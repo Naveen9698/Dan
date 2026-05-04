@@ -1,0 +1,228 @@
+html,
+body {
+  min-height: 100%;
+  width: 100%;
+  padding: 0;
+  height: 100%;
+}
+
+/* Global box-sizing reset */
+html {
+  box-sizing: border-box;
+}
+
+* {
+  font-weight: 300;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui;
+  font-weight: 300;
+  background: canvas;
+  color: CanvasText;
+  color-scheme: dark;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wrapper {
+  width: 100%;
+  padding: 0;
+  text-align: center;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Embla */
+.embla {
+  --gap: 24px;
+  --card-radius: 10px;
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --card-bg-active: rgba(255, 255, 255, 0.14);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+  --muted: rgba(255, 255, 255, 0.45);
+  --muted-2: rgba(255, 255, 255, 0.25);
+  position: relative;
+}
+
+.embla__viewport {
+  overflow: hidden;
+  padding: 10px 0 24px;
+}
+
+.embla__container {
+  display: flex;
+  will-change: transform;
+}
+
+/* Responsive slides-per-view via flex-basis */
+.embla__slide {
+  flex: 0 0 85%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+@media (min-width: 640px) {
+  .embla__slide {
+    flex-basis: 48%;
+  }
+}
+@media (min-width: 992px) {
+  .embla__slide {
+    flex-basis: 32%;
+  }
+}
+
+/* Scale the CARD (not the slide) to avoid snap math jitter */
+.card {
+  width: 100%;
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: 2.25rem 1.75rem;
+  color: CanvasText;
+  transform: scale(0.92);
+  opacity: 0.35;
+  filter: saturate(0.85);
+  transition: transform 0.45s ease, opacity 0.45s ease, background-color 0.45s ease, filter 0.45s ease;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+}
+
+.embla__slide.is-selected .card {
+  transform: scale(1.06);
+  opacity: 1;
+  background: var(--card-bg-active);
+  filter: saturate(1);
+}
+
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  -o-object-fit: cover;
+     object-fit: cover;
+  display: block;
+}
+
+.quote {
+  margin: 0;
+  line-height: 1.6;
+  color: CanvasText;
+}
+
+.cite {
+  margin: 1rem 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Controls */
+.embla__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.embla__btn {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  border: 1px solid var(--muted-2);
+  background: transparent;
+  color: currentColor;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.embla__btn:active {
+  transform: scale(0.96);
+}
+
+.embla__btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.chev {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  opacity: 0.9;
+}
+
+.chev--left {
+  transform: rotate(135deg);
+}
+
+.chev--right {
+  transform: rotate(-45deg);
+}
+
+/* Dots */
+.embla__dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.embla__dot {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  border: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--muted-2);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.embla__dot[aria-selected=true] {
+  background: currentColor;
+  transform: scale(1.6);
+}
+
+.embla__dot:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}

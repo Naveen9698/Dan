@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <style>
+    .popup-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .popup-modal {
+      background: #fff;
+      padding: 24px;
+      max-width: 420px;
+      width: 90%;
+      border-radius: 6px;
+      position: relative;
+    }
+
+    .popup-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+
+  <!-- Triggers -->
+  <a href="#" data-popup-target="popup-1">Open Popup 1</a>
+  <a href="#" data-popup-target="popup-2">Open Popup 2</a>
+
+  <!-- Popup 1 -->
+  <div id="popup-1" class="popup-overlay">
+    <div class="popup-modal">
+      <button class="popup-close" aria-label="Close popup">×</button>
+      <h2>Popup One</h2>
+      <p>Popup one content.</p>
+    </div>
+  </div>
+
+  <!-- Popup 2 -->
+  <div id="popup-2" class="popup-overlay">
+    <div class="popup-modal">
+      <button class="popup-close" aria-label="Close popup">×</button>
+      <h2>Popup Two</h2>
+      <p>Popup two content.</p>
+    </div>
+  </div>
+
+
+  <script>
+    document.addEventListener('click', function (e) {
+
+      // --------------------
+      // OPEN POPUP
+      // --------------------
+      const trigger = e.target.closest('[data-popup-target]');
+      if (trigger) {
+        e.preventDefault();
+
+        const popupId = trigger.dataset.popupTarget;
+        const popup = document.getElementById(popupId);
+
+        if (popup) {
+          popup.style.display = 'flex';
+        }
+
+        return;
+      }
+
+      // --------------------
+      // CLOSE VIA X BUTTON
+      // --------------------
+      if (e.target.classList.contains('popup-close')) {
+        const overlay = e.target.closest('.popup-overlay');
+        if (overlay) overlay.style.display = 'none';
+        return;
+      }
+
+      // --------------------
+      // CLOSE VIA OVERLAY CLICK
+      // --------------------
+      if (e.target.classList.contains('popup-overlay')) {
+        e.target.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

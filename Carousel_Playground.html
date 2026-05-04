@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Embla Master Carousel – Final</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+/* ================= PAGE ================= */
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 2rem;
+}
+h1 { text-align: center; }
+
+/* ================= LAYOUT ================= */
+.layout {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 2rem;
+  max-width: 1900px;
+  margin: auto;
+}
+
+/* ================= BUILDER ================= */
+.builder {
+  background: #020617;
+  padding: 1rem;
+  border-radius: 1rem;
+  font-size: 0.9rem;
+}
+.builder fieldset {
+  border: 1px solid #1e293b;
+  padding: 0.6rem;
+  margin-bottom: 0.8rem;
+  border-radius: 0.5rem;
+}
+.builder legend {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.builder label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+.builder input[type="number"] { width: 100px; }
+.builder input:disabled,
+.builder button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ================= EMBLA CORE ================= */
+.embla {
+  max-width: 900px;
+  height: 420px;
+  margin: auto;
+}
+.embla__viewport {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Direction-safe spacing */
+.embla.ltr .embla__container { display:flex;height:100%;margin-left:-0.5rem; }
+.embla.ltr .embla__slide { padding-left:0.5rem; }
+.embla.rtl .embla__container { display:flex;height:100%;margin-right:-0.5rem; }
+.embla.rtl .embla__slide { padding-right:0.5rem; }
+
+/* Vertical */
+.embla.vertical .embla__container {
+  flex-direction: column;
+  margin: 0;
+  margin-top: -0.5rem;
+}
+.embla.vertical .embla__slide {
+  padding: 0.5rem 0 0 0;
+}
+
+/* Slides */
+.embla__slide {
+  height:100%;
+  display:flex;
+}
+.embla:not(.variable) .embla__slide {
+  flex:0 0 var(--slide-size,100%);
+}
+.embla.variable .embla__slide {
+  flex:0 0 auto;
+}
+
+/* Inner visuals */
+.embla__slide__inner {
+  min-width:260px;
+  flex:1;
+  background:#1e293b;
+  border-radius:1rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2rem;
+  transform:scale(0.92);
+  opacity:0.6;
+  transition:transform .35s ease,opacity .35s ease;
+}
+.embla__slide.is-selected .embla__slide__inner {
+  transform:scale(1);
+  opacity:1;
+}
+.embla.fade .embla__slide__inner { opacity:0; }
+.embla.fade .embla__slide.is-selected .embla__slide__inner { opacity:1; }
+
+/* Controls */
+.controls {
+  display:flex;
+  justify-content:center;
+  gap:0.5rem;
+  margin-top:1rem;
+}
+.controls button {
+  border:none;
+  background:#38bdf8;
+  padding:.4rem 1rem;
+  border-radius:.5rem;
+  cursor:pointer;
+}
+
+/* Footer */
+.footer-ui {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:0.75rem;
+  font-size:0.85rem;
+}
+.scrollbar { margin-top: 0.75rem; }
+.scrollbar input { width: 100%; }
+
+/* ================= CSS MARQUEE ================= */
+#css-marquee {
+  max-width: 900px;
+  overflow: hidden;
+  margin: auto;
+  display: none;
+}
+#css-marquee .track {
+  display: flex;
+  width: max-content;
+  animation: marquee var(--duration, 20s) linear infinite;
+}
+#css-marquee.paused .track {
+  animation-play-state: paused;
+}
+#css-marquee .item {
+  width: 240px;
+  padding: 20px;
+  margin-right: 16px;
+  background: #1e293b;
+  border-radius: 1rem;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+</style>
+</head>
+
+<body>
+
+<h1>Embla Master Carousel – Complete Build</h1>
+
+<div class="layout">
+
+<!-- ================= BUILDER ================= -->
+<div class="builder">
+
+  <fieldset>
+    <legend>Direction</legend>
+    <label>LTR <input type="radio" name="direction" value="ltr" checked></label>
+    <label>RTL <input type="radio" name="direction" value="rtl"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Scroll Mode</legend>
+    <label>Snap <input type="radio" name="scrollMode" value="snap" checked></label>
+    <label>Drag-Free <input type="radio" name="scrollMode" value="free"></label>
+  </fieldset>
+
+  <fieldset id="alignField">
+    <legend>Align (Snap only)</legend>
+    <label>Start <input type="radio" name="align" value="start"></label>
+    <label>Center <input type="radio" name="align" value="center" checked></label>
+    <label>End <input type="radio" name="align" value="end"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Interaction</legend>
+    <label>Keyboard Nav <input type="checkbox" id="keyboardNav" checked></label>
+    <label>Tab / Focus Nav <input type="checkbox" id="watchFocus"></label>
+    <label>Enable Drag / Swipe <input type="checkbox" id="watchDrag" checked></label>
+    <label>Scrollbar Interaction <input type="checkbox" id="scrollbarEnabled"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Layout</legend>
+    <label>Loop <input type="checkbox" id="loop" checked></label>
+    <label>Vertical <input type="checkbox" id="vertical"></label>
+    <label>Variable Widths <input type="checkbox" id="variable"></label>
+    <label>Fade <input type="checkbox" id="fade"></label>
+    <label>Contain Scroll <input type="checkbox" id="containScroll"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Scroll Settings</legend>
+    <label>Start Index <input type="number" id="startIndex" value="0"></label>
+    <label>Slides / View <input type="number" id="slidesPerView" value="1"></label>
+    <label>Slides / Scroll <input type="number" id="slidesToScroll" value="1"></label>
+    <label>Skip Snaps <input type="checkbox" id="skipSnaps"></label>
+    <label>Drag Threshold <input type="number" id="dragThreshold" value="10"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Autoplay Mode</legend>
+    <label>Off <input type="radio" name="autoplayMode" value="off" checked></label>
+    <label>Timed <input type="radio" name="autoplayMode" value="timed"></label>
+    <label>Marquee (JS) <input type="radio" name="autoplayMode" value="js"></label>
+    <label>Marquee (CSS) <input type="radio" name="autoplayMode" value="css"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Autoplay Settings</legend>
+    <label>Delay (ms) <input id="delay" type="number" value="3000"></label>
+    <label>JS Marquee Speed <input id="jsSpeed" type="number" value="10"></label>
+    <label>CSS Marquee Duration (s) <input id="cssDuration" type="number" value="20"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Stop Conditions</legend>
+    <label>Stop on Interaction <input id="stopInteract" type="checkbox" checked></label>
+    <label>Stop on Hover <input id="stopHover" type="checkbox" checked></label>
+    <label>Stop on Focus <input id="stopFocus" type="checkbox" checked></label>
+    <label>Stop on Visibility <input id="stopVisibility" type="checkbox" checked></label>
+    <label>Pause CSS marquee on hover <input id="cssHoverPause" type="checkbox" checked></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Manual</legend>
+    <button id="play">Play</button>
+    <button id="pause">Pause</button>
+  </fieldset>
+
+</div>
+
+<!-- ================= EMBLA ================= -->
+<div class="embla ltr" id="embla">
+  <div class="embla__viewport">
+    <div class="embla__container">
+      <div class="embla__slide"><div class="embla__slide__inner" tabindex="0">1</div></div>
+      <div class="embla__slide"><div class="embla__slide__inner" tabindex="0">2</div></div>
+      <div class="embla__slide"><div class="embla__slide__inner" tabindex="0">3</div></div>
+      <div class="embla__slide"><div class="embla__slide__inner" tabindex="0">4</div></div>
+      <div class="embla__slide"><div class="embla__slide__inner" tabindex="0">5</div></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="prev">Prev</button>
+    <button id="next">Next</button>
+  </div>
+
+  <div class="footer-ui">
+    <div>
+      <button onclick="sectionNav('start')">Start</button>
+      <button onclick="sectionNav('middle')">Middle</button>
+      <button onclick="sectionNav('end')">End</button>
+    </div>
+    <div id="counter">1 / 5</div>
+  </div>
+
+  <div class="scrollbar">
+    <input type="range" min="0" max="100" value="0">
+  </div>
+</div>
+
+<!-- ================= CSS MARQUEE ================= -->
+<div id="css-marquee">
+  <div class="track">
+    <div class="item">1</div><div class="item">2</div><div class="item">3</div>
+    <div class="item">4</div><div class="item">5</div>
+    <div class="item">1</div><div class="item">2</div><div class="item">3</div>
+    <div class="item">4</div><div class="item">5</div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://unpkg.com/embla-carousel@8.5.2/embla-carousel.umd.js"></script>
+<script>
+// -------------- CORE REFERENCES --------------
+const root = document.getElementById('embla');
+const viewport = root.querySelector('.embla__viewport');
+const slides = [...root.querySelectorAll('.embla__slide')];
+const scrollbar = document.querySelector('.scrollbar input');
+const counter = document.getElementById('counter');
+const cssMarquee = document.getElementById('css-marquee');
+
+let embla = null;
+let timer = null;
+let raf = null;
+let manualPause = false;
+
+// -------------- HELPERS --------------
+const radio = name => document.querySelector(`input[name="${name}"]:checked`).value;
+const el = id => document.getElementById(id);
+const clamp = (n, min, max) => Math.max(min, Math.min(n, max));
+
+// -------------- SECTION NAV --------------
+window.sectionNav = which => {
+  if (!embla) return;
+  const n = embla.scrollSnapList().length - 1;
+  if (which === 'start') embla.scrollTo(0);
+  if (which === 'middle') embla.scrollTo(Math.floor(n / 2));
+  if (which === 'end') embla.scrollTo(n);
+};
+
+// -------------- AUTOPLAY CONTROL --------------
+function stopAll(manual = false) {
+  clearInterval(timer);
+  cancelAnimationFrame(raf);
+  timer = raf = null;
+  if (manual) manualPause = true;
+}
+
+function startAutoplay() {
+  stopAll();
+  manualPause = false;
+
+  const mode = radio('autoplayMode');
+
+  cssMarquee.classList.remove('paused');
+
+  if (mode === 'css') {
+    root.style.display = 'none';
+    cssMarquee.style.display = 'block';
+    cssMarquee.style.setProperty('--duration', `${cssDuration.value}s`);
+    return;
+  }
+
+  cssMarquee.style.display = 'none';
+  root.style.display = 'block';
+
+  if (mode === 'timed') {
+    timer = setInterval(() => embla.scrollNext(), +delay.value);
+  }
+
+  if (mode === 'js') {
+    let last = 0;
+    const interval = 1000 / Math.max(1, +jsSpeed.value);
+    const step = t => {
+      if (t - last >= interval) {
+        embla.scrollNext();
+        last = t;
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+}
+
+// -------------- GUARDRAILS --------------
+function enforceGuardrails() {
+  const free = radio('scrollMode') === 'free';
+  document.querySelectorAll('input[name="align"]').forEach(r => r.disabled = free);
+  skipSnaps.disabled = free;
+
+  const sbAllowed =
+    !loop.checked &&
+    !vertical.checked &&
+    !free &&
+    radio('autoplayMode') !== 'css';
+
+  scrollbarEnabled.disabled = !sbAllowed;
+}
+
+// -------------- BUILD --------------
+function build() {
+  stopAll();
+  embla?.destroy();
+
+  const autoplayMode = radio('autoplayMode');
+  const autoplayActive = autoplayMode !== 'off';
+
+  delay.disabled = autoplayMode !== 'timed';
+  jsSpeed.disabled = autoplayMode !== 'js';
+  cssDuration.disabled = autoplayMode !== 'css';
+  cssHoverPause.disabled = autoplayMode !== 'css';
+
+  [stopInteract, stopHover, stopFocus, stopVisibility, play, pause]
+    .forEach(elm => elm.disabled = !autoplayActive);
+
+  enforceGuardrails();
+
+  // Apply core classes
+  root.className = 'embla ' + radio('direction');
+  root.classList.toggle('vertical', vertical.checked);
+  root.classList.toggle('variable', variable.checked);
+  root.classList.toggle('fade', fade.checked);
+
+  const view = clamp(+slidesPerView.value || 1, 1, slides.length);
+  root.style.setProperty('--slide-size', `${100 / view}%`);
+
+  if (autoplayMode !== 'css') {
+    embla = EmblaCarousel(viewport, {
+      loop: loop.checked,
+      axis: vertical.checked ? 'y' : 'x',
+      direction: radio('direction'),
+      dragFree: autoplayMode === 'js' || radio('scrollMode') === 'free',
+      align: radio('scrollMode') === 'free' ? 'start' : radio('align'),
+      skipSnaps: skipSnaps.checked,
+      watchDrag: watchDrag.checked,
+      watchFocus: watchFocus.checked,
+      dragThreshold: +dragThreshold.value || 10,
+      startIndex: clamp(+startIndex.value || 0, 0, slides.length - 1),
+      slidesToScroll: clamp(+slidesToScroll.value || 1, 1, slides.length),
+      containScroll: containScroll.checked ? 'trimSnaps' : false
+    });
+
+    prev.onclick = () => embla.scrollPrev();
+    next.onclick = () => embla.scrollNext();
+
+    document.onkeydown = keyboardNav.checked
+      ? e => {
+          if (['ArrowRight','ArrowDown'].includes(e.key)) embla.scrollNext();
+          if (['ArrowLeft','ArrowUp'].includes(e.key)) embla.scrollPrev();
+        }
+      : null;
+
+    embla.on('select', () => {
+      const i = embla.selectedScrollSnap();
+      const t = embla.scrollSnapList().length;
+      counter.textContent = `${i + 1} / ${t}`;
+      slides.forEach((s, idx) => s.classList.toggle('is-selected', idx === i));
+      if (scrollbarEnabled.checked && !scrollbarEnabled.disabled) {
+        scrollbar.value = i / (t - 1) * 100;
+      }
+    });
+  }
+
+  const hoverTarget = autoplayMode === 'css' ? cssMarquee : viewport;
+
+  hoverTarget.onmouseenter = () => {
+    if (!stopHover.checked) return;
+    stopAll();
+    if (autoplayMode === 'css' && cssHoverPause.checked) {
+      cssMarquee.classList.add('paused');
+    }
+  };
+
+  hoverTarget.onmouseleave = () => {
+    if (!stopHover.checked || manualPause) return;
+    if (autoplayMode === 'css') cssMarquee.classList.remove('paused');
+    startAutoplay();
+  };
+
+  if (stopInteract.checked) viewport.onpointerdown = () => stopAll();
+  if (stopFocus.checked) viewport.onfocusin = () => stopAll();
+
+  document.onvisibilitychange = () => {
+    if (!stopVisibility.checked) return;
+    if (document.hidden) stopAll();
+    else if (!manualPause) startAutoplay();
+  };
+
+  startAutoplay();
+}
+
+// Wire updates
+document.querySelectorAll('input').forEach(i => i.onchange = build);
+play.onclick = () => startAutoplay();
+pause.onclick = () => stopAll(true);
+
+// Initial
+build();
+</script>
+
+</body>
+</html>

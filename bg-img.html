@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hero Image Example</title>
+
+  <style>
+    /* Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .hero {
+      position: relative;
+    }
+
+    /* HERO IMAGE (ACTS LIKE BACKGROUND) */
+    .hero-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: right bottom;
+      z-index: 1;
+    }
+
+    /* OPTIONAL OVERLAY */
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 2;
+    }
+
+    /* HERO CONTENT */
+    .hero-content {
+      position: relative;
+      text-align: center;
+      padding: 20rem 1rem;
+      max-width: 800px;
+      z-index: 3;
+    }
+
+    .hero-content h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+
+    .hero-content p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <section class="hero">
+    <img
+      src="1.jpg"
+      alt="Hero background"
+      class="hero-image"
+      loading="lazy"
+    />
+
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+      <h1>Hero Banner Using Image</h1>
+      <p>This image is NOT a background image — it’s an absolutely positioned img.</p>
+    </div>
+  </section>
+
+</body>
+</html>

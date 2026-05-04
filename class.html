@@ -1,0 +1,5443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Style Guide – Alignment</title>
+
+  <!-- =========================
+       LAYOUT & UI POLISH
+       ========================= -->
+  <style>
+    /* APP LAYOUT */
+    .app {
+      display: flex;
+      min-height: 100vh;
+      background: #f5f6f8;
+    }
+
+
+    .sidebar {
+      width: 260px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      padding: 24px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar {
+      scrollbar-width: thin;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 10px;
+    }
+
+
+    .sidebar h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #111;
+    }
+
+    .nav-group {
+      margin-bottom: 28px;
+    }
+
+    .nav-group h3 {
+      font-size: 13px;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+
+    .nav-group h4 {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-top: 15px;
+      margin-bottom: 12px;
+      margin-left: 10px;
+    }
+
+    .nav-item {
+      font-size: 14px;
+      padding: 6px 4px;
+      color: #374151;
+      cursor: default;
+      margin-left: 20px;
+      border-radius: 6px;
+    }
+
+    .nav-item.active {
+      color: hsl(245, 100%, 68%);
+      font-weight: 600;
+      background: hsl(221 83% 95%);
+    }
+
+    .main {
+      flex: 1;
+    }
+
+    .main section {
+      padding: 48px 50px;
+    }
+
+    .main section>*+* {
+      margin-top: 20px;
+    }
+
+    .note {
+      margin-top: 10px;
+      max-width: 900px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #4b5563;
+      margin-left: 50px;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 12px;
+      overflow-x: auto;
+      line-height: 1.65;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    .sample-card {
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .sample-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+    }
+
+    .sample-swatch {
+      height: 56px;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .sample-swatch p {
+      margin: 0;
+      padding: 4px 6px;
+      font-size: 11px;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.35);
+      border-top-right-radius: 6px;
+    }
+
+    .sample-meta {
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #374151;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .sample-text {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111;
+      position: absolute;
+      top: 5px;
+      right: 10px;
+    }
+
+    h2.demo {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #111827;
+      background: #bdbdbd;
+      text-align: center;
+      padding: 10px 0 15px;
+    }
+
+    h3.demo {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .cols {
+      display: flex;
+      justify-content: flex-start;
+      gap: 30px;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <aside class="sidebar">
+      <h2>Style Guide</h2>
+
+      <div class="nav-group">
+        <h3>Systems</h3>
+        <div class="nav-item active" data-target="base">Base</div>
+        <div class="nav-item" data-target="color-system">Color</div>
+        <div class="nav-item" data-target="space-system">Space</div>
+        <div class="nav-item" data-target="typography-system">Typography</div>
+        <div class="nav-item" data-target="border-radius-system">Border & Radius</div>
+        <div class="nav-item" data-target="max-width-system">Max Width</div>
+        <div class="nav-item" data-target="grid-system">Grid</div>
+        <div class="nav-item" data-target="flex-system">Flex</div>
+      </div>
+      <div class="nav-group">
+        <h3>Interaction</h3>
+        <h4>Toggle</h4>
+        <div class="nav-item" data-target="toggle-popup">Popup</div>
+        <div class="nav-item" data-target="toggle-dropdown">Dropdown</div>
+        <div class="nav-item" data-target="toggle-accordion">Accordion</div>
+        <h4>Hover</h4>
+        <div class="nav-item" data-target="hover-tooltip">Tooltip</div>
+        <h4>Navigation</h4>
+        <div class="nav-item" data-target="navigation-scroll">Scroll</div>
+        <div class="nav-item" data-target="navigation-scrollspy">Scroll Spy</div>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <h2 class="demo" id="base">Base</h2>
+
+      <section>
+        <style>
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+
+          body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+            background: #f5f5f5;
+            color: #111;
+          }
+        </style>
+        <div class="cols">
+          <pre><code>* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+  background: #f5f5f5;
+  color: #111;
+  line-height: 1.2;
+}</code></pre>
+        </div>
+        <p class="note">
+          This sets a global box-sizing of border-box, removes default margin and padding, and applies a
+          clean system font stack with a light background and dark text color.
+        </p>
+
+      </section>
+
+      <h2 class="demo" id="color-system">Color System</h2>
+
+      <section>
+        <h3 class="demo">Color Variables</h3>
+
+        <style>
+          :root {
+            --color-primary: hsl(245, 100%, 68%);
+            --color-primary-hover: hsl(245, 100%, 78%);
+            --color-secondary: hsl(142, 76%, 40%);
+            --color-secondary-hover: hsl(142, 76%, 30%);
+            --color-black: hsl(0, 0%, 0%);
+            --color-gray-10: hsl(0, 0%, 10%);
+            --color-gray-20: hsl(0, 0%, 20%);
+            --color-gray-30: hsl(0, 0%, 30%);
+            --color-gray-40: hsl(0, 0%, 40%);
+            --color-gray-50: hsl(0, 0%, 50%);
+            --color-gray-60: hsl(0, 0%, 60%);
+            --color-gray-70: hsl(0, 0%, 70%);
+            --color-gray-80: hsl(0, 0%, 80%);
+            --color-gray-90: hsl(0, 0%, 90%);
+            --color-white: hsl(0, 0%, 100%);
+          }
+        </style>
+        <div class="cols">
+          <pre><code>--color-primary: hsl(245, 100%, 68%);
+--color-primary-hover: hsl(245, 100%, 78%);
+--color-secondary: hsl(142, 76%, 40%);
+--color-secondary-hover: hsl(142, 76%, 30%);
+--color-black: hsl(0, 0%, 0%);
+--color-gray-10: hsl(0, 0%, 10%);
+--color-gray-20: hsl(0, 0%, 20%);
+--color-gray-30: hsl(0, 0%, 30%);
+--color-gray-40: hsl(0, 0%, 40%);
+--color-gray-50: hsl(0, 0%, 50%);
+--color-gray-60: hsl(0, 0%, 60%);
+--color-gray-70: hsl(0, 0%, 70%);
+--color-gray-80: hsl(0, 0%, 80%);
+--color-gray-90: hsl(0, 0%, 90%);
+--color-white: hsl(0, 0%, 100%);</code></pre>
+        </div>
+        <h3 class="demo">Live demo of the color palette</h3>
+
+        <div class="sample-grid">
+
+
+          <div class="sample-card">
+            <div class="sample-meta">Primary</div>
+            <div class="sample-text" style="color:var(--color-primary)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-primary)">
+              <p>--color-primary</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Primary Hover</div>
+            <div class="sample-text" style="color:var(--color-primary-hover)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-primary-hover)">
+              <p>--color-primary-hover</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Secondary</div>
+            <div class="sample-text" style="color:var(--color-secondary)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-secondary)">
+              <p>--color-secondary</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Secondary Hover</div>
+            <div class="sample-text" style="color:var(--color-secondary-hover)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-secondary-hover)">
+              <p>--color-secondary-hover</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Black</div>
+            <div class="sample-text" style="color:var(--color-black)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-black)">
+              <p>--color-black</p>
+            </div>
+          </div>
+
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 10</div>
+            <div class="sample-text" style="color:var(--color-gray-10)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-10)">
+              <p>--color-gray-10</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 20</div>
+            <div class="sample-text" style="color:var(--color-gray-20)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-20)">
+              <p>--color-gray-20</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 30</div>
+            <div class="sample-text" style="color:var(--color-gray-30)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-30)">
+              <p>--color-gray-30</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 40</div>
+            <div class="sample-text" style="color:var(--color-gray-40)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-40)">
+              <p>--color-gray-40</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 50</div>
+            <div class="sample-text" style="color:var(--color-gray-50)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-50)">
+              <p>--color-gray-50</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 60</div>
+            <div class="sample-text" style="color:var(--color-gray-60)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-60)">
+              <p>--color-gray-60</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 70</div>
+            <div class="sample-text" style="color:var(--color-gray-70)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-70)">
+              <p>--color-gray-70</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 80</div>
+            <div class="sample-text" style="color:var(--color-gray-80)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-80)">
+              <p>--color-gray-80</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta">Gray 90</div>
+            <div class="sample-text" style="color:var(--color-gray-90)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-gray-90)">
+              <p style="color:#000;background:rgba(255,255,255,.6)">--color-gray-90</p>
+            </div>
+          </div>
+
+          <div class="sample-card">
+            <div class="sample-meta" style="background:rgba(0,0,0,.3)">White</div>
+            <div class="sample-text" style="color:var(--color-white)">Abc</div>
+            <div class="sample-swatch" style="background:var(--color-white)">
+              <p style="color:#000;background:rgba(0,0,0,.1)">--color-white</p>
+            </div>
+          </div>
+
+        </div>
+
+        <h3 class="demo">Color Utility Classes</h3>
+
+        <style>
+          .text-primary {
+            color: var(--color-primary);
+          }
+
+          .text-primary-hover {
+            color: var(--color-primary-hover);
+          }
+
+          .text-secondary {
+            color: var(--color-secondary);
+          }
+
+          .text-secondary-hover {
+            color: var(--color-secondary-hover);
+          }
+
+          .text-black {
+            color: var(--color-black);
+          }
+
+          .text-white {
+            color: var(--color-white);
+          }
+
+          .text-gray-10 {
+            color: var(--color-gray-10);
+          }
+
+          .text-gray-20 {
+            color: var(--color-gray-20);
+          }
+
+          .text-gray-30 {
+            color: var(--color-gray-30);
+          }
+
+          .text-gray-40 {
+            color: var(--color-gray-40);
+          }
+
+          .text-gray-50 {
+            color: var(--color-gray-50);
+          }
+
+          .text-gray-60 {
+            color: var(--color-gray-60);
+          }
+
+          .text-gray-70 {
+            color: var(--color-gray-70);
+          }
+
+          .text-gray-80 {
+            color: var(--color-gray-80);
+          }
+
+          .text-gray-90 {
+            color: var(--color-gray-90);
+          }
+
+          .bg-primary {
+            background-color: var(--color-primary);
+          }
+
+          .bg-primary-hover {
+            background-color: var(--color-primary-hover);
+          }
+
+          .bg-secondary {
+            background-color: var(--color-secondary);
+          }
+
+          .bg-secondary-hover {
+            background-color: var(--color-secondary-hover);
+          }
+
+          .bg-black {
+            background-color: var(--color-black);
+          }
+
+          .bg-white {
+            background-color: var(--color-white);
+          }
+
+          .bg-gray-10 {
+            background-color: var(--color-gray-10);
+          }
+
+          .bg-gray-20 {
+            background-color: var(--color-gray-20);
+          }
+
+          .bg-gray-30 {
+            background-color: var(--color-gray-30);
+          }
+
+          .bg-gray-40 {
+            background-color: var(--color-gray-40);
+          }
+
+          .bg-gray-50 {
+            background-color: var(--color-gray-50);
+          }
+
+          .bg-gray-60 {
+            background-color: var(--color-gray-60);
+          }
+
+          .bg-gray-70 {
+            background-color: var(--color-gray-70);
+          }
+
+          .bg-gray-80 {
+            background-color: var(--color-gray-80);
+          }
+
+          .bg-gray-90 {
+            background-color: var(--color-gray-90);
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>.text-primary         { color: var(--color-primary); }
+.text-primary-hover   { color: var(--color-primary-hover); }
+.text-secondary       { color: var(--color-secondary); }
+.text-secondary-hover { color: var(--color-secondary-hover); }
+.text-black     { color: var(--color-black); }
+.text-white     { color: var(--color-white); }
+.text-gray-10   { color: var(--color-gray-10); }
+.text-gray-20   { color: var(--color-gray-20); }
+.text-gray-30   { color: var(--color-gray-30); }
+.text-gray-40   { color: var(--color-gray-40); }
+.text-gray-50   { color: var(--color-gray-50); }
+.text-gray-60   { color: var(--color-gray-60); }
+.text-gray-70   { color: var(--color-gray-70); }
+.text-gray-80   { color: var(--color-gray-80); }
+.text-gray-90   { color: var(--color-gray-90); }</code></pre>
+
+          <pre><code>.bg-primary           { background-color: var(--color-primary); }
+.bg-primary-hover     { background-color: var(--color-primary-hover); }
+.bg-secondary         { background-color: var(--color-secondary); }
+.bg-secondary-hover   { background-color: var(--color-secondary-hover); }
+.bg-black       { background-color: var(--color-black); }
+.bg-white       { background-color: var(--color-white); }
+.bg-gray-10     { background-color: var(--color-gray-10); }
+.bg-gray-20     { background-color: var(--color-gray-20); }
+.bg-gray-30     { background-color: var(--color-gray-30); }
+.bg-gray-40     { background-color: var(--color-gray-40); }
+.bg-gray-50     { background-color: var(--color-gray-50); }
+.bg-gray-60     { background-color: var(--color-gray-60); }
+.bg-gray-70     { background-color: var(--color-gray-70); }
+.bg-gray-80     { background-color: var(--color-gray-80); }
+.bg-gray-90     { background-color: var(--color-gray-90); }</code></pre>
+        </div>
+      </section>
+
+      <h2 class="demo" id="space-system">Space System</h2>
+
+      <section>
+
+        <h3 class="demo">Space Variables</h3>
+
+        <style>
+          :root {
+            --space-unit: 8px;
+          }
+
+          @media (max-width: 991px) {
+            :root {
+              --space-unit: 6px;
+            }
+          }
+
+          @media (max-width: 767px) {
+            :root {
+              --space-unit: 4px;
+            }
+          }
+
+          :root {
+            --xxs: calc(var(--space-unit) * 1);
+            --xs: calc(var(--space-unit) * 2);
+            --sm: calc(var(--space-unit) * 3);
+            --md: calc(var(--space-unit) * 4);
+            --lg: calc(var(--space-unit) * 6);
+            --xl: calc(var(--space-unit) * 8);
+            --xxl: calc(var(--space-unit) * 12);
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>:root {--space-unit: 8px;}
+
+@media (max-width: 991px) {
+  :root {--space-unit: 6px;}
+}
+
+@media (max-width: 767px) {
+  :root {--space-unit: 4px;}
+}</code></pre>
+          <pre><code>--xxs: calc(var(--space-unit) * 1);
+--xs:  calc(var(--space-unit) * 2);
+--sm:  calc(var(--space-unit) * 3);
+--md:  calc(var(--space-unit) * 4);
+--lg:  calc(var(--space-unit) * 6);
+--xl:  calc(var(--space-unit) * 8);
+--xxl: calc(var(--space-unit) * 12);
+</code></pre>
+        </div>
+
+        <p class="note">
+          Spacing is derived from a single <code>--space-unit</code> variable that adjusts across breakpoints.
+          All spacing tokens automatically scale for desktop, tablet, and mobile layouts.
+        </p>
+
+        <h3 class="demo">Live demo of spacing scale</h3>
+
+        <style>
+          .space-demo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+          }
+
+          .space-demo-panel {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+          }
+
+          .space-demo-panel h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #111827;
+          }
+
+          .space-item {
+            display: grid;
+            grid-template-columns: 30px 30px auto;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+          }
+
+          .space-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+          }
+
+          .space-bar {
+            height: 24px;
+            border-radius: 6px;
+            background: hsl(220.82deg 100% 80.69%);
+          }
+
+          .space-value {
+            font-size: 12px;
+            color: #6b7280;
+            text-align: right;
+          }
+        </style>
+
+        <div class="space-demo-grid">
+
+
+          <div class="space-demo-panel" style="--space-unit:8px;">
+            <h4>Desktop · 8px unit</h4>
+
+            <div class="space-item">
+              <div class="space-label">XXS</div>
+              <div class="space-value">8px</div>
+              <div class="space-bar" style="width:8px;"></div>
+            </div>
+
+            <div class="space-item">
+              <div class="space-label">XS</div>
+              <div class="space-value">16px</div>
+              <div class="space-bar" style="width:16px;"></div>
+            </div>
+
+            <div class="space-item">
+              <div class="space-label">SM</div>
+              <div class="space-value">24px</div>
+              <div class="space-bar" style="width:24px;"></div>
+            </div>
+
+            <div class="space-item">
+              <div class="space-label">MD</div>
+              <div class="space-value">32px</div>
+              <div class="space-bar" style="width:32px;"></div>
+            </div>
+
+            <div class="space-item">
+              <div class="space-label">LG</div>
+              <div class="space-value">48px</div>
+              <div class="space-bar" style="width:48px;"></div>
+            </div>
+
+            <div class="space-item">
+              <div class="space-label">XL</div>
+              <div class="space-value">64px</div>
+              <div class="space-bar" style="width:64px;"></div>
+            </div>
+
+            <div class="space-item">
+              <div class="space-label">XXL</div>
+              <div class="space-value">96px</div>
+              <div class="space-bar" style="width:96px;"></div>
+            </div>
+          </div>
+
+
+          <div class="space-demo-panel" style="--space-unit:6px;">
+            <h4>Tablet · 6px unit</h4>
+
+            <div class="space-item">
+              <div class="space-label">XXS</div>
+              <div class="space-value">6px</div>
+              <div class="space-bar" style="width:6px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">XS</div>
+              <div class="space-value">12px</div>
+              <div class="space-bar" style="width:12px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">SM</div>
+              <div class="space-value">18px</div>
+              <div class="space-bar" style="width:18px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">MD</div>
+              <div class="space-value">24px</div>
+              <div class="space-bar" style="width:24px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">LG</div>
+              <div class="space-value">36px</div>
+              <div class="space-bar" style="width:36px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">XL</div>
+              <div class="space-value">48px</div>
+              <div class="space-bar" style="width:48px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">XXL</div>
+              <div class="space-value">72px</div>
+              <div class="space-bar" style="width:72px;"></div>
+            </div>
+          </div>
+
+
+          <div class="space-demo-panel" style="--space-unit:4px;">
+            <h4>Mobile · 4px unit</h4>
+
+            <div class="space-item">
+              <div class="space-label">XXS</div>
+              <div class="space-value">4px</div>
+              <div class="space-bar" style="width:4px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">XS</div>
+              <div class="space-value">8px</div>
+              <div class="space-bar" style="width:8px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">SM</div>
+              <div class="space-value">12px</div>
+              <div class="space-bar" style="width:12px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">MD</div>
+              <div class="space-value">16px</div>
+              <div class="space-bar" style="width:16px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">LG</div>
+              <div class="space-value">24px</div>
+              <div class="space-bar" style="width:24px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">XL</div>
+              <div class="space-value">32px</div>
+              <div class="space-bar" style="width:32px;"></div>
+            </div>
+            <div class="space-item">
+              <div class="space-label">XXL</div>
+              <div class="space-value">48px</div>
+              <div class="space-bar" style="width:48px;"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <h3 class="demo">Padding Utility Classes</h3>
+        <style>
+          .p-xxs {
+            padding: var(--xxs);
+          }
+
+          .p-xs {
+            padding: var(--xs);
+          }
+
+          .p-sm {
+            padding: var(--sm);
+          }
+
+          .p-md {
+            padding: var(--md);
+          }
+
+          .p-lg {
+            padding: var(--lg);
+          }
+
+          .p-xl {
+            padding: var(--xl);
+          }
+
+          .p-xxl {
+            padding: var(--xxl);
+          }
+
+          .px-xxs {
+            padding-left: var(--xxs);
+            padding-right: var(--xxs);
+          }
+
+          .px-xs {
+            padding-left: var(--xs);
+            padding-right: var(--xs);
+          }
+
+          .px-sm {
+            padding-left: var(--sm);
+            padding-right: var(--sm);
+          }
+
+          .px-md {
+            padding-left: var(--md);
+            padding-right: var(--md);
+          }
+
+          .px-lg {
+            padding-left: var(--lg);
+            padding-right: var(--lg);
+          }
+
+          .px-xl {
+            padding-left: var(--xl);
+            padding-right: var(--xl);
+          }
+
+          .px-xxl {
+            padding-left: var(--xxl);
+            padding-right: var(--xxl);
+          }
+
+          .py-xxs {
+            padding-top: var(--xxs);
+            padding-bottom: var(--xxs);
+          }
+
+          .py-xs {
+            padding-top: var(--xs);
+            padding-bottom: var(--xs);
+          }
+
+          .py-sm {
+            padding-top: var(--sm);
+            padding-bottom: var(--sm);
+          }
+
+          .py-md {
+            padding-top: var(--md);
+            padding-bottom: var(--md);
+          }
+
+          .py-lg {
+            padding-top: var(--lg);
+            padding-bottom: var(--lg);
+          }
+
+          .py-xl {
+            padding-top: var(--xl);
+            padding-bottom: var(--xl);
+          }
+
+          .py-xxl {
+            padding-top: var(--xxl);
+            padding-bottom: var(--xxl);
+          }
+
+          .pt-xxs {
+            padding-top: var(--xxs);
+          }
+
+          .pt-xs {
+            padding-top: var(--xs);
+          }
+
+          .pt-sm {
+            padding-top: var(--sm);
+          }
+
+          .pt-md {
+            padding-top: var(--md);
+          }
+
+          .pt-lg {
+            padding-top: var(--lg);
+          }
+
+          .pt-xl {
+            padding-top: var(--xl);
+          }
+
+          .pt-xxl {
+            padding-top: var(--xxl);
+          }
+
+          .pr-xxs {
+            padding-right: var(--xxs);
+          }
+
+          .pr-xs {
+            padding-right: var(--xs);
+          }
+
+          .pr-sm {
+            padding-right: var(--sm);
+          }
+
+          .pr-md {
+            padding-right: var(--md);
+          }
+
+          .pr-lg {
+            padding-right: var(--lg);
+          }
+
+          .pr-xl {
+            padding-right: var(--xl);
+          }
+
+          .pr-xxl {
+            padding-right: var(--xxl);
+          }
+
+          .pb-xxs {
+            padding-bottom: var(--xxs);
+          }
+
+          .pb-xs {
+            padding-bottom: var(--xs);
+          }
+
+          .pb-sm {
+            padding-bottom: var(--sm);
+          }
+
+          .pb-md {
+            padding-bottom: var(--md);
+          }
+
+          .pb-lg {
+            padding-bottom: var(--lg);
+          }
+
+          .pb-xl {
+            padding-bottom: var(--xl);
+          }
+
+          .pb-xxl {
+            padding-bottom: var(--xxl);
+          }
+
+          .pl-xxs {
+            padding-left: var(--xxs);
+          }
+
+          .pl-xs {
+            padding-left: var(--xs);
+          }
+
+          .pl-sm {
+            padding-left: var(--sm);
+          }
+
+          .pl-md {
+            padding-left: var(--md);
+          }
+
+          .pl-lg {
+            padding-left: var(--lg);
+          }
+
+          .pl-xl {
+            padding-left: var(--xl);
+          }
+
+          .pl-xxl {
+            padding-left: var(--xxl);
+          }
+
+          .m-xxs {
+            margin: var(--xxs);
+          }
+
+          .m-xs {
+            margin: var(--xs);
+          }
+
+          .m-sm {
+            margin: var(--sm);
+          }
+
+          .m-md {
+            margin: var(--md);
+          }
+
+          .m-lg {
+            margin: var(--lg);
+          }
+
+          .m-xl {
+            margin: var(--xl);
+          }
+
+          .m-xxl {
+            margin: var(--xxl);
+          }
+
+          .mx-xxs {
+            margin-left: var(--xxs);
+            margin-right: var(--xxs);
+          }
+
+          .mx-xs {
+            margin-left: var(--xs);
+            margin-right: var(--xs);
+          }
+
+          .mx-sm {
+            margin-left: var(--sm);
+            margin-right: var(--sm);
+          }
+
+          .mx-md {
+            margin-left: var(--md);
+            margin-right: var(--md);
+          }
+
+          .mx-lg {
+            margin-left: var(--lg);
+            margin-right: var(--lg);
+          }
+
+          .mx-xl {
+            margin-left: var(--xl);
+            margin-right: var(--xl);
+          }
+
+          .mx-xxl {
+            margin-left: var(--xxl);
+            margin-right: var(--xxl);
+          }
+
+          .my-xxs {
+            margin-top: var(--xxs);
+            margin-bottom: var(--xxs);
+          }
+
+          .my-xs {
+            margin-top: var(--xs);
+            margin-bottom: var(--xs);
+          }
+
+          .my-sm {
+            margin-top: var(--sm);
+            margin-bottom: var(--sm);
+          }
+
+          .my-md {
+            margin-top: var(--md);
+            margin-bottom: var(--md);
+          }
+
+          .my-lg {
+            margin-top: var(--lg);
+            margin-bottom: var(--lg);
+          }
+
+          .my-xl {
+            margin-top: var(--xl);
+            margin-bottom: var(--xl);
+          }
+
+          .my-xxl {
+            margin-top: var(--xxl);
+            margin-bottom: var(--xxl);
+          }
+
+          .mt-xxs {
+            margin-top: var(--xxs);
+          }
+
+          .mt-xs {
+            margin-top: var(--xs);
+          }
+
+          .mt-sm {
+            margin-top: var(--sm);
+          }
+
+          .mt-md {
+            margin-top: var(--md);
+          }
+
+          .mt-lg {
+            margin-top: var(--lg);
+          }
+
+          .mt-xl {
+            margin-top: var(--xl);
+          }
+
+          .mt-xxl {
+            margin-top: var(--xxl);
+          }
+
+          .mr-xxs {
+            margin-right: var(--xxs);
+          }
+
+          .mr-xs {
+            margin-right: var(--xs);
+          }
+
+          .mr-sm {
+            margin-right: var(--sm);
+          }
+
+          .mr-md {
+            margin-right: var(--md);
+          }
+
+          .mr-lg {
+            margin-right: var(--lg);
+          }
+
+          .mr-xl {
+            margin-right: var(--xl);
+          }
+
+          .mr-xxl {
+            margin-right: var(--xxl);
+          }
+
+          .mb-xxs {
+            margin-bottom: var(--xxs);
+          }
+
+          .mb-xs {
+            margin-bottom: var(--xs);
+          }
+
+          .mb-sm {
+            margin-bottom: var(--sm);
+          }
+
+          .mb-md {
+            margin-bottom: var(--md);
+          }
+
+          .mb-lg {
+            margin-bottom: var(--lg);
+          }
+
+          .mb-xl {
+            margin-bottom: var(--xl);
+          }
+
+          .mb-xxl {
+            margin-bottom: var(--xxl);
+          }
+
+          .ml-xxs {
+            margin-left: var(--xxs);
+          }
+
+          .ml-xs {
+            margin-left: var(--xs);
+          }
+
+          .ml-sm {
+            margin-left: var(--sm);
+          }
+
+          .ml-md {
+            margin-left: var(--md);
+          }
+
+          .ml-lg {
+            margin-left: var(--lg);
+          }
+
+          .ml-xl {
+            margin-left: var(--xl);
+          }
+
+          .ml-xxl {
+            margin-left: var(--xxl);
+          }
+
+          .gap-xxs {
+            gap: var(--xxs);
+          }
+
+          .gap-xs {
+            gap: var(--xs);
+          }
+
+          .gap-sm {
+            gap: var(--sm);
+          }
+
+          .gap-md {
+            gap: var(--md);
+          }
+
+          .gap-lg {
+            gap: var(--lg);
+          }
+
+          .gap-xl {
+            gap: var(--xl);
+          }
+
+          .gap-xxl {
+            gap: var(--xxl);
+          }
+
+          .gap-x-xxs {
+            column-gap: var(--xxs);
+          }
+
+          .gap-x-xs {
+            column-gap: var(--xs);
+          }
+
+          .gap-x-sm {
+            column-gap: var(--sm);
+          }
+
+          .gap-x-md {
+            column-gap: var(--md);
+          }
+
+          .gap-x-lg {
+            column-gap: var(--lg);
+          }
+
+          .gap-x-xl {
+            column-gap: var(--xl);
+          }
+
+          .gap-x-xxl {
+            column-gap: var(--xxl);
+          }
+
+          .gap-y-xxs {
+            row-gap: var(--xxs);
+          }
+
+          .gap-y-xs {
+            row-gap: var(--xs);
+          }
+
+          .gap-y-sm {
+            row-gap: var(--sm);
+          }
+
+          .gap-y-md {
+            row-gap: var(--md);
+          }
+
+          .gap-y-lg {
+            row-gap: var(--lg);
+          }
+
+          .gap-y-xl {
+            row-gap: var(--xl);
+          }
+
+          .gap-y-xxl {
+            row-gap: var(--xxl);
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.p-xxs { padding: var(--xxs); }
+.p-xs  { padding: var(--xs); }
+.p-sm  { padding: var(--sm); }
+.p-md  { padding: var(--md); }
+.p-lg  { padding: var(--lg); }
+.p-xl  { padding: var(--xl); }
+.p-xxl { padding: var(--xxl); }</code></pre>
+          <pre><code>.px-xxs { padding-left: var(--xxs); padding-right: var(--xxs); }
+.px-xs  { padding-left: var(--xs);  padding-right: var(--xs);  }
+.px-sm  { padding-left: var(--sm);  padding-right: var(--sm);  }
+.px-md  { padding-left: var(--md);  padding-right: var(--md);  }
+.px-lg  { padding-left: var(--lg);  padding-right: var(--lg);  }
+.px-xl  { padding-left: var(--xl);  padding-right: var(--xl);  }
+.px-xxl { padding-left: var(--xxl); padding-right: var(--xxl); }</code></pre>
+          <pre><code>.py-xxs { padding-top: var(--xxs); padding-bottom: var(--xxs); }
+.py-xs  { padding-top: var(--xs);  padding-bottom: var(--xs);  }
+.py-sm  { padding-top: var(--sm);  padding-bottom: var(--sm);  }
+.py-md  { padding-top: var(--md);  padding-bottom: var(--md);  }
+.py-lg  { padding-top: var(--lg);  padding-bottom: var(--lg);  }
+.py-xl  { padding-top: var(--xl);  padding-bottom: var(--xl);  }
+.py-xxl { padding-top: var(--xxl); padding-bottom: var(--xxl); }</code></pre>
+          <pre><code>.pt-xxs { padding-top: var(--xxs); }
+.pt-xs  { padding-top: var(--xs);  }
+.pt-sm  { padding-top: var(--sm);  }
+.pt-md  { padding-top: var(--md);  }
+.pt-lg  { padding-top: var(--lg);  }
+.pt-xl  { padding-top: var(--xl);  }
+.pt-xxl { padding-top: var(--xxl); }</code></pre>
+          <pre><code>.pr-xxs { padding-right: var(--xxs); }
+.pr-xs  { padding-right: var(--xs);  }
+.pr-sm  { padding-right: var(--sm);  }
+.pr-md  { padding-right: var(--md);  }
+.pr-lg  { padding-right: var(--lg);  }
+.pr-xl  { padding-right: var(--xl);  }
+.pr-xxl { padding-right: var(--xxl); }</code></pre>
+          <pre><code>.pb-xxs { padding-bottom: var(--xxs); }
+.pb-xs  { padding-bottom: var(--xs);  }
+.pb-sm  { padding-bottom: var(--sm);  }
+.pb-md  { padding-bottom: var(--md);  }
+.pb-lg  { padding-bottom: var(--lg);  }
+.pb-xl  { padding-bottom: var(--xl);  }
+.pb-xxl { padding-bottom: var(--xxl); }</code></pre>
+          <pre><code>.pl-xxs { padding-left: var(--xxs); }
+.pl-xs  { padding-left: var(--xs);  }
+.pl-sm  { padding-left: var(--sm);  }
+.pl-md  { padding-left: var(--md);  }
+.pl-lg  { padding-left: var(--lg);  }
+.pl-xl  { padding-left: var(--xl);  }
+.pl-xxl { padding-left: var(--xxl); }
+</code></pre>
+        </div>
+        <h3 class="demo">Margin Utility Classes</h3>
+        <div class="cols">
+          <pre><code>.m-xxs { margin: var(--xxs); }
+.m-xs  { margin: var(--xs); }
+.m-sm  { margin: var(--sm); }
+.m-md  { margin: var(--md); }
+.m-lg  { margin: var(--lg); }
+.m-xl  { margin: var(--xl); }
+.m-xxl { margin: var(--xxl); }</code></pre>
+          <pre><code>.mx-xxs { margin-left: var(--xxs); margin-right: var(--xxs); }
+.mx-xs  { margin-left: var(--xs);  margin-right: var(--xs);  }
+.mx-sm  { margin-left: var(--sm);  margin-right: var(--sm);  }
+.mx-md  { margin-left: var(--md);  margin-right: var(--md);  }
+.mx-lg  { margin-left: var(--lg);  margin-right: var(--lg);  }
+.mx-xl  { margin-left: var(--xl);  margin-right: var(--xl);  }
+.mx-xxl { margin-left: var(--xxl); margin-right: var(--xxl); }</code></pre>
+          <pre><code>.my-xxs { margin-top: var(--xxs); margin-bottom: var(--xxs); }
+.my-xs  { margin-top: var(--xs);  margin-bottom: var(--xs);  }
+.my-sm  { margin-top: var(--sm);  margin-bottom: var(--sm);  }
+.my-md  { margin-top: var(--md);  margin-bottom: var(--md);  }
+.my-lg  { margin-top: var(--lg);  margin-bottom: var(--lg);  }
+.my-xl  { margin-top: var(--xl);  margin-bottom: var(--xl);  }
+.my-xxl { margin-top: var(--xxl); margin-bottom: var(--xxl); }</code></pre>
+          <pre><code>.mt-xxs { margin-top: var(--xxs); }
+.mt-xs  { margin-top: var(--xs);  }
+.mt-sm  { margin-top: var(--sm);  }
+.mt-md  { margin-top: var(--md);  }
+.mt-lg  { margin-top: var(--lg);  }
+.mt-xl  { margin-top: var(--xl);  }
+.mt-xxl { margin-top: var(--xxl); }</code></pre>
+          <pre><code>.mr-xxs { margin-right: var(--xxs); }
+.mr-xs  { margin-right: var(--xs);  }
+.mr-sm  { margin-right: var(--sm);  }
+.mr-md  { margin-right: var(--md);  }
+.mr-lg  { margin-right: var(--lg);  }
+.mr-xl  { margin-right: var(--xl);  }
+.mr-xxl { margin-right: var(--xxl); }</code></pre>
+          <pre><code>.mb-xxs { margin-bottom: var(--xxs); }
+.mb-xs  { margin-bottom: var(--xs);  }
+.mb-sm  { margin-bottom: var(--sm);  }
+.mb-md  { margin-bottom: var(--md);  }
+.mb-lg  { margin-bottom: var(--lg);  }
+.mb-xl  { margin-bottom: var(--xl);  }
+.mb-xxl { margin-bottom: var(--xxl); }</code></pre>
+          <pre><code>.ml-xxs { margin-left: var(--xxs); }
+.ml-xs  { margin-left: var(--xs);  }
+.ml-sm  { margin-left: var(--sm);  }
+.ml-md  { margin-left: var(--md);  }
+.ml-lg  { margin-left: var(--lg);  }
+.ml-xl  { margin-left: var(--xl);  }
+.ml-xxl { margin-left: var(--xxl); }
+</code></pre>
+        </div>
+
+        <h3 class="demo">Gap Utility Classes</h3>
+        <div class="cols">
+          <pre><code>.gap-xxs { gap: var(--xxs); }
+.gap-xs  { gap: var(--xs); }
+.gap-sm  { gap: var(--sm); }
+.gap-md  { gap: var(--md); }
+.gap-lg  { gap: var(--lg); }
+.gap-xl  { gap: var(--xl); }
+.gap-xxl { gap: var(--xxl); }</code></pre>
+          <pre><code>.gap-x-xxs { column-gap: var(--xxs); }
+.gap-x-xs  { column-gap: var(--xs); }
+.gap-x-sm  { column-gap: var(--sm); }
+.gap-x-md  { column-gap: var(--md); }
+.gap-x-lg  { column-gap: var(--lg); }
+.gap-x-xl  { column-gap: var(--xl); }
+.gap-x-xxl { column-gap: var(--xxl); }</code></pre>
+          <pre><code>.gap-y-xxs { row-gap: var(--xxs); }
+.gap-y-xs  { row-gap: var(--xs); }
+.gap-y-sm  { row-gap: var(--sm); }
+.gap-y-md  { row-gap: var(--md); }
+.gap-y-lg  { row-gap: var(--lg); }
+.gap-y-xl  { row-gap: var(--xl); }
+.gap-y-xxl { row-gap: var(--xxl); }
+</code></pre>
+        </div>
+      </section>
+
+      <h2 class="demo" id="typography-system">Typography System</h2>
+
+      <section>
+        <h3 class="demo">Font Size Variables</h3>
+        <style>
+          html {
+            font-size: 16px;
+          }
+
+          @media (max-width: 991px) {
+            html {
+              font-size: 15px;
+            }
+          }
+
+          @media (max-width: 767px) {
+            html {
+              font-size: 14px;
+            }
+          }
+        </style>
+        <div class="cols">
+          <pre><code>/* Desktop */
+  html {font-size: 16px;}
+/* Tablet */
+@media (max-width: 991px) {
+  html {font-size: 15px;}
+}
+/* Mobile */
+@media (max-width: 767px) {
+  html {font-size: 14px;}
+}
+</code></pre>
+        </div>
+        <p class="note">
+          Font sizes use rem, where 1rem equals the root font size (16px by default), so text scales automatically when
+          the base font size changes.
+        </p>
+        <h3 class="demo">Font Sizes Classes</h3>
+        <style>
+          .fs-8px {
+            font-size: 0.5rem;
+          }
+
+          .fs-10px {
+            font-size: 0.625rem;
+          }
+
+          .fs-12px {
+            font-size: 0.75rem;
+          }
+
+          .fs-14px {
+            font-size: 0.875rem;
+          }
+
+          .fs-16px {
+            font-size: 1rem;
+          }
+
+          .fs-18px {
+            font-size: 1.125rem;
+          }
+
+          .fs-20px {
+            font-size: 1.25rem;
+          }
+
+          .fs-22px {
+            font-size: 1.375rem;
+          }
+
+          .fs-24px {
+            font-size: 1.5rem;
+          }
+
+          .fs-26px {
+            font-size: 1.625rem;
+          }
+
+          .fs-28px {
+            font-size: 1.75rem;
+          }
+
+          .fs-30px {
+            font-size: 1.875rem;
+          }
+
+          .fs-32px {
+            font-size: 2rem;
+          }
+
+          .fs-34px {
+            font-size: 2.125rem;
+          }
+
+          .fs-36px {
+            font-size: 2.25rem;
+          }
+
+          .fs-38px {
+            font-size: 2.375rem;
+          }
+
+          .fs-40px {
+            font-size: 2.5rem;
+          }
+
+          .fs-42px {
+            font-size: 2.625rem;
+          }
+
+          .fs-44px {
+            font-size: 2.75rem;
+          }
+
+          .fs-46px {
+            font-size: 2.875rem;
+          }
+
+          .fs-48px {
+            font-size: 3rem;
+          }
+
+          .fs-50px {
+            font-size: 3.125rem;
+          }
+
+          .fs-52px {
+            font-size: 3.25rem;
+          }
+
+          .fs-54px {
+            font-size: 3.375rem;
+          }
+
+          .fs-56px {
+            font-size: 3.5rem;
+          }
+
+          .fs-58px {
+            font-size: 3.625rem;
+          }
+
+          .fs-60px {
+            font-size: 3.75rem;
+          }
+
+          .fs-62px {
+            font-size: 3.875rem;
+          }
+
+          .fs-64px {
+            font-size: 4rem;
+          }
+
+          .fs-66px {
+            font-size: 4.125rem;
+          }
+
+          .fs-68px {
+            font-size: 4.25rem;
+          }
+
+          .fs-70px {
+            font-size: 4.375rem;
+          }
+
+          .fs-72px {
+            font-size: 4.5rem;
+          }
+
+          .fs-74px {
+            font-size: 4.625rem;
+          }
+
+          .fs-76px {
+            font-size: 4.75rem;
+          }
+
+          .fs-78px {
+            font-size: 4.875rem;
+          }
+
+          .fs-80px {
+            font-size: 5rem;
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.fs-8px  { font-size: 0.5rem; }
+.fs-10px { font-size: 0.625rem; }
+.fs-12px { font-size: 0.75rem; }
+.fs-14px { font-size: 0.875rem; }
+.fs-16px { font-size: 1rem; }
+.fs-18px { font-size: 1.125rem; }
+.fs-20px { font-size: 1.25rem; }
+</code></pre>
+          <pre><code>.fs-22px { font-size: 1.375rem; }
+.fs-24px { font-size: 1.5rem; }
+.fs-26px { font-size: 1.625rem; }
+.fs-28px { font-size: 1.75rem; }
+.fs-30px { font-size: 1.875rem; }
+.fs-32px { font-size: 2rem; }
+.fs-34px { font-size: 2.125rem; }
+.fs-36px { font-size: 2.25rem; }
+.fs-38px { font-size: 2.375rem; }
+.fs-40px { font-size: 2.5rem; }
+</code></pre>
+          <pre><code>.fs-42px { font-size: 2.625rem; }
+.fs-44px { font-size: 2.75rem; }
+.fs-46px { font-size: 2.875rem; }
+.fs-48px { font-size: 3rem; }
+.fs-50px { font-size: 3.125rem; }
+.fs-52px { font-size: 3.25rem; }
+.fs-54px { font-size: 3.375rem; }
+.fs-56px { font-size: 3.5rem; }
+.fs-58px { font-size: 3.625rem; }
+.fs-60px { font-size: 3.75rem; }
+</code></pre>
+          <pre><code>.fs-62px { font-size: 3.875rem; }
+.fs-64px { font-size: 4rem; }
+.fs-66px { font-size: 4.125rem; }
+.fs-68px { font-size: 4.25rem; }
+.fs-70px { font-size: 4.375rem; }
+.fs-72px { font-size: 4.5rem; }
+.fs-74px { font-size: 4.625rem; }
+.fs-76px { font-size: 4.75rem; }
+.fs-78px { font-size: 4.875rem; }
+.fs-80px { font-size: 5rem; } 
+</code></pre>
+        </div>
+
+        <h3 class="demo">Font Weight / Line Height Classes</h3>
+        <style>
+          .fw-100 {
+            font-weight: 100;
+          }
+
+          /* Thin */
+          .fw-200 {
+            font-weight: 200;
+          }
+
+          /* Extra Light */
+          .fw-300 {
+            font-weight: 300;
+          }
+
+          /* Light */
+          .fw-400 {
+            font-weight: 400;
+          }
+
+          /* Regular */
+          .fw-500 {
+            font-weight: 500;
+          }
+
+          /* Medium */
+          .fw-600 {
+            font-weight: 600;
+          }
+
+          /* Semi-bold */
+          .fw-700 {
+            font-weight: 700;
+          }
+
+          /* Bold */
+          .fw-800 {
+            font-weight: 800;
+          }
+
+          /* Extra Bold */
+          .fw-900 {
+            font-weight: 900;
+          }
+
+          /* Black */
+
+          .lh-10 {
+            line-height: 1;
+          }
+
+          .lh-11 {
+            line-height: 1.1;
+          }
+
+          .lh-12 {
+            line-height: 1.2;
+          }
+
+          .lh-13 {
+            line-height: 1.3;
+          }
+
+          .lh-14 {
+            line-height: 1.4;
+          }
+
+          .lh-15 {
+            line-height: 1.5;
+          }
+
+          .lh-16 {
+            line-height: 1.6;
+          }
+
+          .lh-17 {
+            line-height: 1.7;
+          }
+
+          .lh-18 {
+            line-height: 1.8;
+          }
+
+          .lh-19 {
+            line-height: 1.9;
+          }
+
+          .lh-20 {
+            line-height: 2;
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>.fw-100 { font-weight: 100; } /* Thin */
+.fw-200 { font-weight: 200; } /* Extra Light */
+.fw-300 { font-weight: 300; } /* Light */
+.fw-400 { font-weight: 400; } /* Regular */
+.fw-500 { font-weight: 500; } /* Medium */
+.fw-600 { font-weight: 600; } /* Semi-bold */
+.fw-700 { font-weight: 700; } /* Bold */
+.fw-800 { font-weight: 800; } /* Extra Bold */
+.fw-900 { font-weight: 900; } /* Black */</code></pre>
+          <pre><code>.lh-10 { line-height: 1; }
+.lh-11 { line-height: 1.1; }
+.lh-12 { line-height: 1.2; }
+.lh-13 { line-height: 1.3; }
+.lh-14 { line-height: 1.4; }
+.lh-15 { line-height: 1.5; }
+.lh-16 { line-height: 1.6; }
+.lh-17 { line-height: 1.7; }
+.lh-18 { line-height: 1.8; }
+.lh-19 { line-height: 1.9; }
+.lh-20 { line-height: 2; }
+</code></pre>
+          <style>
+            .lh-calculator {
+              max-width: 720px;
+              background: #ffffff;
+              border: 1px solid #e5e7eb;
+              border-radius: 16px;
+              padding: 24px;
+              display: flex;
+              flex-direction: column;
+              gap: 20px;
+            }
+
+            .lh-controls {
+              display: flex;
+              gap: 20px;
+              flex-wrap: wrap;
+            }
+
+            .lh-controls label {
+              font-size: 12px;
+              color: #374151;
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+            }
+
+            .lh-controls input {
+              width: 140px;
+              padding: 8px 10px;
+              border-radius: 8px;
+              border: 1px solid #d1d5db;
+              font-size: 14px;
+            }
+
+            .lh-result {
+              font-size: 14px;
+              color: #111827;
+            }
+
+            .lh-preview {
+              background: #f9fafb;
+              border-radius: 12px;
+              padding: 16px;
+              border-left: 4px solid hsl(245, 100%, 68%);
+            }
+          </style>
+
+          <div class="lh-calculator">
+            <div class="lh-controls">
+              <label>
+                Font size (px)
+                <input type="number" id="fontSize" value="16" />
+              </label>
+
+              <label>
+                Line‑height
+                <input type="number" id="lineHeight" step="0.1" value="1.6" />
+              </label>
+            </div>
+
+            <div class="lh-result">
+              Line height =
+              <strong><span id="lhPx">25.6</span>px</strong>
+            </div>
+          </div>
+          <script>
+            const fontSizeInput = document.getElementById('fontSize');
+            const lineHeightInput = document.getElementById('lineHeight');
+            const result = document.getElementById('lhPx');
+            const preview = document.getElementById('preview');
+
+            function updateLineHeight() {
+              const fontSize = parseFloat(fontSizeInput.value) || 0;
+              const lineHeight = parseFloat(lineHeightInput.value) || 0;
+              const pxValue = (fontSize * lineHeight).toFixed(1);
+
+              result.textContent = pxValue;
+              preview.style.fontSize = fontSize + 'px';
+              preview.style.lineHeight = lineHeight;
+            }
+
+            fontSizeInput.addEventListener('input', updateLineHeight);
+            lineHeightInput.addEventListener('input', updateLineHeight);
+
+            updateLineHeight();
+          </script>
+
+        </div>
+        <p class="note">
+          Line-height values like 1.6 mean “1.6 × the font size”, so at 16px text the line height becomes 25.6px,
+          scaling
+          automatically with font size.
+        </p>
+        <style>
+          .type-demo {
+            display: grid;
+            gap: 20px;
+            max-width: 900px;
+          }
+
+          .type-row {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+          }
+
+          .type-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          }
+        </style>
+        <h3 class="demo">Live demo of typography system</h3>
+
+        <div class="type-demo">
+
+          <div class="type-row fs-48px fw-700 lh-12">
+            <div class="type-label">fs-48px · fw-700 · lh-12</div>
+            Display Heading – Large & Tight
+          </div>
+
+          <div class="type-row fs-32px fw-600 lh-13">
+            <div class="type-label">fs-32px · fw-600 · lh-13</div>
+            Section Heading – Balanced
+          </div>
+
+          <div class="type-row fs-20px fw-500 lh-14">
+            <div class="type-label">fs-20px · fw-500 · lh-14</div>
+            Subheading – Compact
+          </div>
+
+          <div class="type-row fs-16px fw-400 lh-16">
+            <div class="type-label">fs-16px · fw-400 · lh-16</div>
+            Body text uses a comfortable line-height for long reading. This paragraph
+            demonstrates how font size and line height work together for readability
+            across screen sizes.
+          </div>
+
+          <div class="type-row fs-12px fw-500 lh-14">
+            <div class="type-label">fs-12px · fw-500 · lh-14</div>
+            Helper / Caption text
+          </div>
+
+        </div>
+
+      </section>
+
+      <h2 class="demo" id="border-radius-system">Border & Radius System</h2>
+
+      <section>
+        <h3 class="demo">Border width & radius tokens</h3>
+
+        <style>
+          :root {
+            --bw-1: 1px;
+            --bw-2: 2px;
+            --bw-3: 3px;
+          }
+
+          [class^="bw-"],
+          [class*=" bw-"],
+          [class^="bt-"],
+          [class*=" bt-"],
+          [class^="br-"],
+          [class*=" br-"],
+          [class^="bb-"],
+          [class*=" bb-"],
+          [class^="bl-"],
+          [class*=" bl-"] {
+            border-width: 0;
+            border-style: solid;
+            border-color: currentColor;
+          }
+
+          :root {
+            --ra-4: 4px;
+            /* Small */
+            --ra-6: 6px;
+            --ra-8: 8px;
+            --ra-10: 10px;
+            /* Medium */
+            --ra-15: 15px;
+            --ra-20: 20px;
+            /* Large */
+            --ra-25: 25px;
+            --ra-30: 30px;
+            --ra-full: 9999px;
+            /* Circular */
+          }
+
+          .bw-1 {
+            border-width: var(--bw-1);
+          }
+
+          .bt-1 {
+            border-top-width: var(--bw-1);
+          }
+
+          .br-1 {
+            border-right-width: var(--bw-1);
+          }
+
+          .bb-1 {
+            border-bottom-width: var(--bw-1);
+          }
+
+          .bl-1 {
+            border-left-width: var(--bw-1);
+          }
+
+          .bw-2 {
+            border-width: var(--bw-2);
+          }
+
+          .bt-2 {
+            border-top-width: var(--bw-2);
+          }
+
+          .br-2 {
+            border-right-width: var(--bw-2);
+          }
+
+          .bb-2 {
+            border-bottom-width: var(--bw-2);
+          }
+
+          .bl-2 {
+            border-left-width: var(--bw-2);
+          }
+
+          .bw-3 {
+            border-width: var(--bw-3);
+          }
+
+          .bt-3 {
+            border-top-width: var(--bw-3);
+          }
+
+          .br-3 {
+            border-right-width: var(--bw-3);
+          }
+
+          .bb-3 {
+            border-bottom-width: var(--bw-3);
+          }
+
+          .bl-3 {
+            border-left-width: var(--bw-3);
+          }
+
+          .ra-4 {
+            border-radius: var(--ra-4);
+          }
+
+          .ra-6 {
+            border-radius: var(--ra-6);
+          }
+
+          .ra-8 {
+            border-radius: var(--ra-8);
+          }
+
+          .ra-10 {
+            border-radius: var(--ra-10);
+          }
+
+          .ra-15 {
+            border-radius: var(--ra-15);
+          }
+
+          .ra-20 {
+            border-radius: var(--ra-20);
+          }
+
+          .ra-25 {
+            border-radius: var(--ra-25);
+          }
+
+          .ra-30 {
+            border-radius: var(--ra-30);
+          }
+
+          .ra-full {
+            border-radius: var(--ra-full);
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>:root {
+  --bw-1: 1px;
+  --bw-2: 2px;
+  --bw-3: 3px;
+}
+
+[class^="bw-"],
+[class*=" bw-"],
+[class^="bt-"],
+[class*=" bt-"],
+[class^="br-"],
+[class*=" br-"],
+[class^="bb-"],
+[class*=" bb-"],
+[class^="bl-"],
+[class*=" bl-"] {
+  border-width: 0;
+  border-style: solid;
+  border-color: currentColor;
+}</code></pre>
+          <code><pre>:root {
+  --ra-4: 4px;   /* Small */
+  --ra-6: 6px;
+  --ra-8: 8px;
+  --ra-10: 10px; /* Medium */
+  --ra-15: 15px;
+  --ra-20: 20px; /* Large */
+  --ra-25: 25px;
+  --ra-30: 30px;
+  --ra-full: 9999px; /* Circular */
+}</code></pre>
+        </div>
+
+        <p class="note">
+          * <b>b*-0</b> provides a no-border option, while <b>b*-1</b>, <b>b*-2</b>, and <b>b*-3</b> offer a simple
+          scale of border thicknesses for consistent use across.<br>
+          * Border widths are defined as <b>1px (thin)</b>, <b>2px (medium)</b>, and <b>3px (thick)</b> tokens to
+          maintain consistent geometry across components.<br>
+          * Border radius tokens provide a curated range from small to large rounding options, plus a full radius for
+          circular elements.<br>
+          * <b>border-width: 0</b> is set by default to ensure that borders only appear when explicitly applied,
+          preventing unintended borders from default styles.<br>
+          * Border style is <b>solid</b> by default and is not exposed as a utility, as alternate styles are
+          intentionally excluded.<br>
+          * Border color is set to <b>currentColor</b>, allowing borders to inherit <b>text color</b> directly from the
+          Color System for clear and flexible styling.
+        </p>
+
+        <h3 class="demo">Border Utility classes</h3>
+        <div class="cols">
+          <pre><code>.bw-1 { border-width: var(--bw-1); }
+.bt-1 { border-top-width: var(--bw-1); }
+.br-1 { border-right-width: var(--bw-1); }
+.bb-1 { border-bottom-width: var(--bw-1); }
+.bl-1 { border-left-width: var(--bw-1); }</code></pre>
+          <pre><code>.bw-2 { border-width: var(--bw-2); }
+.bt-2 { border-top-width: var(--bw-2); }
+.br-2 { border-right-width: var(--bw-2); }
+.bb-2 { border-bottom-width: var(--bw-2); }
+.bl-2 { border-left-width: var(--bw-2); }</code></pre>
+          <pre><code>.bw-3 { border-width: var(--bw-3); }
+.bt-3 { border-top-width: var(--bw-3); }
+.br-3 { border-right-width: var(--bw-3); }
+.bb-3 { border-bottom-width: var(--bw-3); }
+.bl-3 { border-left-width: var(--bw-3); }</code></pre>
+        </div>
+
+        <h3 class="demo">Radius Utility classes</h3>
+        <div class="cols">
+          <pre><code>.ra-4    { border-radius: var(--ra-4); }
+.ra-6    { border-radius: var(--ra-6); }
+.ra-8    { border-radius: var(--ra-8); }
+.ra-10   { border-radius: var(--ra-10); }
+.ra-15   { border-radius: var(--ra-15); }
+.ra-20   { border-radius: var(--ra-20); }
+.ra-25   { border-radius: var(--ra-25); }
+.ra-30   { border-radius: var(--ra-30); }
+.ra-full { border-radius: var(--ra-full); }</code></pre>
+        </div>
+
+        <h3 class="demo">Live demo</h3>
+
+        <style>
+          .border-orientation-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 24px;
+          }
+
+          .border-sample {
+            aspect-ratio: 1 / 1;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            line-height: 1.2;
+            text-align: center;
+            font-weight: 500;
+          }
+        </style>
+
+        <div class="border-orientation-demo bg-gray-80 p-md">
+
+          <div class="border-sample ra-full">
+            ra-full
+          </div>
+
+          <div class="border-sample bl-3 ra-full text-primary">
+            bl-3 <br> ra-full <br> text-primary
+          </div>
+
+          <div class="border-sample bw-2 ra-full text-secondary">
+            bw-2<br>
+            ra-full<br>
+            text-secondary
+          </div>
+
+          <div class="border-sample bl-3 br-3 bb-3 ra-full text-gray-30">
+            br-3 .
+            bb-3 .
+            bl-3<br>
+            ra-full<br>
+            text-gray-30
+          </div>
+
+          <div class="border-sample ra-4">
+            ra-4<br>
+          </div>
+
+          <div class="border-sample bw-1 ra-30">
+            bw-1<br>
+            ra-30
+          </div>
+
+          <div class="border-sample br-2 ra-10 text-primary">
+            br-2<br>
+            ra-10<br>
+            text-primary
+          </div>
+
+          <div class="border-sample bt-1 br-3 bb-2 ra-15 text-secondary">
+            bt-1 .
+            br-3 .
+            bb-2<br>
+            ra-15<br>
+            text-secondary
+          </div>
+
+          <div class="border-sample bl-3 br-3 bb-3 ra-20 text-gray-30">
+            br-3 .
+            bb-3 .
+            bl-3<br>
+            ra-20<br>
+            text-gray-30
+          </div>
+
+          <div class="border-sample bw-3 ra-30 text-gray-40">
+            bw-3<br>
+            ra-30<br>
+            text-gray-40
+          </div>
+
+
+        </div>
+
+
+
+        <p class="note">
+          * Demonstrates common border and radius combinations.&lt;br&gt;
+          * Visual styling is minimal and for documentation clarity only.&lt;br&gt;
+          * In production, borders typically combine with color utilities.&lt;br&gt;
+          * Avoid mixing arbitrary border values outside the defined scale.
+        </p>
+      </section>
+
+      <h2 class="demo" id="max-width-system">Max Width System</h2>
+
+      <section>
+        <h3 class="demo">Max Width engine via class prefix</h3>
+        <style>
+          :root {
+            --mw-base: 100%;
+            --mw-add1: 0px;
+            --mw-add10: 0px;
+          }
+
+          [class^="mw-"],
+          [class*=" mw-"] {
+            max-width: min(calc(var(--mw-base) + var(--mw-add10) + var(--mw-add1)), 100%);
+          }
+        </style>
+        <div class="cols">
+          <pre><code>:root {
+  --mw-base: 100%;
+  --mw-add1: 0px;
+  --mw-add10: 0px;
+}
+
+[class^="mw-"],
+[class*=" mw-"] {
+  max-width: min(calc(var(--mw-base) + var(--mw-add10) + var(--mw-add1)), 100%);
+}
+</code></pre>
+        </div>
+        <p class="note">
+          Max-width utilities use intentional base tokens with optional additive modifiers to support precise,
+          responsive layouts. Any <code>mw-*</code> class activates the system automatically, ensuring elements
+          never overflow smaller viewports.
+        </p>
+        <h3 class="demo">Max Width Utility Classes</h3>
+        <style>
+          .mw-10 {
+            --mw-base: 10px;
+          }
+
+          .mw-20 {
+            --mw-base: 20px;
+          }
+
+          .mw-30 {
+            --mw-base: 30px;
+          }
+
+          .mw-40 {
+            --mw-base: 40px;
+          }
+
+          .mw-50 {
+            --mw-base: 50px;
+          }
+
+          .mw-60 {
+            --mw-base: 60px;
+          }
+
+          .mw-70 {
+            --mw-base: 70px;
+          }
+
+          .mw-80 {
+            --mw-base: 80px;
+          }
+
+          .mw-90 {
+            --mw-base: 90px;
+          }
+
+          .mw-100 {
+            --mw-base: 100px;
+          }
+
+          .mw-200 {
+            --mw-base: 200px;
+          }
+
+          .mw-300 {
+            --mw-base: 300px;
+          }
+
+          .mw-400 {
+            --mw-base: 400px;
+          }
+
+          .mw-500 {
+            --mw-base: 500px;
+          }
+
+          .mw-600 {
+            --mw-base: 600px;
+          }
+
+          .mw-700 {
+            --mw-base: 700px;
+          }
+
+          .mw-800 {
+            --mw-base: 800px;
+          }
+
+          .mw-900 {
+            --mw-base: 900px;
+          }
+
+          .mw-1000 {
+            --mw-base: 1000px;
+          }
+
+          .mw-1100 {
+            --mw-base: 1100px;
+          }
+
+          .mw-1200 {
+            --mw-base: 1200px;
+          }
+
+          .mw-1300 {
+            --mw-base: 1300px;
+          }
+
+          .mw-1400 {
+            --mw-base: 1400px;
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.mw-10 {--mw-base: 10px;}
+.mw-20 {--mw-base: 20px;}
+.mw-30 {--mw-base: 30px;}
+.mw-40 {--mw-base: 40px;}
+.mw-50 {--mw-base: 50px;}
+.mw-60 {--mw-base: 60px;}
+.mw-70 {--mw-base: 70px;}
+.mw-80 {--mw-base: 80px;}
+.mw-90 {--mw-base: 90px;}</code></pre>
+          <pre><code>.mw-100 {--mw-base: 100px;}
+.mw-200 {--mw-base: 200px;}
+.mw-300 {--mw-base: 300px;}
+.mw-400 {--mw-base: 400px;}
+.mw-500 {--mw-base: 500px;}
+.mw-600 {--mw-base: 600px;}
+.mw-700 {--mw-base: 700px;}
+.mw-800 {--mw-base: 800px;}
+.mw-900 {--mw-base: 900px;}</code></pre>
+          <pre><code>.mw-1000 {--mw-base: 1000px;}
+.mw-1100 {--mw-base: 1100px;}
+.mw-1200 {--mw-base: 1200px;}
+.mw-1300 {--mw-base: 1300px;}
+.mw-1400 {--mw-base: 1400px;}</code></pre>
+        </div>
+
+        <h3 class="demo">Max Width Modifiers</h3>
+        <style>
+          .mw-plus-1 {
+            --mw-add1: 1px;
+          }
+
+          .mw-plus-2 {
+            --mw-add1: 2px;
+          }
+
+          .mw-plus-3 {
+            --mw-add1: 3px;
+          }
+
+          .mw-plus-4 {
+            --mw-add1: 4px;
+          }
+
+          .mw-plus-5 {
+            --mw-add1: 5px;
+          }
+
+          .mw-plus-6 {
+            --mw-add1: 6px;
+          }
+
+          .mw-plus-7 {
+            --mw-add1: 7px;
+          }
+
+          .mw-plus-8 {
+            --mw-add1: 8px;
+          }
+
+          .mw-plus-9 {
+            --mw-add1: 9px;
+          }
+
+          .mw-plus-10 {
+            --mw-add10: 10px;
+          }
+
+          .mw-plus-20 {
+            --mw-add10: 20px;
+          }
+
+          .mw-plus-30 {
+            --mw-add10: 30px;
+          }
+
+          .mw-plus-40 {
+            --mw-add10: 40px;
+          }
+
+          .mw-plus-50 {
+            --mw-add10: 50px;
+          }
+
+          .mw-plus-60 {
+            --mw-add10: 60px;
+          }
+
+          .mw-plus-70 {
+            --mw-add10: 70px;
+          }
+
+          .mw-plus-80 {
+            --mw-add10: 80px;
+          }
+
+          .mw-plus-90 {
+            --mw-add10: 90px;
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.mw-plus-1 {--mw-add1: 1px;}
+.mw-plus-2 {--mw-add1: 2px;}
+.mw-plus-3 {--mw-add1: 3px;}
+.mw-plus-4 {--mw-add1: 4px;}
+.mw-plus-5 {--mw-add1: 5px;}
+.mw-plus-6 {--mw-add1: 6px;}
+.mw-plus-7 {--mw-add1: 7px;}
+.mw-plus-8 {--mw-add1: 8px;}
+.mw-plus-9 {--mw-add1: 9px;}</code></pre>
+          <pre><code>.mw-plus-10 {--mw-add10: 10px;}
+.mw-plus-20 {--mw-add10: 20px;}
+.mw-plus-30 {--mw-add10: 30px;}
+.mw-plus-40 {--mw-add10: 40px;}
+.mw-plus-50 {--mw-add10: 50px;}
+.mw-plus-60 {--mw-add10: 60px;}
+.mw-plus-70 {--mw-add10: 70px;}
+.mw-plus-80 {--mw-add10: 80px;}
+.mw-plus-90 {--mw-add10: 90px;}</code></pre>
+        </div>
+
+
+        <style>
+          .mw-demo {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .mw-track {
+            position: relative;
+            padding: 6px;
+            border-radius: 12px;
+            background: linear-gradient(#f9fafb, #f3f4f6);
+            border: 1px solid #e5e7eb;
+          }
+
+          .mw-block {
+            height: 40px;
+            border-radius: 8px 0 0 8px;
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, .7),
+              0 6px 18px rgba(0, 0, 0, .08);
+            background:
+              linear-gradient(to right,
+                hsl(221 83% 50%) 0px,
+                hsl(221 83% 50%) 500px,
+                hsl(142 76% 40%) 500px,
+                hsl(142 76% 40%) 550px,
+                hsl(0 84% 60%) 550px,
+                hsl(0 84% 60%) 555px);
+          }
+
+          .mw-label {
+            margin-top: -29px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #ffffff;
+            position: absolute;
+            margin-left: 20px;
+          }
+
+          .mw-total-555 {
+            color: #262626;
+            font-weight: 500;
+            position: absolute;
+            left: 575px;
+            top: 9px;
+          }
+
+          .mw-total-550 {
+            color: #262626;
+            font-weight: 500;
+            position: absolute;
+            left: 570px;
+            top: 9px;
+          }
+
+          .mw-total-500 {
+            color: #262626;
+            font-weight: 500;
+            position: absolute;
+            left: 520px;
+            top: 9px;
+          }
+
+          .dot {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+          }
+
+          .dot.base {
+            background: hsl(221 83% 50%);
+          }
+
+          .dot.plus {
+            background: hsl(142 76% 40%);
+          }
+
+          .dot.fine {
+            background: hsl(0 84% 60%);
+          }
+        </style>
+
+        <h3 class="demo">Live demo of max‑width system</h3>
+
+        <div class="mw-demo">
+
+          <!-- Base -->
+          <div class="mw-track">
+            <div class="mw-block mw-500"></div>
+            <div class="mw-label">
+              <span class="dot base"></span> mw‑500
+            </div>
+            <span class="mw-total-500">→ max 500px</span>
+          </div>
+
+          <!-- +50 -->
+          <div class="mw-track">
+            <div class="mw-block mw-500 mw-plus-50"></div>
+            <div class="mw-label">
+              <span class="dot base"></span> mw‑500
+              <span class="dot plus"></span> mw‑plus‑50
+            </div>
+            <span class="mw-total-550">→ max 550px</span>
+          </div>
+
+          <!-- +50 +5 -->
+          <div class="mw-track">
+            <div class="mw-block mw-500 mw-plus-50 mw-plus-5"></div>
+            <div class="mw-label">
+              <span class="dot base"></span> mw‑500
+              <span class="dot plus"></span> mw‑plus‑50
+              <span class="dot fine"></span> mw‑plus‑5
+            </div>
+            <span class="mw-total-555">→ max 555px</span>
+          </div>
+
+        </div>
+
+
+        <p class="note">
+          * This content can grow, but stops at <span style="font-weight: 600; color: hsl(221 83% 50%);">500px</span>.
+          <br>
+          * The <span style="font-weight: 600; color: hsl(142 76% 40%);">mw-plus-50</span> modifier adds 50px to the
+          base, which expand up to <span style="font-weight: 600; color: hsl(142 76% 40%);">550px</span>. <br>
+          * Stacking another <span style="font-weight: 600; color: hsl(0 84% 60%);">mw-plus-5</span> adds <span
+            style="font-weight: 600; color: hsl(0 84% 60%);">5px</span> more, so this block can grow up to
+          <span style="font-weight: 600; color: hsl(0 84% 60%);">555px</span>.
+        </p>
+
+      </section>
+
+      <h2 class="demo" id="image-system">Image System</h2>
+
+      <section>
+
+        <!-- ========================================================= -->
+        <!-- ENGINE -->
+        <!-- ========================================================= -->
+        <h3 class="demo">Layered media engine</h3>
+
+        <style>
+          /* Media container */
+          .media-layer {
+            position: relative;
+            overflow: hidden;
+          }
+
+          /* Image behaves like a background, but remains <img> */
+          .img-fill {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          /* Image focus control */
+          .img-pos-center {
+            object-position: center;
+          }
+
+          .img-pos-top {
+            object-position: top;
+          }
+
+          .img-pos-bottom {
+            object-position: bottom;
+          }
+
+          .img-pos-left {
+            object-position: left;
+          }
+
+          .img-pos-right {
+            object-position: right;
+          }
+
+          .img-pos-right-bottom {
+            object-position: right bottom;
+          }
+
+          /* Overlay layer */
+          .media-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+          }
+
+          /* Layer ordering */
+          .layer-media {
+            z-index: 1;
+          }
+
+          .layer-overlay {
+            z-index: 2;
+          }
+
+          .layer-content {
+            position: relative;
+            z-index: 3;
+          }
+        </style>
+
+        <pre><code>
+.media-layer {
+  position: relative;
+  overflow: hidden;
+}
+
+.img-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-pos-right-bottom {
+  object-position: right bottom;
+}
+
+.media-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.layer-media { z-index: 1; }
+.layer-overlay { z-index: 2; }
+.layer-content {
+  position: relative;
+  z-index: 3;
+}
+  </code></pre>
+
+        <p class="note">
+          * Images are treated as layout layers rather than fixed boxes, allowing them to behave like background images
+          while remaining semantic <code>&lt;img&gt;</code> elements.<br>
+          * The image fills its container using <b>object-fit: cover</b> and is clipped by the container using
+          <b>overflow: hidden</b>.<br>
+          * Layering is standardized to prevent z-index conflicts and ensure predictable stacking behavior.
+        </p>
+
+        <!-- ========================================================= -->
+        <!-- UTILITIES -->
+        <!-- ========================================================= -->
+        <h3 class="demo">Utility classes</h3>
+
+        <style>
+          .img-demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+          }
+
+          .img-demo-box {
+            height: 220px;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: flex-end;
+            font-size: 12px;
+          }
+
+          .img-demo-caption {
+            padding: 12px;
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>
+.media-layer
+.img-fill
+.img-pos-center
+.img-pos-right-bottom
+.media-overlay
+.layer-media
+.layer-overlay
+.layer-content
+    </code></pre>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- LIVE DEMO -->
+        <!-- ========================================================= -->
+        <h3 class="demo">Live demo</h3>
+
+        <div class="img-demo-grid">
+
+          <!-- DEMO 1 -->
+          <div class="media-layer img-demo-box ra-20">
+            <img src="https://images.unsplash.com/photo-1503264116251-35a269479413"
+              class="img-fill img-pos-center layer-media" loading="lazy" alt="" />
+
+            <div class="media-overlay layer-overlay"></div>
+
+            <div class="layer-content img-demo-caption">
+              img-fill<br>
+              img-pos-center<br>
+              ra-20
+            </div>
+          </div>
+
+          <!-- DEMO 2 -->
+          <div class="media-layer img-demo-box ra-full">
+            <img src="https://images.unsplash.com/photo-1519608487953-e999c86e7455"
+              class="img-fill img-pos-right-bottom layer-media" loading="lazy" alt="" />
+
+            <div class="media-overlay layer-overlay"></div>
+
+            <div class="layer-content img-demo-caption">
+              img-fill<br>
+              img-pos-right-bottom<br>
+              ra-full
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <h2 class="demo" id="grid-system">Grid System</h2>
+
+      <section>
+        <h3 class="demo">Grid class</h3>
+        <style>
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            grid-auto-rows: minmax(min-content, max-content);
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-rows: minmax(min-content, max-content);
+}</code></pre>
+        </div>
+        <p class="note">
+          The grid does not provide spacing by default.
+          Use spacing utilities (gap-*, padding, margin) explicitly.
+        </p>
+        <h3 class="demo">Grid Column Utility Classes</h3>
+        <style>
+          .dp-1 {
+            grid-column: span 1;
+          }
+
+          .dp-2 {
+            grid-column: span 2;
+          }
+
+          .dp-3 {
+            grid-column: span 3;
+          }
+
+          .dp-4 {
+            grid-column: span 4;
+          }
+
+          .dp-5 {
+            grid-column: span 5;
+          }
+
+          .dp-6 {
+            grid-column: span 6;
+          }
+
+          .dp-7 {
+            grid-column: span 7;
+          }
+
+          .dp-8 {
+            grid-column: span 8;
+          }
+
+          .dp-9 {
+            grid-column: span 9;
+          }
+
+          .dp-10 {
+            grid-column: span 10;
+          }
+
+          .dp-11 {
+            grid-column: span 11;
+          }
+
+          .dp-12 {
+            grid-column: span 12;
+          }
+
+          @media (max-width: 991px) {
+            .tb-1 {
+              grid-column: span 1;
+            }
+
+            .tb-2 {
+              grid-column: span 2;
+            }
+
+            .tb-3 {
+              grid-column: span 3;
+            }
+
+            .tb-4 {
+              grid-column: span 4;
+            }
+
+            .tb-5 {
+              grid-column: span 5;
+            }
+
+            .tb-6 {
+              grid-column: span 6;
+            }
+
+            .tb-7 {
+              grid-column: span 7;
+            }
+
+            .tb-8 {
+              grid-column: span 8;
+            }
+
+            .tb-9 {
+              grid-column: span 9;
+            }
+
+            .tb-10 {
+              grid-column: span 10;
+            }
+
+            .tb-11 {
+              grid-column: span 11;
+            }
+
+            .tb-12 {
+              grid-column: span 12;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mb-1 {
+              grid-column: span 1;
+            }
+
+            .mb-2 {
+              grid-column: span 2;
+            }
+
+            .mb-3 {
+              grid-column: span 3;
+            }
+
+            .mb-4 {
+              grid-column: span 4;
+            }
+
+            .mb-5 {
+              grid-column: span 5;
+            }
+
+            .mb-6 {
+              grid-column: span 6;
+            }
+
+            .mb-7 {
+              grid-column: span 7;
+            }
+
+            .mb-8 {
+              grid-column: span 8;
+            }
+
+            .mb-9 {
+              grid-column: span 9;
+            }
+
+            .mb-10 {
+              grid-column: span 10;
+            }
+
+            .mb-11 {
+              grid-column: span 11;
+            }
+
+            .mb-12 {
+              grid-column: span 12;
+            }
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.dp-1  { grid-column: span 1; }
+.dp-2  { grid-column: span 2; }
+.dp-3  { grid-column: span 3; }
+.dp-4  { grid-column: span 4; }
+.dp-5  { grid-column: span 5; }
+.dp-6  { grid-column: span 6; }
+.dp-7  { grid-column: span 7; }
+.dp-8  { grid-column: span 8; }
+.dp-9  { grid-column: span 9; }
+.dp-10 { grid-column: span 10; }
+.dp-11 { grid-column: span 11; }
+.dp-12 { grid-column: span 12; }</code></pre>
+          <pre><code>@media (max-width: 991px) {
+  .tb-1  { grid-column: span 1; }
+  .tb-2  { grid-column: span 2; }
+  .tb-3  { grid-column: span 3; }
+  .tb-4  { grid-column: span 4; }
+  .tb-5  { grid-column: span 5; }
+  .tb-6  { grid-column: span 6; }
+  .tb-7  { grid-column: span 7; }
+  .tb-8  { grid-column: span 8; }
+  .tb-9  { grid-column: span 9; }
+  .tb-10 { grid-column: span 10; }
+  .tb-11 { grid-column: span 11; }
+  .tb-12 { grid-column: span 12; }
+}</code></pre>
+          <pre><code>@media (max-width: 767px) {
+  .mb-1  { grid-column: span 1; }
+  .mb-2  { grid-column: span 2; }
+  .mb-3  { grid-column: span 3; }
+  .mb-4  { grid-column: span 4; }
+  .mb-5  { grid-column: span 5; }
+  .mb-6  { grid-column: span 6; }
+  .mb-7  { grid-column: span 7; }
+  .mb-8  { grid-column: span 8; }
+  .mb-9  { grid-column: span 9; }
+  .mb-10 { grid-column: span 10; }
+  .mb-11 { grid-column: span 11; }
+  .mb-12 { grid-column: span 12; }
+}</code></pre>
+        </div>
+
+
+        <h3 class="demo">Grid Row Utility Classes</h3>
+
+        <style>
+          .dp-y-1 {
+            grid-row: span 1;
+          }
+
+          .dp-y-2 {
+            grid-row: span 2;
+          }
+
+          .dp-y-3 {
+            grid-row: span 3;
+          }
+
+          .dp-y-4 {
+            grid-row: span 4;
+          }
+
+          .dp-y-5 {
+            grid-row: span 5;
+          }
+
+          .dp-y-6 {
+            grid-row: span 6;
+          }
+
+          .dp-y-7 {
+            grid-row: span 7;
+          }
+
+          .dp-y-8 {
+            grid-row: span 8;
+          }
+
+          .dp-y-9 {
+            grid-row: span 9;
+          }
+
+          .dp-y-10 {
+            grid-row: span 10;
+          }
+
+          .dp-y-11 {
+            grid-row: span 11;
+          }
+
+          .dp-y-12 {
+            grid-row: span 12;
+          }
+
+          @media (max-width: 991px) {
+            .tb-y-1 {
+              grid-row: span 1;
+            }
+
+            .tb-y-2 {
+              grid-row: span 2;
+            }
+
+            .tb-y-3 {
+              grid-row: span 3;
+            }
+
+            .tb-y-4 {
+              grid-row: span 4;
+            }
+
+            .tb-y-5 {
+              grid-row: span 5;
+            }
+
+            .tb-y-6 {
+              grid-row: span 6;
+            }
+
+            .tb-y-7 {
+              grid-row: span 7;
+            }
+
+            .tb-y-8 {
+              grid-row: span 8;
+            }
+
+            .tb-y-9 {
+              grid-row: span 9;
+            }
+
+            .tb-y-10 {
+              grid-row: span 10;
+            }
+
+            .tb-y-11 {
+              grid-row: span 11;
+            }
+
+            .tb-y-12 {
+              grid-row: span 12;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mb-y-1 {
+              grid-row: span 1;
+            }
+
+            .mb-y-2 {
+              grid-row: span 2;
+            }
+
+            .mb-y-3 {
+              grid-row: span 3;
+            }
+
+            .mb-y-4 {
+              grid-row: span 4;
+            }
+
+            .mb-y-5 {
+              grid-row: span 5;
+            }
+
+            .mb-y-6 {
+              grid-row: span 6;
+            }
+
+            .mb-y-7 {
+              grid-row: span 7;
+            }
+
+            .mb-y-8 {
+              grid-row: span 8;
+            }
+
+            .mb-y-9 {
+              grid-row: span 9;
+            }
+
+            .mb-y-10 {
+              grid-row: span 10;
+            }
+
+            .mb-y-11 {
+              grid-row: span 11;
+            }
+
+            .mb-y-12 {
+              grid-row: span 12;
+            }
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>.dp-y-1  { grid-row: span 1; }
+.dp-y-2  { grid-row: span 2; }
+.dp-y-3  { grid-row: span 3; }
+.dp-y-4  { grid-row: span 4; }
+.dp-y-5  { grid-row: span 5; }
+.dp-y-6  { grid-row: span 6; }
+.dp-y-7  { grid-row: span 7; }
+.dp-y-8  { grid-row: span 8; }
+.dp-y-9  { grid-row: span 9; }
+.dp-y-10 { grid-row: span 10; }
+.dp-y-11 { grid-row: span 11; }
+.dp-y-12 { grid-row: span 12; }</code></pre>
+          <pre><code>@media (max-width: 991px) {
+  .tb-y-1  { grid-row: span 1; }
+  .tb-y-2  { grid-row: span 2; }
+  .tb-y-3  { grid-row: span 3; }
+  .tb-y-4  { grid-row: span 4; }
+  .tb-y-5  { grid-row: span 5; }
+  .tb-y-6  { grid-row: span 6; }
+  .tb-y-7  { grid-row: span 7; }
+  .tb-y-8  { grid-row: span 8; }
+  .tb-y-9  { grid-row: span 9; }
+  .tb-y-10 { grid-row: span 10; }
+  .tb-y-11 { grid-row: span 11; }
+  .tb-y-12 { grid-row: span 12; }
+}</code></pre>
+          <pre><code>@media (max-width: 767px) {
+  .mb-y-1  { grid-row: span 1; }
+  .mb-y-2  { grid-row: span 2; }
+  .mb-y-3  { grid-row: span 3; }
+  .mb-y-4  { grid-row: span 4; }
+  .mb-y-5  { grid-row: span 5; }
+  .mb-y-6  { grid-row: span 6; }
+  .mb-y-7  { grid-row: span 7; }
+  .mb-y-8  { grid-row: span 8; }
+  .mb-y-9  { grid-row: span 9; }
+  .mb-y-10 { grid-row: span 10; }
+  .mb-y-11 { grid-row: span 11; }
+  .mb-y-12 { grid-row: span 12; }
+}</code></pre>
+        </div>
+
+
+        <h3 class="demo">Live Responsive Demo with it's static dp / tb / mb demos</h3>
+        <style>
+          .demo-preview {
+            background:
+              linear-gradient(180deg, #fafafa, #f3f4f6);
+            padding: var(--sm);
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            gap: var(--xs);
+
+            /* subtle elevation */
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, .6),
+              0 8px 24px rgba(0, 0, 0, .04);
+          }
+
+          .demo-preview-header mb-xs {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: .01em;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .demo-preview-header mb-xs::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: hsl(221 83% 50%);
+            box-shadow: 0 0 0 4px hsl(221 83% 50% / .15);
+          }
+
+          .demo-preview-hint {
+            font-size: 12px;
+            color: #6b7280;
+          }
+
+          .demo-item {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: var(--xxs) var(--xs);
+            font-size: 12px;
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, .8),
+              0 2px 6px rgba(0, 0, 0, .04);
+          }
+
+          .demo-item b {
+            font-size: 13px;
+          }
+
+          .demo-item.primary {
+            background: hsl(221 83% 50% / 0.10);
+            border-color: hsl(221 83% 50% / 0.25);
+          }
+
+          .demo-item.secondary {
+            background: hsl(142 76% 40% / 0.10);
+            border-color: hsl(142 76% 40% / 0.25);
+          }
+
+          .demo-item.accent {
+            background: hsl(271 76% 40% / 0.10);
+            border-color: hsl(271 76% 40% / 0.25);
+          }
+
+          .demo-code pre {
+            margin: 0;
+            border-radius: 14px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+          }
+        </style>
+        <div class="demo-preview">
+          <pre><code>&lt;div class="grid gap-xs"&gt;
+  &lt;div class="dp-2 tb-3"&gt;&lt;/div&gt;
+  &lt;div class="dp-2 tb-3"&gt;&lt;/div&gt;
+  &lt;div class="dp-2 mb-12"&gt;&lt;/div&gt;
+
+  &lt;div class="dp-3 tb-6 mb-8"&gt;&lt;/div&gt;
+  &lt;div class="dp-3 tb-6 mb-12"&gt;&lt;/div&gt;
+  
+  &lt;div class="dp-8"&gt;&lt;/div&gt;
+  &lt;div class="dp-4"&gt;&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="grid gap-sm">
+
+            <div class="demo-preview dp-12">
+              <div class="demo-preview-header mb-xs">
+                desktop (dp-*)
+              </div>
+              <div class="grid gap-xs">
+                <div class="demo-item primary dp-2 tb-3 dp-y-2 tb-y-3"><b>dp-2</b> tb-3 <br> <b>dp-y-2</b> tb-y-3</div>
+                <div class="demo-item primary dp-2 tb-3 dp-y-2 tb-y-1"><b>dp-2</b> tb-3 <br> <b>dp-y-2</b> tb-y-1</div>
+                <div class="demo-item primary dp-2 tb-3 mb-6 dp-y-2 tb-y-1"><b>dp-2</b> tb-3 mb-6 <br> <b>dp-y-2</b>
+                  tb-y-1</div>
+                <div class="demo-item secondary dp-3 mb-9 tb-y-3"><b>dp-3</b> mb-9 <br> tb-y-3 mb-y-2</div>
+                <div class="demo-item secondary dp-3 mb-12 tb-y-2"><b>dp-3</b> mb-12 <br> tb-y-2</div>
+                <div class="demo-item primary dp-2 mb-12"><b>dp-2</b> mb-12</div>
+                <div class="demo-item secondary dp-1"><b>dp-1</b> mb-6</div>
+                <div class="demo-item primary dp-2 mb-12"><b>dp-2</b> mb-12</div>
+                <div class="demo-item secondary dp-1"><b>dp-1</b> mb-6</div>
+                <div class="demo-item accent dp-8"><b>dp-8</b></div>
+                <div class="demo-item accent dp-4"><b>dp-4</b></div>
+              </div>
+            </div>
+
+            <div class="demo-preview dp-8">
+              <div class="demo-preview-header mb-xs">
+                tablet (tb-*)
+              </div>
+              <div class="grid gap-xs">
+                <div class="demo-item primary dp-3 dp-y-3">dp-2 <b>tb-3</b> <br> dp-y-2 <b>tb-y-3</b></div>
+                <div class="demo-item primary dp-3 dp-y-1">dp-2 <b>tb-3</b> <br> dp-y-2 <b>tb-y-1</b></div>
+                <div class="demo-item primary dp-3 mb-6 dp-y-1">dp-2 <b>tb-3</b> mb-6 <br> dp-y-2 <b>tb-y-1</b></div>
+                <div class="demo-item secondary dp-3 mb-9 dp-y-3"><b>dp-3</b> mb-9 <br> <b>tb-y-3</b> mb-y-2</div>
+                <div class="demo-item secondary dp-3 mb-12 dp-y-2"><b>dp-3</b> mb-12 <br> <b>tb-y-2</b></div>
+                <div class="demo-item primary dp-2 mb-12"><b>dp-2</b> mb-12</div>
+                <div class="demo-item secondary dp-1"><b>dp-1</b> mb-6</div>
+                <div class="demo-item primary dp-2 mb-12"><b>dp-2</b> mb-12</div>
+                <div class="demo-item secondary dp-1"><b>dp-1</b> mb-6</div>
+                <div class="demo-item accent dp-8"><b>dp-8</b></div>
+                <div class="demo-item accent dp-4"><b>dp-4</b></div>
+              </div>
+            </div>
+
+            <div class="demo-preview dp-4">
+              <div class="demo-preview-header mb-xs">
+                mobile (mb-*)
+              </div>
+              <div class="grid gap-xs">
+                <div class="demo-item primary dp-3 dp-y-3">dp-2 <b>tb-3</b> <br> dp-y-2 <b>tb-y-3</b></div>
+                <div class="demo-item primary dp-3 dp-y-1">dp-2 <b>tb-3</b> <br> dp-y-2 <b>tb-y-1</b></div>
+                <div class="demo-item primary dp-6 dp-y-1">dp-2 tb-3 <b>mb-6</b> <br> dp-y-2 <b>tb-y-1</b></div>
+                <div class="demo-item secondary dp-9 dp-y-2">dp-3 <b>mb-9</b> <br> tb-y-3 <b>mb-y-2</b></div>
+                <div class="demo-item secondary dp-12 dp-y-2">dp-3 <b>mb-12</b> <br> <b>tb-y-2</b></div>
+                <div class="demo-item primary dp-12">dp-2 <b>mb-12</b></div>
+                <div class="demo-item secondary dp-6">dp-1 <b>mb-6</b></div>
+                <div class="demo-item primary dp-12">dp-2 <b>mb-12</b></div>
+                <div class="demo-item secondary dp-6">dp-1 <b>mb-6</b></div>
+                <div class="demo-item accent dp-8"><b>dp-8</b></div>
+                <div class="demo-item accent dp-4"><b>dp-4</b></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <style>
+          /* Demo visuals only */
+          .grid-tile {
+            width: 200px;
+            height: 200px;
+            padding: 14px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            gap: 10px;
+            align-content: space-between
+          }
+
+          .cell {
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+          }
+
+          .grid-atlas {
+            gap: 30px;
+            padding: 28px;
+            background: #fafafa;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+          }
+
+          .demo-max-5px {
+            height: 5px;
+          }
+        </style>
+
+        <div class="grid grid-atlas">
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+            <div class="cell dp-1 dp-y-1 demo-max-5px"></div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+            <div class="cell dp-2 dp-y-2">2</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+            <div class="cell dp-3 dp-y-3">3 / 3</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-12">12 / 12</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-3">12 / 3</div>
+            <div class="cell dp-4 dp-y-9">4 / 9</div>
+            <div class="cell dp-4 dp-y-9">4 / 9</div>
+            <div class="cell dp-4 dp-y-9">4 / 9</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-3 dp-y-12">3 / 12</div>
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+            <div class="cell dp-3 dp-y-12">3 / 12</div>
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-4 dp-y-9">4 / 9</div>
+            <div class="cell dp-4 dp-y-9">4 / 9</div>
+            <div class="cell dp-4 dp-y-9">4 / 9</div>
+            <div class="cell dp-12 dp-y-3">12 / 3</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-8">12 / 8</div>
+            <div class="cell dp-12 dp-y-4">12 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-3 dp-y-12">3 / 12</div>
+            <div class="cell dp-9 dp-y-8">9 / 8</div>
+            <div class="cell dp-9 dp-y-4">9 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-3">12 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-3">12 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+            <div class="cell dp-4 dp-y-3">4 / 3</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-4">12 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+            <div class="cell dp-6 dp-y-4">6 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-6 dp-y-12">6 / 12</div>
+            <div class="cell dp-3 dp-y-6">3 / 6</div>
+            <div class="cell dp-3 dp-y-6">3 / 6</div>
+            <div class="cell dp-3 dp-y-6">3 / 6</div>
+            <div class="cell dp-3 dp-y-6">3 / 6</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-12 dp-y-3">12 / 3</div>
+            <div class="cell dp-12 dp-y-3">12 / 3</div>
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-9 dp-y-8">9 / 8</div>
+            <div class="cell dp-3 dp-y-4">3 / 4</div>
+            <div class="cell dp-3 dp-y-4">3 / 4</div>
+            <div class="cell dp-12 dp-y-4">12 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-8 dp-y-12">8 / 12</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+            <div class="cell dp-4 dp-y-4">4 / 4</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-4 dp-y-12">4 / 12</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+            <div class="cell dp-4 dp-y-6">4 / 6</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-6 dp-y-12">6 / 12</div>
+            <div class="cell dp-6 dp-y-6">6 / 6</div>
+            <div class="cell dp-3 dp-y-6">3 / 6</div>
+            <div class="cell dp-3 dp-y-6">3 / 6</div>
+          </div>
+
+          <div class="dp-2 grid grid-tile">
+            <div class="cell dp-2 dp-y-6">2 / 6</div>
+            <div class="cell dp-5 dp-y-4">5 / 4</div>
+            <div class="cell dp-5 dp-y-4">5 / 4</div>
+            <div class="cell dp-3 dp-y-4">3 / 4</div>
+            <div class="cell dp-5 dp-y-4">5 / 4</div>
+            <div class="cell dp-2 dp-y-8">2 / 8</div>
+            <div class="cell dp-2 dp-y-6">2 / 6</div>
+            <div class="cell dp-5 dp-y-4">5 / 4</div>
+            <div class="cell dp-3 dp-y-4">3 / 4</div>
+          </div>
+
+        </div>
+
+
+
+
+      </section>
+
+      <h2 class="demo" id="flex-system">Flex System</h2>
+
+      <section>
+
+        <style>
+          /* ---------- Demo visuals only ---------- */
+          .flex-ref {
+            font-family: system-ui, sans-serif;
+            background: #fafafa;
+            padding: 28px;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            max-width: 100%;
+          }
+
+          .ref-section {
+            margin-bottom: 36px;
+          }
+
+          .ref-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 14px;
+          }
+
+          .ref-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+          }
+
+          .ref-grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+          }
+
+          .ref-box {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 14px;
+          }
+
+          .ref-label {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+          }
+
+          .ref-items {
+            gap: 10px;
+            height: 200px;
+            width: 200px;
+          }
+
+          .item {
+            background: #ef4444;
+            border-radius: 6px;
+            width: 20px;
+          }
+
+          .item.small {
+            height: 13px;
+          }
+
+          .item.mid {
+            height: 25px;
+          }
+
+          .item.tall {
+            height: 50px;
+          }
+
+          .item-y {
+            background: #ef4444;
+            border-radius: 6px;
+            height: 20px;
+          }
+
+          .item-y.small {
+            width: 13px;
+          }
+
+          .item-y.mid {
+            width: 25px;
+          }
+
+          .item-y.tall {
+            width: 50px;
+          }
+
+          .text-item {
+            font-family: system-ui, sans-serif;
+            color: #ef4444;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-weight: 600;
+          }
+
+          .text-item.small {
+            font-size: 8px;
+          }
+
+          .text-item.mid {
+            font-size: 14px;
+          }
+
+          .text-item.tall {
+            font-size: 30px;
+          }
+        </style>
+
+        <h3 class="demo">Flex Engine</h3>
+
+        <style>
+          [class^="flex-"],
+          [class*=" flex-"] {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+          }
+
+          .flex-x {
+            flex-direction: row;
+          }
+
+          .flex-y {
+            flex-direction: column;
+          }
+        </style>
+
+        <div class="cols">
+          <pre><code>[class^="flex-"],
+[class*=" flex-"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.no-wrap {flex-wrap: nowrap;}
+.fill {flex: 1;}</code></pre>
+        </div>
+
+        <p class="note">
+          * Elements with <code>flex-*</code> classes automatically become flex containers.<br>
+          * Flex layouts wrap by default and align items to the start.<br>
+          * no-wrap and fill utilities provide additional control over wrapping and item growth within flex containers.
+        </p>
+
+        <h3 class="demo">Flex Direction Utility Classes</h3>
+        <style>
+          .no-wrap {
+            flex-wrap: nowrap;
+          }
+
+          .fill {
+            flex: 1;
+          }
+
+          @media (max-width: 991px) {
+            .tb-x {
+              flex-direction: row;
+            }
+
+            .tb-y {
+              flex-direction: column;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mb-x {
+              flex-direction: row;
+            }
+
+            .mb-y {
+              flex-direction: column;
+            }
+          }
+        </style>
+        <div class="cols">
+          <pre><code>.flex-x {flex-direction: row;}
+.flex-y {flex-direction: column;}
+
+@media (max-width: 991px) {
+  .tb-x { flex-direction: row; }
+  .tb-y { flex-direction: column; }
+}
+
+@media (max-width: 767px) {
+  .mb-x { flex-direction: row; }
+  .mb-y { flex-direction: column; }
+}</code></pre>
+        </div>
+        <p class="note">
+          * Flex direction defines the primary flow of items along the x‑axis or y‑axis.<br>
+          * <code>flex-x</code> creates a row layout and <code>flex-y</code> creates a column layout.<br>
+          * Responsive variants (<code>tb-*</code>, <code>mb-*</code>) override direction on smaller screens.
+        </p>
+        <div class="flex-ref">
+
+
+          <div class="ref-section">
+            <div class="ref-title">Flex Direction</div>
+            <div class="ref-grid">
+
+              <div>
+                <div class="ref-box flex-x ref-items">
+                  <div class="item mid"></div>
+                  <div class="item tall"></div>
+                  <div class="item small"></div>
+                </div>
+                <div class="ref-label">flex-x</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y small"></div>
+                </div>
+                <div class="ref-label">flex-y</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <style>
+          .dp-left {
+            align-items: flex-start;
+          }
+
+          .dp-center {
+            align-items: center;
+          }
+
+          .dp-yight {
+            align-items: flex-end;
+          }
+
+          .dp-stretch {
+            align-items: stretch;
+          }
+
+          .dp-baseline {
+            align-items: baseline;
+          }
+
+          @media (max-width: 991px) {
+            .tb-left {
+              align-items: flex-start;
+            }
+
+            .tb-center {
+              align-items: center;
+            }
+
+            .tb-yight {
+              align-items: flex-end;
+            }
+
+            .tb-stretch {
+              align-items: stretch;
+            }
+
+            .tb-baseline {
+              align-items: baseline;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mb-left {
+              align-items: flex-start;
+            }
+
+            .mb-center {
+              align-items: center;
+            }
+
+            .mb-yight {
+              align-items: flex-end;
+            }
+
+            .mb-stretch {
+              align-items: stretch;
+            }
+
+            .mb-baseline {
+              align-items: baseline;
+            }
+          }
+
+          .dp-top {
+            justify-content: flex-start;
+          }
+
+          .dp-middle {
+            justify-content: center;
+          }
+
+          .dp-bottom {
+            justify-content: flex-end;
+          }
+
+          .dp-spread {
+            justify-content: space-between;
+          }
+
+          .dp-around {
+            justify-content: space-around;
+          }
+
+          .dp-even {
+            justify-content: space-evenly;
+          }
+
+          @media (max-width: 991px) {
+            .tb-top {
+              justify-content: flex-start;
+            }
+
+            .tb-middle {
+              justify-content: center;
+            }
+
+            .tb-bottom {
+              justify-content: flex-end;
+            }
+
+            .tb-spread {
+              justify-content: space-between;
+            }
+
+            .tb-around {
+              justify-content: space-around;
+            }
+
+            .tb-even {
+              justify-content: space-evenly;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mb-top {
+              justify-content: flex-start;
+            }
+
+            .mb-middle {
+              justify-content: center;
+            }
+
+            .mb-bottom {
+              justify-content: flex-end;
+            }
+
+            .mb-spread {
+              justify-content: space-between;
+            }
+
+            .mb-around {
+              justify-content: space-around;
+            }
+
+            .mb-even {
+              justify-content: space-evenly;
+            }
+          }
+
+          .dp-lines-top {
+            align-content: flex-start;
+          }
+
+          .dp-lines-middle {
+            align-content: center;
+          }
+
+          .dp-lines-bottom {
+            align-content: flex-end;
+          }
+
+          .dp-lines-spread {
+            align-content: space-between;
+          }
+
+          .dp-lines-around {
+            align-content: space-around;
+          }
+
+          .dp-lines-even {
+            align-content: space-evenly;
+          }
+
+          @media (max-width: 991px) {
+            .tb-lines-top {
+              align-content: flex-start;
+            }
+
+            .tb-lines-middle {
+              align-content: center;
+            }
+
+            .tb-lines-bottom {
+              align-content: flex-end;
+            }
+
+            .tb-lines-spread {
+              align-content: space-between;
+            }
+
+            .tb-lines-around {
+              align-content: space-around;
+            }
+
+            .tb-lines-even {
+              align-content: space-evenly;
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mb-lines-top {
+              align-content: flex-start;
+            }
+
+            .mb-lines-middle {
+              align-content: center;
+            }
+
+            .mb-lines-bottom {
+              align-content: flex-end;
+            }
+
+            .mb-lines-spread {
+              align-content: space-between;
+            }
+
+            .mb-lines-around {
+              align-content: space-around;
+            }
+
+            .mb-lines-even {
+              align-content: space-evenly;
+            }
+          }
+        </style>
+        <h3 class="demo">Flex x-axis/align-items Utility Classes</h3>
+        <div class="cols">
+          <pre><code>.dp-left     { align-items: flex-start; }
+.dp-center   { align-items: center; }
+.dp-yight    { align-items: flex-end; }
+.dp-stretch  { align-items: stretch; }
+.dp-baseline { align-items: baseline; }</code></pre>
+          <pre><code>@media (max-width: 991px) {
+  .tb-left     { align-items: flex-start; }
+  .tb-center   { align-items: center; }
+  .tb-yight    { align-items: flex-end; }
+  .tb-stretch  { align-items: stretch; }
+  .tb-baseline { align-items: baseline; }
+}</code></pre>
+          <pre><code>@media (max-width: 767px) {
+  .mb-left     { align-items: flex-start; }
+  .mb-center   { align-items: center; }
+  .mb-yight    { align-items: flex-end; }
+  .mb-stretch  { align-items: stretch; }
+  .mb-baseline { align-items: baseline; }
+}</code></pre>
+        </div>
+        <p class="note">
+          * Align‑items controls how items align along the cross axis.<br>
+          * In <code>flex-x</code>, this aligns items vertically.<br>
+          * In <code>flex-y</code>, this aligns items horizontally.<br>
+          * Stretch makes items fill the container along the cross axis.
+          * Baseline aligns text baselines for a cohesive look.
+        </p>
+        <div class="flex-ref">
+
+          <div class="ref-section">
+
+            <div class="ref-title">Align Items flex-x</div>
+
+            <div class="ref-grid-5">
+
+              <div>
+                <div class="ref-box flex-x dp-left ref-items">
+                  <div class="item tall"></div>
+                  <div class="item mid"></div>
+                  <div class="item small"></div>
+                </div>
+                <div class="ref-label">dp-left</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-center ref-items">
+                  <div class="item tall"></div>
+                  <div class="item mid"></div>
+                  <div class="item small"></div>
+                </div>
+                <div class="ref-label">dp-center</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-right ref-items">
+                  <div class="item tall"></div>
+                  <div class="item mid"></div>
+                  <div class="item small"></div>
+                </div>
+                <div class="ref-label">dp-right</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-stretch ref-items">
+                  <div class="item"></div>
+                  <div class="item"></div>
+                  <div class="item"></div>
+                </div>
+                <div class="ref-label">dp-stretch</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-baseline ref-items">
+                  <span class="text-item tall">Aa</span>
+                  <span class="text-item mid">Aa</span>
+                  <span class="text-item small">Aa</span>
+                </div>
+                <div class="ref-label">dp-baseline</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ref-section">
+
+            <div class="ref-title">Align Items flex-y</div>
+            <div class="ref-grid-5">
+
+              <div>
+                <div class="ref-box flex-y dp-left ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y small"></div>
+                </div>
+                <div class="ref-label">dp-left</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-center ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y small"></div>
+                </div>
+                <div class="ref-label">dp-center</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-right ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y small"></div>
+                </div>
+                <div class="ref-label">dp-right</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-stretch ref-items">
+                  <div class="item-y"></div>
+                  <div class="item-y"></div>
+                  <div class="item-y"></div>
+                </div>
+                <div class="ref-label">dp-stretch</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-baseline ref-items">
+                  <span class="text-item tall">Aa</span>
+                  <span class="text-item mid">Aa</span>
+                  <span class="text-item small">Aa</span>
+                </div>
+                <div class="ref-label">dp-baseline</div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <h3 class="demo">Flex y-axis/justify-content Utility Classes</h3>
+        <div class="cols">
+          <pre><code>.dp-top    { justify-content: flex-start; }
+.dp-middle { justify-content: center; }
+.dp-bottom { justify-content: flex-end; }
+.dp-spread { justify-content: space-between; }
+.dp-around { justify-content: space-around; }
+.dp-even   { justify-content: space-evenly; }</code></pre>
+          <pre><code>@media (max-width: 991px) {
+  .tb-top    { justify-content: flex-start; }
+  .tb-middle { justify-content: center; }
+  .tb-bottom { justify-content: flex-end; }
+  .tb-spread { justify-content: space-between; }
+  .tb-around { justify-content: space-around; }
+  .tb-even   { justify-content: space-evenly; }
+}</code></pre>
+          <pre><code>@media (max-width: 767px) {
+  .mb-top    { justify-content: flex-start; }
+  .mb-middle { justify-content: center; }
+  .mb-bottom { justify-content: flex-end; }
+  .mb-spread { justify-content: space-between; }
+  .mb-around { justify-content: space-around; }
+  .mb-even   { justify-content: space-evenly; }
+}</code></pre>
+        </div>
+        <p class="note">
+          * Justify‑content controls positioning and spacing along the main axis.<br>
+          * top aligns items to the start, middle centers them, and bottom aligns to the end.<br>
+          * spread distributes space between items, around places space around items, and even distributes space
+          evenly.<br>
+          * Avoid combining positional alignment and space distribution at the same breakpoint.
+        </p>
+        <div class="flex-ref">
+
+          <div class="ref-section">
+
+            <div class="ref-title">Justify Content flex-x</div>
+            <div class="ref-grid">
+
+              <div>
+                <div class="ref-box flex-x dp-top ref-items">
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                </div>
+                <div class="ref-label">dp-top</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-middle ref-items">
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                </div>
+                <div class="ref-label">dp-middle</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-bottom ref-items">
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                </div>
+                <div class="ref-label">dp-bottom</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-spread ref-items">
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                </div>
+                <div class="ref-label">dp-spread</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-around ref-items">
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                </div>
+                <div class="ref-label">dp-around</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-even ref-items">
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                  <div class="item tall"></div>
+                </div>
+                <div class="ref-label">dp-even</div>
+              </div>
+
+            </div>
+          </div>
+          <div class="ref-section">
+
+            <div class="ref-title">Justify Content flex-y</div>
+            <div class="ref-grid">
+
+              <div>
+                <div class="ref-box flex-y dp-top ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                </div>
+                <div class="ref-label">dp-top</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-middle ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                </div>
+                <div class="ref-label">dp-middle</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-bottom ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                </div>
+                <div class="ref-label">dp-bottom</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-spread ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                </div>
+                <div class="ref-label">dp-spread</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-around ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                </div>
+                <div class="ref-label">dp-around</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-even ref-items">
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                  <div class="item-y tall"></div>
+                </div>
+                <div class="ref-label">dp-even</div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+
+
+        <h3 class="demo">Flex align-content Utility Classes</h3>
+        <div class="cols">
+          <pre><code>.dp-lines-top    { align-content: flex-start; }
+.dp-lines-middle { align-content: center; }
+.dp-lines-bottom { align-content: flex-end; }
+.dp-lines-spread { align-content: space-between; }
+.dp-lines-around { align-content: space-around; }
+.dp-lines-even   { align-content: space-evenly; }</code></pre>
+          <pre><code>@media (max-width: 991px) {
+  .tb-lines-top    { align-content: flex-start; }
+  .tb-lines-middle { align-content: center; }
+  .tb-lines-bottom { align-content: flex-end; }
+  .tb-lines-spread { align-content: space-between; }
+  .tb-lines-around { align-content: space-around; }
+  .tb-lines-even   { align-content: space-evenly; }
+}</code></pre>
+          <pre><code>@media (max-width: 767px) {
+  .mb-lines-top    { align-content: flex-start; }
+  .mb-lines-middle { align-content: center; }
+  .mb-lines-bottom { align-content: flex-end; }
+  .mb-lines-spread { align-content: space-between; }
+  .mb-lines-around { align-content: space-around; }
+  .mb-lines-even   { align-content: space-evenly; }
+}</code></pre>
+        </div>
+        <p class="note">
+          * Align‑content controls how multiple flex lines are positioned when items wrap.<br>
+          * This property applies only to wrapped layouts with more than one line.<br>
+          * Align‑content has no effect on single‑line flex layouts. <br>
+          * Use align‑content to control vertical spacing of rows in <code>flex-x</code> or horizontal spacing of
+          columns in <code>flex-y</code>. <br>
+          * Avoid using align‑content with align‑items to prevent conflicting alignment rules.
+        </p>
+        <div class="flex-ref">
+
+          <div class="ref-section">
+            <div class="ref-title">Align Content flex-x</div>
+            <div class="ref-grid">
+
+              <div>
+                <div class="ref-box flex-x dp-lines-top ref-items">
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-top</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-lines-middle ref-items">
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-middle</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-lines-bottom ref-items">
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-bottom</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-lines-spread ref-items">
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-spread</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-lines-around ref-items">
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-around</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-x dp-lines-even ref-items">
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                  <div class="item mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-even</div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="ref-section">
+            <div class="ref-title">Align Content flex-y</div>
+            <div class="ref-grid">
+
+              <div>
+                <div class="ref-box flex-y dp-lines-top ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-top</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-lines-middle ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-middle</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-lines-bottom ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-bottom</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-lines-spread ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-spread</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-lines-around ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-around</div>
+              </div>
+
+              <div>
+                <div class="ref-box flex-y dp-lines-even ref-items">
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                  <div class="item-y mid"></div>
+                </div>
+                <div class="ref-label">dp-lines-even</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <h2 class="demo" id="toggle-popup">Popup Interaction · Toggle</h2>
+
+      <section>
+
+        <div class="cols">
+          <pre><code>.popup-btn {
+  padding: 12px 18px;
+  font-size: 14px;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}</code></pre>
+        </div>
+
+        <h3 class="demo">CSS‑only popup using &lt;dialog&gt;</h3>
+
+        <style>
+          dialog {
+            border: none;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 420px;
+            width: 90%;
+            margin: auto;
+          }
+
+          dialog::backdrop {
+            background: rgba(0, 0, 0, 0.5);
+          }
+
+          .dialog-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+          }
+
+          .popup-btn {
+            padding: 12px 18px;
+            font-size: 14px;
+            border-radius: 6px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+          }
+        </style>
+
+        <button class="popup-btn" onclick="popupDialog.showModal()">
+          Open &lt;dialog&gt; popup
+        </button>
+
+        <dialog id="popupDialog">
+          <button class="dialog-close" onclick="popupDialog.close()">
+            ×
+          </button>
+
+          <h3>Popup</h3>
+          <p>
+            CSS-only popup using the native dialog element.
+          </p>
+        </dialog>
+
+        <div class="cols">
+          <!-- HTML -->
+          <pre><code>&lt;button class="popup-btn" onclick="popupDialog.showModal()"&gt;
+  Open &lt;dialog&gt; popup
+&lt;/button&gt;
+
+&lt;dialog id="popupDialog"&gt;
+  &lt;button class="dialog-close" onclick="popupDialog.close()"&gt;×&lt;/button&gt;
+  &lt;h3&gt;Popup&lt;/h3&gt;
+  &lt;p&gt;CSS-only popup using the native dialog element.&lt;/p&gt;
+&lt;/dialog&gt;</code></pre>
+
+          <!-- CSS -->
+          <pre><code>dialog {
+  border: none;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  margin: auto;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}</code></pre>
+
+          <!-- JavaScript -->
+          <pre><code>// No custom JavaScript
+// showModal() and close() are native &lt;dialog&gt; methods</code></pre>
+        </div>
+
+        <p class="note">
+          * Uses the native <b>&lt;dialog&gt;</b> element provided by the browser.<br>
+          * Opening and closing use native methods: <b>showModal()</b> and <b>close()</b>.<br>
+          * Focus trapping, Escape key dismissal, and modal semantics are handled by the browser.<br>
+          * No custom JavaScript, ARIA attributes, or focus management code is required.<br>
+          * Styling and animation control are limited compared to custom implementations.<br>
+          * Best suited for simple, standard popups when browser‑defined behavior is acceptable.
+        </p>
+
+
+
+        <h3 class="demo">Simplest popup with JavaScript</h3>
+
+        <style>
+          .popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .popup-overlay.is-open {
+            display: flex;
+            margin-top: 0;
+          }
+
+          .popup-box {
+            background: #fff;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 420px;
+            width: 90%;
+            position: relative;
+          }
+
+          .popup-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+          }
+        </style>
+
+        <button class="popup-btn" data-popup-target="simple-popup-1">
+          Open Popup 1
+        </button>
+
+        <button class="popup-btn" data-popup-target="simple-popup-2">
+          Open Popup 2
+        </button>
+
+        <div class="popup-overlay" data-popup="simple-popup-1">
+          <div class="popup-box">
+            <button class="popup-close" data-popup-close>×</button>
+            <h3>Popup 1</h3>
+            <p>This is the first popup.</p>
+          </div>
+        </div>
+
+        <div class="popup-overlay" data-popup="simple-popup-2">
+          <div class="popup-box">
+            <button class="popup-close" data-popup-close>×</button>
+            <h3>Popup 2</h3>
+            <p>This is the second popup.</p>
+          </div>
+        </div>
+
+        <script>
+          document.addEventListener('click', e => {
+            const openTrigger = e.target.closest('[data-popup-target]');
+            const closeTrigger = e.target.closest('[data-popup-close]');
+
+            // Open popup
+            if (openTrigger) {
+              e.preventDefault();
+              const id = openTrigger.dataset.popupTarget;
+              const popup = document.querySelector(`[data-popup="${id}"]`);
+              popup?.classList.add('is-open');
+            }
+
+            // Close popup via button
+            if (closeTrigger) {
+              closeTrigger.closest('[data-popup]')?.classList.remove('is-open');
+            }
+
+            // Close popup via overlay click
+            if (e.target.matches('.popup-overlay.is-open')) {
+              e.target.classList.remove('is-open');
+            }
+          });
+        </script>
+
+        <div class="cols">
+          <!-- HTML -->
+          <pre><code>&lt;button class="popup-btn" data-popup-target="simple-popup-1"&gt;
+  Open Popup 1
+&lt;/button&gt;
+
+&lt;div class="popup-overlay" data-popup="simple-popup-1"&gt;
+  &lt;div class="popup-box"&gt;
+    &lt;button class="popup-close" data-popup-close&gt;×&lt;/button&gt;
+    &lt;h3&gt;Popup 1&lt;/h3&gt;
+    &lt;p&gt;This is the first popup.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+
+
+&lt;button class="popup-btn" data-popup-target="simple-popup-2"&gt;
+  Open Popup 2
+&lt;/button&gt;
+
+&lt;div class="popup-overlay" data-popup="simple-popup-2"&gt;
+  &lt;div class="popup-box"&gt;
+    &lt;button class="popup-close" data-popup-close&gt;×&lt;/button&gt;
+    &lt;h3&gt;Popup 2&lt;/h3&gt;
+    &lt;p&gt;This is the second popup.&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+          <!-- CSS -->
+          <pre><code>.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.popup-overlay.is-open {
+  display: flex;
+}
+
+.popup-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+}
+
+.popup-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+</code></pre>
+
+          <!-- JavaScript -->
+          <pre><code>document.addEventListener('click', e => {
+  const openTrigger = e.target.closest('[data-popup-target]');
+  const closeTrigger = e.target.closest('[data-popup-close]');
+
+  // Open popup
+  if (openTrigger) {
+    e.preventDefault();
+    const id = openTrigger.dataset.popupTarget;
+    const popup = document.querySelector(`[data-popup="${id}"]`);
+    popup?.classList.add('is-open');
+  }
+
+  // Close popup via button
+  if (closeTrigger) {
+    closeTrigger.closest('[data-popup]')?.classList.remove('is-open');
+  }
+
+  // Close popup via overlay click
+  if (e.target.matches('.popup-overlay.is-open')) {
+    e.target.classList.remove('is-open');
+  }
+});</code></pre>
+        </div>
+
+        <p class="note">
+          * Supports multiple popups using declarative data attributes.<br>
+          * No IDs, globals, or hard‑coded selectors are required.<br>
+          * Popup visibility is controlled by toggling a single CSS class.<br>
+          * Allows closing via close button and overlay click.<br>
+          * Does not handle focus management, Escape key, or accessibility semantics.<br>
+          * Intended as a simple, reusable baseline — not production‑grade.
+        </p>
+
+        <h3 class="demo">Production‑grade popup with JS</h3>
+
+        <br>
+
+        <a href="#" class="popup-btn" data-popup-target="popup-1">Open Popup 1</a>
+        <a href="#" class="popup-btn" data-popup-target="popup-2">Open Popup 2</a>
+
+        <div class="popup-overlay" data-popup="popup-1" aria-hidden="true">
+          <div class="popup-box" role="dialog" aria-modal="true" tabindex="-1">
+            <button class="popup-close" data-popup-close aria-label="Close">×</button>
+            <h3>Popup 1</h3>
+            <p>Scoped popup</p>
+          </div>
+        </div>
+
+        <div class="popup-overlay" data-popup="popup-2" aria-hidden="true">
+          <div class="popup-box" role="dialog" aria-modal="true" tabindex="-1">
+            <button class="popup-close" data-popup-close aria-label="Close">×</button>
+            <h3>Popup 2</h3>
+            <p>Scoped popup</p>
+          </div>
+        </div>
+
+        <script>
+          (() => {
+            let activePopup = null;
+            let lastFocused = null;
+
+            const focusable =
+              'a[href], button, input, textarea, select, not([tabindex="-1"])';
+
+            function openPopup(popup, trigger) {
+              if (activePopup) closePopup();
+
+              activePopup = popup;
+              lastFocused = trigger;
+
+              popup.classList.add('is-open');
+              popup.setAttribute('aria-hidden', 'false');
+              document.body.style.overflow = 'hidden';
+
+              (popup.querySelector(focusable) || popup).focus();
+            }
+
+            function closePopup() {
+              if (!activePopup) return;
+
+              activePopup.classList.remove('is-open');
+              activePopup.setAttribute('aria-hidden', 'true');
+              document.body.style.overflow = '';
+
+              lastFocused?.focus();
+              activePopup = null;
+            }
+
+            document.addEventListener('click', e => {
+              const open = e.target.closest('[data-popup-target]');
+              const close = e.target.closest('[data-popup-close]');
+              const overlay = e.target.classList.contains('popup-overlay');
+
+              if (open) {
+                e.preventDefault();
+                const id = open.dataset.popupTarget;
+                const popup = document.querySelector(
+                  `.popup-overlay[data-popup="${id}"]`
+                );
+                if (popup) openPopup(popup, open);
+              }
+
+              if (close || overlay) {
+                closePopup();
+              }
+            });
+
+            document.addEventListener('keydown', e => {
+              if (!activePopup) return;
+
+              if (e.key === 'Escape') {
+                closePopup();
+              }
+
+              if (e.key === 'Tab') {
+                const items = [...activePopup.querySelectorAll(focusable)];
+                if (!items.length) return;
+
+                const first = items[0];
+                const last = items[items.length - 1];
+
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault();
+                  last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault();
+                  first.focus();
+                }
+              }
+            });
+          })();
+        </script>
+
+        <div class="cols">
+          <pre><code>&lt;a href="#" class="popup-btn" data-popup-target="popup-1"&gt;Open Popup 1&lt;/a&gt;
+  &lt;a href="#" class="popup-btn" data-popup-target="popup-2"&gt;Open Popup 2&lt;/a&gt;
+
+  &lt;div class="popup-overlay" data-popup="popup-1" aria-hidden="true"&gt;
+    &lt;div class="popup-box" role="dialog" aria-modal="true" tabindex="-1"&gt;
+      &lt;button class="popup-close" data-popup-close aria-label="Close"&gt;×&lt;/button&gt;
+      &lt;h3&gt;Popup 1&lt;/h3&gt;
+      &lt;p&gt;Scoped popup&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class="popup-overlay" data-popup="popup-2" aria-hidden="true"&gt;
+    &lt;div class="popup-box" role="dialog" aria-modal="true" tabindex="-1"&gt;
+      &lt;button class="popup-close" data-popup-close aria-label="Close"&gt;×&lt;/button&gt;
+      &lt;h3&gt;Popup 2&lt;/h3&gt;
+      &lt;p&gt;Scoped popup&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;</code></pre>
+          <pre><code>.popup-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.popup-overlay.is-open {
+  display: flex;
+}
+
+.popup-box {
+  background: #fff;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  border-radius: 8px;
+  position: relative;
+  outline: none;
+}
+
+.popup-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+}</code></pre>
+          <pre><code>(() => {
+  let activePopup = null;
+  let lastFocused = null;
+
+  const focusable =
+    'a[href], button, input, textarea, select, not([tabindex="-1"])';
+
+  function openPopup(popup, trigger) {
+    if (activePopup) closePopup();
+
+    activePopup = popup;
+    lastFocused = trigger;
+
+    popup.classList.add('is-open');
+    popup.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    (popup.querySelector(focusable) || popup).focus();
+  }
+
+  function closePopup() {
+    if (!activePopup) return;
+
+    activePopup.classList.remove('is-open');
+    activePopup.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+
+    lastFocused?.focus();
+    activePopup = null;
+  }
+
+  document.addEventListener('click', e => {
+    const open = e.target.closest('[data-popup-target]');
+    const close = e.target.closest('[data-popup-close]');
+    const overlay = e.target.classList.contains('popup-overlay');
+
+    if (open) {
+      e.preventDefault();
+      const id = open.dataset.popupTarget;
+      const popup = document.querySelector(
+        `.popup-overlay[data-popup="${id}"]`
+      );
+      if (popup) openPopup(popup, open);
+    }
+
+    if (close || overlay) {
+      closePopup();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!activePopup) return;
+
+    if (e.key === 'Escape') {
+      closePopup();
+    }
+
+    if (e.key === 'Tab') {
+      const items = [...activePopup.querySelectorAll(focusable)];
+      if (!items.length) return;
+
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+})();</code></pre>
+        </div>
+
+        <p class="note">
+          * Implements a reusable, production‑grade popup system using declarative data attributes.<br>
+          * Popups are opened explicitly by matching data attributes.<br>
+          * Only one popup is active at a time to avoid interaction conflicts on documentation pages.<br>
+          * Includes focus trapping, Escape key dismissal, focus return, and background scroll locking.<br>
+          * Styles are minimal and intended for documentation clarity only.<br>
+          * Recommended when a single popup system exists per page.
+        </p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </main>
+
+  </div>
+
+</body>
+<script>
+  const navItems = document.querySelectorAll('.nav-item');
+  const sections = Array.from(navItems).map(item =>
+    document.getElementById(item.dataset.target)
+  );
+
+  function onScroll() {
+    const scrollPos = window.scrollY + 120;
+
+    let activeIndex = sections.findIndex((section, index) => {
+      const current = section.offsetTop;
+      const next = sections[index + 1]?.offsetTop ?? Infinity;
+      return scrollPos >= current && scrollPos < next;
+    });
+
+    if (activeIndex === -1) activeIndex = 0;
+
+    navItems.forEach(item => item.classList.remove('active'));
+    navItems[activeIndex].classList.add('active');
+  }
+
+  window.addEventListener('scroll', onScroll);
+  onScroll(); // run once on load
+</script>
+<script>
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      document
+        .getElementById(item.dataset.target)
+        .scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+
+</html>

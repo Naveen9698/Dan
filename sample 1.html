@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>Embla Carousel</title>
+</head>
+
+<!-- <link rel="stylesheet" href="embla.css"> -->
+<link rel="stylesheet" href="style.css">
+
+<body>
+<div class="wrapper">
+  <section class="embla" aria-label="Testimonials carousel">
+    <div class="embla__viewport">
+      <div class="embla__container">
+
+        <div class="embla__slide">
+          <article class="card">
+            <div class="avatar">
+              <img 
+                alt="Juliet Elliott" 
+                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80">
+            </div>
+            <p class="quote">"Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Donec id elit non mi porta gravida at eget metus."</p>
+            <p class="cite">- Juliet Elliott, Cyclist</p>
+          </article>
+        </div>
+
+        <div class="embla__slide">
+          <article class="card">
+            <div class="avatar">
+              <img 
+                alt="Katie Kookaburra" 
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80">
+            </div>
+            <p class="quote">"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed posuere consectetur est at lobortis. Nullam id dolor id nibh ultricies vehicula ut id elit."</p>
+            <p class="cite">- Katie Kookaburra, Cyclist</p>
+          </article>
+        </div>
+
+        <div class="embla__slide">
+          <article class="card">
+            <div class="avatar">
+              <img 
+                alt="Alison Tetrick" 
+                src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80">
+            </div>
+            <p class="quote">"Duis mollis, est non commodo luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit. Aenean eu leo quam. Pellentesque ornare sem lacinia quam."</p>
+            <p class="cite">- Alison Tetrick, Cyclist</p>
+          </article>
+        </div>
+
+        <div class="embla__slide">
+          <article class="card">
+            <div class="avatar">
+              <img alt="Taylor Rider" src="https://i.pravatar.cc/400?img=32">
+            </div>
+            <p class="quote">"Curabitur blandit tempus porttitor. Integer posuere erat a ante venenatis dapibus posuere velit aliquet. Etiam porta sem malesuada magna mollis."</p>
+            <p class="cite">- Taylor Rider, Cyclist</p>
+          </article>
+        </div>
+
+        <div class="embla__slide">
+          <article class="card">
+            <div class="avatar">
+             <img alt="Morgan Gravel" src="https://i.pravatar.cc/400?img=47">
+            </div>
+            <p class="quote">"Maecenas sed diam eget risus varius blandit sit amet non magna. Vestibulum id ligula porta felis euismod semper. Donec ullamcorper nulla non metus."</p>
+            <p class="cite">- Morgan Gravel, Cyclist</p>
+          </article>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="embla__controls" aria-label="Carousel controls">
+      <button class="embla__btn embla__btn--prev" type="button" aria-label="Previous testimonial">
+        <span aria-hidden="true" class="chev chev--left"></span>
+      </button>
+
+      <div class="embla__dots" role="tablist" aria-label="Choose testimonial"></div>
+
+      <button class="embla__btn embla__btn--next" type="button" aria-label="Next testimonial">
+        <span aria-hidden="true" class="chev chev--right"></span>
+      </button>
+    </div>
+
+    <p id="emblaStatus" class="sr-only" aria-live="polite"></p>
+  </section>
+</div>
+
+  <script src="embla.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>

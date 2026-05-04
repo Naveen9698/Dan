@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Design System – Style Guide</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+        }
+
+        html {
+            font-size: 16px;
+            /* Desktop */
+        }
+
+        @media (max-width: 991px) {
+            html {
+                font-size: 15px;
+                /* Tablet */
+            }
+        }
+
+        @media (max-width: 767px) {
+            html {
+                font-size: 14px;
+                /* Mobile */
+            }
+        }
+
+        /* =========================
+            TOKENS (LOCKED STRUCTURE)
+           ========================= */
+        :root {
+            --space-unit: 8px;
+
+            --xxs: calc(var(--space-unit) * 1);
+            --xs: calc(var(--space-unit) * 2);
+            --sm: calc(var(--space-unit) * 3);
+            --md: calc(var(--space-unit) * 4);
+            --lg: calc(var(--space-unit) * 6);
+            --xl: calc(var(--space-unit) * 8);
+            --xxl: calc(var(--space-unit) * 12);
+
+            /* CORE COLORS */
+            --color-primary: hsl(221, 83%, 50%);
+            --color-primary-hover: hsl(221, 83%, 40%);
+
+            --color-secondary: hsl(142, 76%, 40%);
+            --color-secondary-hover: hsl(142, 76%, 30%);
+
+            --color-accent: hsl(38, 92%, 50%);
+            --color-accent-hover: hsl(38, 92%, 40%);
+
+            --color-black: hsl(0, 0%, 7%);
+            --color-white: hsl(0, 0%, 100%);
+
+            /* SUPPORTING PALETTE (8 COLORS) */
+            --color-1: hsl(45deg 90% 90%);
+            --color-2: hsl(90deg 90% 90%);
+            --color-3: hsl(135deg 90% 90%);
+            --color-4: hsl(180deg 90% 90%);
+            --color-5: hsl(225deg 90% 90%);
+            --color-6: hsl(270deg 90% 90%);
+            --color-7: hsl(315deg 90% 90%);
+            --color-8: hsl(360deg 90% 90%);
+        }
+
+        /* ========================= BASE ========================= */
+        body {
+            margin: 0;
+            font-family: system-ui;
+            background: #f5f5f5;
+        }
+
+        .stack>*+* {
+            margin-top: 20px;
+        }
+
+        /* ========================= LAYOUT ========================= */
+        .app {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .nav-group {
+            margin-top: 30px;
+        }
+
+        .nav-group h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .nav-item {
+            font-size: 14px;
+            padding: 6px 0;
+            color: #444;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+
+        .main {
+            flex: 1;
+            padding: 40px;
+        }
+
+        .divider {
+            height: 2px;
+            background: #ddd;
+            margin: 100px 0;
+        }
+
+        /* ========================= COLOR ========================= */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .color-card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            background: #fff;
+        }
+
+        .color-swatch {
+            height: 50px;
+        }
+
+        .color-swatch p {
+            margin: 0;
+            height: stretch;
+            padding: 4px;
+            font-size: 12px;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.19);
+            display: inline-block;
+        }
+
+        .color-meta {
+            padding: 10px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .color-meta div {
+            font-size: 14px;
+            padding: 0 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .color-meta div span {
+            margin-left: 14px;
+        }
+
+        /* ========================= TABLE (LOCKED) ========================= */
+        .table {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+        }
+
+        .header,
+        .spacing-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .typography-row {
+            display: grid;
+            grid-template-columns: 100px 1fr 1fr 1fr 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .header {
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bar {
+            height: 20px;
+            position: relative;
+        }
+
+        .bar::before,
+        .bar::after {
+            content: "";
+            position: absolute;
+            width: 10px;
+            height: 100%;
+            top: 0;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .bar::before {
+            left: -12px;
+            border-right: 2px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .bar::after {
+            right: -12px;
+            border-left: 2px solid rgba(0, 0, 0, 0.2);
+        }
+
+        /* ========================= DEMO ========================= */
+        .usage-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        #desktopCard {
+            grid-column: 1 / -1;
+            /* Row 1 → full width */
+        }
+
+        #tabletCard {
+            grid-column: span 2;
+            /* takes 2 columns */
+        }
+
+        #mobileCard {
+            grid-column: span 1;
+            /* takes 1 column */
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            padding: var(--lg);
+            height: fit-content;
+        }
+
+        /* SPACERS (UPDATED TO GLOBAL COLORS) */
+        .spacer {
+            width: 100%;
+        }
+
+        .xxs {
+            height: var(--xxs);
+            background: var(--color-1);
+        }
+
+        .xs {
+            height: var(--xs);
+            background: var(--color-8);
+        }
+
+        .sm {
+            height: var(--sm);
+            background: var(--color-3);
+        }
+
+        .md {
+            height: var(--md);
+            background: var(--color-4);
+        }
+
+        .lg {
+            height: var(--lg);
+            background: var(--color-5);
+        }
+
+        .xl {
+            height: var(--xl);
+            background: var(--color-6);
+        }
+
+        .xxl {
+            height: var(--xxl);
+            background: var(--color-7);
+        }
+
+        .clean .spacer {
+            background: transparent !important;
+        }
+
+        /* ========================= PRODUCT DEMO ========================= */
+        .product {
+            display: flex;
+            gap: var(--lg);
+        }
+
+        .image-wrap {
+            padding: var(--lg) var(--sm) var(--lg) var(--md);
+            background: #e9e9e9;
+            border-radius: 8px;
+        }
+
+        .image {
+            width: 150px;
+            height: 100px;
+            background: #c1c1c1;
+        }
+
+        .content {
+            flex: 1;
+        }
+
+        .category {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .price {
+            font-size: 18px;
+            color: #b45353;
+        }
+
+        .desc {
+            font-size: 14px;
+            color: #555;
+        }
+
+        .sizes {
+            display: flex;
+            gap: var(--xs);
+        }
+
+        .size {
+            padding: var(--xxs) var(--xs);
+            border: 1px solid #ccc;
+        }
+
+        .actions {
+            display: flex;
+            gap: var(--xs);
+        }
+
+        .button {
+            padding: var(--sm) var(--lg);
+            background: var(--color-primary);
+            color: white;
+            border-radius: 6px;
+        }
+
+        .icon-btn {
+            padding: var(--sm);
+            border: 1px solid #ccc;
+        }
+
+        .meta {
+            font-size: 11px;
+            color: #555;
+        }
+
+        /* VISUAL OVERLAY */
+        .visual .image-wrap {
+            box-shadow:
+                inset 0 var(--lg) 0 var(--color-5),
+                inset 0 calc(-1 * var(--lg)) 0 var(--color-5),
+                inset var(--md) 0 0 var(--color-4),
+                inset calc(-1 * var(--sm)) 0 0 var(--color-3);
+        }
+
+        .visual .button {
+            box-shadow:
+                inset 0 var(--sm) 0 var(--color-3),
+                inset 0 calc(-1 * var(--sm)) 0 var(--color-3),
+                inset var(--lg) 0 0 var(--color-5),
+                inset calc(-1 * var(--lg)) 0 0 var(--color-5);
+        }
+
+        .visual .size {
+            box-shadow:
+                inset 0 var(--xxs) 0 var(--color-1),
+                inset 0 calc(-1 * var(--xxs)) 0 var(--color-1),
+                inset var(--xs) 0 0 var(--color-8),
+                inset calc(-1 * var(--xs)) 0 0 var(--color-8);
+        }
+
+        .visual .icon-btn {
+            box-shadow:
+                inset 0 var(--sm) 0 var(--color-3),
+                inset 0 calc(-1 * var(--sm)) 0 var(--color-3),
+                inset var(--sm) 0 0 var(--color-3),
+                inset calc(-1 * var(--sm)) 0 0 var(--color-3);
+        }
+
+        /* ================= TYPOGRAPHY VISUAL OVERLAY ================= */
+
+        .visual .usage-card {
+            box-shadow:
+                inset 0 var(--sm) 0 var(--color-3),
+                inset 0 calc(-1 * var(--sm)) 0 var(--color-3),
+                inset var(--md) 0 0 var(--color-4),
+                inset calc(-1 * var(--md)) 0 0 var(--color-4);
+        }
+
+        .visual .media {
+            box-shadow:
+                inset 0 var(--xs) 0 var(--color-8),
+                inset 0 calc(-1 * var(--xs)) 0 var(--color-8);
+        }
+
+        .visual .usage-content {
+            box-shadow:
+                inset 0 var(--md) 0 var(--color-5),
+                inset 0 calc(-1 * var(--md)) 0 var(--color-5);
+        }
+
+        .visual .usage-list li {
+            box-shadow:
+                inset 0 var(--xxs) 0 var(--color-1),
+                inset 0 calc(-1 * var(--xxs)) 0 var(--color-1);
+        }
+
+        /* BUTTONS */
+        .visual .btn {
+            box-shadow:
+                inset 0 var(--xxs) 0 var(--color-1),
+                inset 0 calc(-1 * var(--xxs)) 0 var(--color-1),
+                inset var(--xs) 0 0 var(--color-8),
+                inset calc(-1 * var(--xs)) 0 0 var(--color-8);
+        }
+
+        .visual .usage-card {
+            outline: 1px dashed transparent;
+        }
+
+        .visual .usage-card>* {
+            position: relative;
+        }
+
+        .visual .usage-card>*+*::before {
+            content: "gap";
+            position: absolute;
+            top: calc(-1 * var(--sm));
+            left: 0;
+            right: 0;
+            height: var(--sm);
+            background: var(--space-sm-color);
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <h2>Style Guide</h2>
+
+            <div class="nav-group">
+                <h4>Foundations</h4>
+                <div class="nav-item active">Color</div>
+                <div class="nav-item">Typography</div>
+                <div class="nav-item">Spacing</div>
+            </div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+
+            <!-- COLOR -->
+            <section class="stack">
+                <h2>Color hsl(hue, saturation, lightness)</h2>
+
+                <div class="color-grid">
+
+                    <div class="color-card">
+                        <div id="primaryScale"></div>
+
+                        <div class="color-meta">
+                            <div>
+                                --color-primary:
+                                <span id="primaryMain"></span>
+                                --color-primary-hover:
+                                <span id="primaryHover"></span>
+                            </div>
+                            <input type="color" id="primaryPicker" value="#2563eb">
+                        </div>
+                    </div>
+
+                    <div class="color-card">
+                        <div id="secondaryScale"></div>
+
+                        <div class="color-meta">
+                            <div>
+                                --color-secondary: <span id="secondaryMain"></span>
+                                --color-secondary-hover: <span id="secondaryHover"></span>
+                            </div>
+                            <input type="color" id="secondaryPicker" value="#22c55e">
+                        </div>
+                    </div>
+
+                    <div class="color-card">
+                        <div id="accentScale"></div>
+
+                        <div class="color-meta">
+                            <div>
+                                --color-accent: <span id="accentMain"></span>
+                                --color-accent-hover: <span id="accentHover"></span>
+                            </div>
+                            <input type="color" id="accentPicker" value="#f59e0b">
+                        </div>
+                    </div>
+
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:hsl(0, 0%, 0%)">
+                            <p>hsl(0, 0%, 0%) --color-black</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 10%)">
+                            <p>hsl(0, 0%, 10%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 20%)">
+                            <p>hsl(0, 0%, 20%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 30%)">
+                            <p>hsl(0, 0%, 30%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 40%)">
+                            <p>hsl(0, 0%, 40%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 50%)">
+                            <p>hsl(0, 0%, 50%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 60%)">
+                            <p>hsl(0, 0%, 60%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 70%)">
+                            <p>hsl(0, 0%, 70%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 80%)">
+                            <p>hsl(0, 0%, 80%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 90%)">
+                            <p>hsl(0, 0%, 90%)</p>
+                        </div>
+                        <div class="color-swatch" style="background:hsl(0, 0%, 100%)">
+                            <p>hsl(0, 0%, 100%) --color-white</p>
+                        </div>
+                    </div>
+
+                    <!-- 8 palette -->
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-1)"></div>
+                        <div class="color-meta">Color 1</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-2)"></div>
+                        <div class="color-meta">Color 2</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-3)"></div>
+                        <div class="color-meta">Color 3</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-4)"></div>
+                        <div class="color-meta">Color 4</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-5)"></div>
+                        <div class="color-meta">Color 5</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-6)"></div>
+                        <div class="color-meta">Color 6</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-7)"></div>
+                        <div class="color-meta">Color 7</div>
+                    </div>
+                    <div class="color-card">
+                        <div class="color-swatch" style="background:var(--color-8)"></div>
+                        <div class="color-meta">Color 8</div>
+                    </div>
+
+                </div>
+            </section>
+
+            <div class="divider"></div>
+
+            <!-- SPACING (UNCHANGED STRUCTURE) -->
+            <section class="stack">
+
+                <h2>Spacing Tokens</h2>
+
+                <h3>
+                    Base unit (n):
+                    <input type="number" id="unitInput" value="8"> px
+                </h3>
+
+                <div class="table">
+                    <div class="header">
+                        <div>Token</div>
+                        <div>Desktop x 1</div>
+                        <div>Tablet x 0.75</div>
+                        <div>Mobile x 0.5</div>
+                    </div>
+                    <div id="tableBody"></div>
+                </div>
+
+                <h2>Real Usage</h2>
+
+                <div class="grid">
+
+                    <!-- VISUAL -->
+                    <div class="card visual">
+                        <div class="product">
+                            <div class="image-wrap">
+                                <div class="image"></div>
+                            </div>
+
+                            <div class="content">
+                                <div class="category">CATEGORY</div>
+                                <div class="spacer xxs"></div>
+
+                                <div class="title">PRODUCT TITLE</div>
+                                <div class="spacer xs"></div>
+
+                                <div class="price">$150</div>
+                                <div class="spacer sm"></div>
+
+                                <div class="desc">Description</div>
+                                <div class="spacer md"></div>
+
+                                <div class="sizes">
+                                    <div class="size">S</div>
+                                    <div class="size">M</div>
+                                </div>
+
+                                <div class="spacer lg"></div>
+
+                                <div class="actions">
+                                    <div class="button">ADD</div>
+                                    <div class="icon-btn">♥</div>
+                                </div>
+
+                                <div class="spacer xl"></div>
+                            </div>
+                        </div>
+
+                        <div class="spacer xxl"></div>
+                    </div>
+
+                    <!-- CLEAN -->
+                    <div class="card clean">
+                        <div class="product">
+                            <div class="image-wrap">
+                                <div class="image"></div>
+                            </div>
+
+                            <div class="content">
+                                <div class="category">CATEGORY</div>
+                                <div class="spacer xxs"></div>
+
+                                <div class="title">PRODUCT TITLE</div>
+                                <div class="spacer xs"></div>
+
+                                <div class="price">$150</div>
+                                <div class="spacer sm"></div>
+
+                                <div class="desc">Description</div>
+                                <div class="spacer md"></div>
+
+                                <div class="sizes">
+                                    <div class="size">S</div>
+                                    <div class="size">M</div>
+                                </div>
+
+                                <div class="spacer lg"></div>
+
+                                <div class="actions">
+                                    <div class="button">ADD</div>
+                                    <div class="icon-btn">♥</div>
+                                </div>
+
+                                <div class="spacer xl"></div>
+                            </div>
+                        </div>
+
+                        <div class="spacer xxl"></div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- ========================= TYPOGRAPHY SECTION (ADDED) ========================= -->
+            <div class="divider"></div>
+
+            <section class="stack">
+                <h2>Typography System</h2>
+
+                <h3>
+                    Base:
+                    <input type="number" id="typeBase" value="16"> px
+                    &nbsp;
+                    Desktop:
+                    <input type="number" id="scaleDesktop" value="1" step="0.1">
+                    Tablet:
+                    <input type="number" id="scaleTablet" value="0.9" step="0.1">
+                    Mobile:
+                    <input type="number" id="scaleMobile" value="0.8" step="0.1">
+                </h3>
+
+                <div class="table">
+                    <div class="typography-row header">
+                        <div>El</div>
+                        <div>Native</div>
+                        <div>Desktop</div>
+                        <div>Tablet</div>
+                        <div>Mobile</div>
+                        <div>Clamp</div>
+                    </div>
+                    <div id="typeTable"></div>
+                </div>
+
+                <!-- ================= REAL USAGE ================= -->
+                <h2>Typography – Real Usage</h2>
+                <label style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="visualToggle">
+                    Show spacing overlay
+                </label>
+                <div class="usage-grid">
+
+                    <div class="card" id="desktopCard">
+                        <h4>Desktop: 992px-1440px</h4>
+                        <div id="typeDesktop">
+                            <div class="content"></div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="tabletCard">
+                        <h4>Tablet: 768px-991px</h4>
+                        <div id="typeTablet">
+                            <div class="content"></div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="mobileCard">
+                        <h4>Mobile: 0px-767px</h4>
+                        <div id="typeMobile">
+                            <div class="content"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+
+    <!--  ========================= Color System =========================  -->
+    <script>
+        function hexToHSL(hex) {
+            let r = parseInt(hex.slice(1, 3), 16) / 255;
+            let g = parseInt(hex.slice(3, 5), 16) / 255;
+            let b = parseInt(hex.slice(5, 7), 16) / 255;
+
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0;
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+
+                h = Math.round(h * 60);
+            }
+
+            return { h, s: Math.round(s * 100) };
+        }
+
+        function createScale(pickerId, containerId, config) {
+            const picker = document.getElementById(pickerId);
+            const container = document.getElementById(containerId);
+
+            function update() {
+                const { h, s } = hexToHSL(picker.value);
+
+                container.innerHTML = "";
+
+                for (let l = 10; l <= 90; l += 10) {
+                    const color = `hsl(${h}, ${s}%, ${l}%)`;
+
+                    const div = document.createElement("div");
+                    div.className = "color-swatch";
+                    div.style.background = color;
+                    div.innerHTML = `<p>${color}</p>`;
+
+                    container.appendChild(div);
+
+                    if (l === config.main) {
+                        document.documentElement.style.setProperty(config.var, color);
+                        document.getElementById(config.labelMain).textContent = color;
+                    }
+
+                    if (l === config.hover) {
+                        document.documentElement.style.setProperty(config.hoverVar, color);
+                        document.getElementById(config.labelHover).textContent = color;
+                    }
+                }
+            }
+
+            picker.addEventListener("input", update);
+            update();
+        }
+
+        /* INIT */
+        createScale("primaryPicker", "primaryScale", {
+            var: "--color-primary",
+            hoverVar: "--color-primary-hover",
+            main: 50,
+            hover: 40,
+            labelMain: "primaryMain",
+            labelHover: "primaryHover"
+        });
+
+        createScale("secondaryPicker", "secondaryScale", {
+            var: "--color-secondary",
+            hoverVar: "--color-secondary-hover",
+            main: 40,
+            hover: 30,
+            labelMain: "secondaryMain",
+            labelHover: "secondaryHover"
+        });
+
+        createScale("accentPicker", "accentScale", {
+            var: "--color-accent",
+            hoverVar: "--color-accent-hover",
+            main: 50,
+            hover: 40,
+            labelMain: "accentMain",
+            labelHover: "accentHover"
+        });
+    </script>
+
+    <!--  ========================= Spacing System =========================  -->
+
+    <script>
+        const scale = [
+            { name: "XXS", mult: 1, color: "var(--color-1)" },
+            { name: "XS", mult: 2, color: "var(--color-8)" },
+            { name: "SM", mult: 3, color: "var(--color-3)" },
+            { name: "MD", mult: 4, color: "var(--color-4)" },
+            { name: "LG", mult: 6, color: "var(--color-5)" },
+            { name: "XL", mult: 8, color: "var(--color-6)" },
+            { name: "XXL", mult: 12, color: "var(--color-7)" }
+        ];
+
+        const input = document.getElementById("unitInput");
+        const tableBody = document.getElementById("tableBody");
+
+        function render() {
+            const base = parseInt(input.value) || 8;
+            document.documentElement.style.setProperty('--space-unit', base + 'px');
+
+            tableBody.innerHTML = "";
+
+            scale.forEach(item => {
+                const d = base * item.mult;
+                const t = Math.round(d * 0.75);
+                const m = Math.round(d * 0.5);
+
+                const row = document.createElement("div");
+                row.className = "spacing-row";
+
+                function cell(val) {
+                    return `<div class="cell">
+        <div class="bar" style="width:${val}px; background:${item.color}"></div>
+        ${val}px
+      </div>`;
+                }
+
+                row.innerHTML = `
+      <div>${item.name}</div>
+      ${cell(d)}
+      ${cell(t)}
+      ${cell(m)}
+    `;
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        input.addEventListener("input", render);
+        render();
+    </script>
+
+    <!--  ========================= Typography System =========================  -->
+
+    <script>
+
+
+        const typeScale = [
+            { name: "h1", mult: 3, weight: 700, line: 1.2, letter: -0.5, vw: 4 },
+            { name: "h2", mult: 2.5, weight: 700, line: 1.2, letter: -0.4, vw: 3.5 },
+            { name: "h3", mult: 2, weight: 600, line: 1.3, letter: -0.3, vw: 3 },
+            { name: "h4", mult: 1.5, weight: 600, line: 1.4, letter: -0.2, vw: 2.5 },
+            { name: "h5", mult: 1.25, weight: 500, line: 1.4, letter: -0.1, vw: 2 },
+            { name: "h6", mult: 1.125, weight: 500, line: 1.5, letter: 0, vw: 1.8 },
+            { name: "p", mult: 1, weight: 400, line: 1.6, letter: 0, vw: 1.5 }
+        ];
+
+        const typeBase = document.getElementById("typeBase");
+        const scaleDesktop = document.getElementById("scaleDesktop");
+        const scaleTablet = document.getElementById("scaleTablet");
+        const scaleMobile = document.getElementById("scaleMobile");
+        const typeTable = document.getElementById("typeTable");
+
+        /* ---------- helpers ---------- */
+
+        function typeContent(tag) {
+            return `<${tag}>${tag}</${tag}>`;
+        }
+
+        function getNative(tag) {
+            const el = document.createElement(tag);
+            el.textContent = tag;
+            el.style.all = "revert"; // important fix
+            el.style.position = "absolute";
+            el.style.visibility = "hidden";
+
+            document.body.appendChild(el);
+            const s = getComputedStyle(el);
+
+            const meta = `${s.fontSize} / ${s.fontWeight} / ${s.lineHeight} / ${s.letterSpacing}`;
+
+            document.body.removeChild(el);
+            return meta;
+        }
+
+        function getClamp(tk, base) {
+            const min = Math.round(base * tk.mult * 0.8);
+            const max = Math.round(base * tk.mult * 1.2);
+            return `clamp(${min}px, ${tk.vw}vw, ${max}px)`;
+        }
+
+        function typeCell(tk, scale, base) {
+            const size = Math.round(base * tk.mult * scale);
+
+            return `
+  <div class="sample" style="
+    font-size:${size}px;
+    font-weight:${tk.weight};
+    line-height:${tk.line};
+    letter-spacing:${tk.letter}px;
+  ">
+    ${typeContent(tk.name)}
+    <div class="meta">
+      ${size}px / ${tk.weight} / ${tk.line} / ${tk.letter}px
+    </div>
+  </div>`;
+        }
+
+        /* ---------- main render ---------- */
+
+        function renderType() {
+            const base = parseInt(typeBase.value) || 16;
+            const ds = parseFloat(scaleDesktop.value) || 1;
+            const ts = parseFloat(scaleTablet.value) || 0.9;
+            const ms = parseFloat(scaleMobile.value) || 0.8;
+
+            typeTable.innerHTML = "";
+
+            typeScale.forEach(tk => {
+                const row = document.createElement("div");
+                row.className = "typography-row";
+
+                row.innerHTML = `
+      <div>${tk.name}</div>
+
+      <div class="sample">
+        ${typeContent(tk.name)}
+        <div class="meta">${getNative(tk.name)}</div>
+      </div>
+
+      ${typeCell(tk, ds, base)}
+      ${typeCell(tk, ts, base)}
+      ${typeCell(tk, ms, base)}
+
+      <div class="sample" style="
+        font-size:${getClamp(tk, base)};
+        font-weight:${tk.weight};
+        line-height:${tk.line};
+        letter-spacing:${tk.letter}px;
+      ">
+        ${typeContent(tk.name)}
+        <div class="meta">${getClamp(tk, base)}</div>
+      </div>
+    `;
+
+                typeTable.appendChild(row);
+            });
+
+            renderUsage("typeDesktop", ds, base);
+            renderUsage("typeTablet", ts, base);
+            renderUsage("typeMobile", ms, base);
+        }
+
+        /* ---------- REAL USAGE ---------- */
+const toggle = document.getElementById("visualToggle");
+
+toggle.addEventListener("change", () => {
+    document.body.classList.toggle("visual", toggle.checked);
+});
+
+        function renderUsage(id, scale, base) {
+            const el = document.querySelector(`#${id} .content`);
+
+            function style(tag) {
+                const tk = typeScale.find(t => t.name === tag);
+                const size = Math.round(base * tk.mult * scale);
+
+                return `
+      font-size:${size}px;
+      font-weight:${tk.weight};
+      line-height:${tk.line};
+      letter-spacing:${tk.letter}px;
+    `;
+            }
+
+el.innerHTML = `
+
+<!-- HERO -->
+<section style="
+  text-align:center;
+  margin-bottom: var(--lg);
+  padding-bottom: var(--md);
+  border-bottom:1px solid #eee;
+" data-space="lg-y">
+
+  <h5 style="${style("h5")}; opacity:.6; margin:0;">
+    PRODUCT TAGLINE
+  </h5>
+
+  <h1 style="${style("h1")}; margin: var(--xxs) 0;">
+    Build Better Interfaces
+  </h1>
+
+  <p style="${style("p")}; max-width:500px; margin:0 auto; opacity:.8;">
+    A clean typographic system helps create hierarchy, clarity and balance across your UI.
+  </p>
+</section>
+
+
+<!-- MAIN LAYOUT -->
+<section style="
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--xl);
+" data-space="xl-x">
+
+  <!-- LEFT: VISUAL CARD -->
+  <div class="card" style="padding: var(--lg);" data-space="lg-y lg-x">
+
+    <div class="image-wrap" style="
+      padding: var(--lg) var(--sm) var(--lg) var(--md);
+    " data-space="lg-y md-x sm-x">
+      <div class="image"></div>
+    </div>
+
+    <div style="height: var(--md);" data-space="md-y"></div>
+
+    <h4 style="${style("h4")}">Product Card</h4>
+
+    <p style="${style("p")}; opacity:.8;">
+      Real component using spacing tokens.
+    </p>
+
+    <div style="
+      display:flex;
+      gap: var(--sm);
+      margin-top: var(--md);
+    " data-space="sm-x md-y">
+
+      <button style="
+        padding: var(--sm) var(--lg);
+        border-radius:6px;
+      " data-space="sm-y lg-x">Buy</button>
+
+      <button style="
+        padding: var(--sm);
+        border:1px solid #ccc;
+      " data-space="sm-y sm-x">♥</button>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: CONTENT -->
+  <div>
+
+    <h2 style="${style("h2")}; margin-bottom: var(--xs);" data-space="xs-y">
+      Why this matters
+    </h2>
+
+    <ul style="
+      padding-left: var(--md);
+      display:flex;
+      flex-direction:column;
+      gap: var(--xs);
+    " data-space="md-x xs-y">
+
+      <li style="${style("p")}">Spacing is token-driven</li>
+      <li style="${style("p")}">Typography scales consistently</li>
+      <li style="${style("p")}">Layout adapts across devices</li>
+
+    </ul>
+
+  </div>
+
+</section>
+`;
+        }
+
+        /* ---------- listeners ---------- */
+
+        [typeBase, scaleDesktop, scaleTablet, scaleMobile].forEach(el => {
+            el.addEventListener("input", renderType);
+        });
+
+        /* init */
+        renderType();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,6675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Dan Carousel – Base + Default</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- ===============================
+       DAN CORE (ONLY LIBRARY)
+       =============================== -->
+  <script src="dan_carousel.js"></script>
+
+  <script>
+    function initDanBase(root, options = {}) {
+      if (!root) return null
+      const viewport = root.querySelector('.dan__viewport')
+      return DanCarousel(viewport, options)
+    }
+  </script>
+
+
+  <style>
+    /* ===============================
+       GLOBAL
+       =============================== */
+    body {
+      margin: 0;
+      padding: 40px;
+      font-family: sans-serif;
+      background: #0b0b12;
+      color: #fff;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+      background: #ffffff1f;
+      padding: 12px 0;
+    }
+
+    h2 {
+      margin: 40px 0 8px;
+    }
+
+    p {
+      opacity: 0.7;
+      margin: 0;
+      font-size: 10px;
+      display: ruby;
+    }
+
+    section {
+      margin-bottom: 80px;
+      padding-bottom: 60px;
+      border-bottom: 1px solid #ffffff1f;
+    }
+
+    /* ===============================
+       card (SHARED)
+       =============================== */
+
+    .card {
+      background: #ffffff14;
+      border-radius: 14px;
+      padding: 60px 0;
+      text-align: center;
+      font-size: 28px;
+      opacity: 0.4;
+      transform: scale(0.96);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    /* ===============================
+       Code (SHARED)
+       =============================== */
+
+    .code {
+      display: grid;
+      margin: 40px auto 0;
+      grid-template-columns: 1fr 1fr;
+      max-width: 1300px;
+      width: 100%;
+      grid-gap: 40px;
+
+    }
+
+    .code div {
+      display: flex;
+      padding: 16px;
+      background: #111;
+      border-radius: 10px;
+      overflow-x: auto;
+      flex-direction: column;
+    }
+
+    .code div pre {
+      margin: 0;
+    }
+ 
+    #section-pagination {
+      position: fixed;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      z-index: 1000;
+    }
+
+    #section-pagination button {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #fff;
+      font-size: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #section-pagination button.is-active {
+      background: #ffffff1f;
+      transform: scale(1.15);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="section-pagination" aria-label="Section navigation"></div>
+
+  <h1>Dan Carousel</h1>
+
+  <section name="default">
+
+    <h2>Default</h2>
+    <p>
+      • Horizontal carousel<br>
+      • Snap‑based scrolling<br>
+      • Mouse / touch drag interaction
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-default {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-default .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-default .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-default .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-default">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-default')
+)
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-default {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-default .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-default .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-default .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-default')
+)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <h1>User Interaction & Controls</h1>
+
+  <section name="prev-next-buttons">
+
+    <h2>Previous / Next Buttons</h2>
+    <p>
+      • Manual navigation controls<br>
+      • Buttons trigger slide movement<br>
+      • Drag interaction still enabled
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-prev-next {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-prev-next .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-prev-next .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-prev-next .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-prev-next .dan__controls {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      #dan-prev-next .dan__controls button {
+        padding: 8px 14px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      #dan-prev-next .dan__controls button:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-prev-next">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dan__controls">
+        <button class="dan__prev">Previous</button>
+        <button class="dan__next">Next</button>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootPrevNext = document.getElementById('dan-prev-next')
+      const danPrevNext = initDanBase(rootPrevNext)
+
+      const prevBtn = rootPrevNext.querySelector('.dan__prev')
+      const nextBtn = rootPrevNext.querySelector('.dan__next')
+
+      prevBtn.addEventListener('click', () => danPrevNext.scrollPrev())
+      nextBtn.addEventListener('click', () => danPrevNext.scrollNext())
+
+      function updateButtons() {
+        prevBtn.disabled = !danPrevNext.canScrollPrev()
+        nextBtn.disabled = !danPrevNext.canScrollNext()
+      }
+
+      updateButtons()
+      danPrevNext.on('select', updateButtons)
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-prev-next {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-prev-next .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-prev-next .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-prev-next .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-prev-next .dan__controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#dan-prev-next .dan__controls button {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#dan-prev-next .dan__controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const rootPrevNext = document.getElementById('dan-prev-next')
+const danPrevNext = initDanBase(rootPrevNext)
+
+const prevBtn = rootPrevNext.querySelector('.dan__prev')
+const nextBtn = rootPrevNext.querySelector('.dan__next')
+
+prevBtn.addEventListener('click', () => danPrevNext.scrollPrev())
+nextBtn.addEventListener('click', () => danPrevNext.scrollNext())
+
+function updateButtons() {
+  prevBtn.disabled = !danPrevNext.canScrollPrev()
+  nextBtn.disabled = !danPrevNext.canScrollNext()
+}
+
+updateButtons()
+danPrevNext.on('select', updateButtons)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="drag-gestures">
+
+    <h2>Mouse / Touch / Trackpad Dragging</h2>
+    <p>
+      • Mouse dragging<br>
+      • Touch swiping<br>
+      • Trackpad gesture scrolling
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-drag {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-drag .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-drag .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-drag .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-drag">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      initDanBase(
+        document.getElementById('dan-drag')
+      )
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-drag {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-drag .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-drag .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-drag .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+initDanBase(
+  document.getElementById('dan-drag')
+)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="disable-drag">
+
+    <h2>Disable Drag / Gesture Control</h2>
+    <p>
+      • Mouse dragging disabled<br>
+      • Touch swiping disabled<br>
+      • Trackpad gestures disabled
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-disable-drag {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-disable-drag .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-disable-drag .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-disable-drag .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-disable-drag">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      initDanBase(
+        document.getElementById('dan-disable-drag'),
+        { watchDrag: false }
+      )
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-disable-drag {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-disable-drag .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-disable-drag .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-disable-drag .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+initDanBase(
+  document.getElementById('dan-disable-drag'),
+  { watchDrag: false }
+)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="keyboard-navigation">
+
+    <h2>Keyboard Navigation</h2>
+    <p>
+      • Navigate slides using Arrow keys<br>
+      • Left / Right arrows move between slides<br>
+      • Carousel receives keyboard focus
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-keyboard {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-keyboard .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-keyboard .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-keyboard .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      /* Optional focus style for clarity */
+      #dan-keyboard:focus-visible {
+        outline: 2px solid #7f5cff;
+        outline-offset: 4px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-keyboard" tabindex="0">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootKeyboard = document.getElementById('dan-keyboard')
+      const danKeyboard = initDanBase(rootKeyboard)
+
+      rootKeyboard.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          danKeyboard.scrollPrev()
+        }
+
+        if (event.key === 'ArrowRight') {
+          danKeyboard.scrollNext()
+        }
+      })
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-keyboard {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-keyboard .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-keyboard .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-keyboard .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-keyboard:focus-visible {
+  outline: 2px solid #7f5cff;
+  outline-offset: 4px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const root = document.getElementById('dan-keyboard')
+const dan = initDanBase(root)
+
+root.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft') {
+    dan.scrollPrev()
+  }
+
+  if (event.key === 'ArrowRight') {
+    dan.scrollNext()
+  }
+})
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="focus-driven-navigation">
+
+    <h2>Focus‑Driven Navigation</h2>
+    <p>
+      • Carousel scrolls when a slide receives focus<br>
+      • Enables Tab‑based navigation through slides<br>
+      • Useful for accessibility and form elements
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-focus {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-focus .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-focus .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-focus .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      /* Clearly show focused element */
+      #dan-focus button:focus-visible {
+        outline: 2px solid #7f5cff;
+        outline-offset: 2px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-focus">
+      <div class="dan__viewport">
+        <div class="dan__container">
+
+          <div class="dan__slide">
+            <div class="card">
+              <button>Slide 1</button>
+            </div>
+          </div>
+
+          <div class="dan__slide">
+            <div class="card">
+              <button>Slide 2</button>
+            </div>
+          </div>
+
+          <div class="dan__slide">
+            <div class="card">
+              <button>Slide 3</button>
+            </div>
+          </div>
+
+          <div class="dan__slide">
+            <div class="card">
+              <button>Slide 4</button>
+            </div>
+          </div>
+
+          <div class="dan__slide">
+            <div class="card">
+              <button>Slide 5</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      initDanBase(
+        document.getElementById('dan-focus')
+      )
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-focus {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-focus .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-focus .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-focus .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-focus button:focus-visible {
+  outline: 2px solid #7f5cff;
+  outline-offset: 2px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+initDanBase(
+  document.getElementById('dan-focus')
+)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="scrollbar-interaction">
+
+    <h2>Scrollbar Interaction</h2>
+    <p>
+      • Native scrollbar enabled<br>
+      • Trackpad / mouse wheel scrolling<br>
+      • Drag gestures still supported
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-scrollbar {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      /* Enable native horizontal scrolling */
+      #dan-scrollbar .dan__viewport {
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+
+      #dan-scrollbar .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-scrollbar .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-scrollbar">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      initDanBase(
+        document.getElementById('dan-scrollbar'),
+        { dragFree: true }
+      )
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-scrollbar {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-scrollbar .dan__viewport {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+#dan-scrollbar .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-scrollbar .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+initDanBase(
+  document.getElementById('dan-scrollbar'),
+  { dragFree: true }
+)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="pagination-dots">
+
+    <h2>Pagination Dots</h2>
+    <p>
+      • Clickable pagination dots<br>
+      • Dots represent scroll snap positions<br>
+      • Dots update based on active slide
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-dots {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-dots .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-dots .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-dots .dan__slide {
+        flex: 0 0 100%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-dots .dan__dots {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      #dan-dots .dan__dots button {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        padding: 0;
+      }
+
+      #dan-dots .dan__dots button.is-active {
+        background: #7f5cff;
+        transform: scale(1.4);
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-dots">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dan__dots"></div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootDots = document.getElementById('dan-dots')
+      const danDots = initDanBase(rootDots)
+      const dotsContainer = rootDots.querySelector('.dan__dots')
+      const dots = []
+
+      danDots.scrollSnapList().forEach((_, index) => {
+        const dot = document.createElement('button')
+        dot.addEventListener('click', () => danDots.scrollTo(index))
+        dotsContainer.appendChild(dot)
+        dots.push(dot)
+      })
+
+      function updateDots() {
+        const index = danDots.selectedScrollSnap()
+        dots.forEach((dot, i) =>
+          dot.classList.toggle('is-active', i === index)
+        )
+      }
+
+      updateDots()
+      danDots.on('select', updateDots)
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-dots {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-dots .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-dots .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-dots .dan__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-dots .dan__dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+#dan-dots .dan__dots button {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+}
+
+#dan-dots .dan__dots button.is-active {
+  background: #7f5cff;
+  transform: scale(1.4);
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const root = document.getElementById('dan-dots')
+const dan = initDanBase(root)
+const dotsContainer = root.querySelector('.dan__dots')
+const dots = []
+
+dan.scrollSnapList().forEach((_, index) => {
+  const dot = document.createElement('button')
+  dot.addEventListener('click', () => dan.scrollTo(index))
+  dotsContainer.appendChild(dot)
+  dots.push(dot)
+})
+
+function updateDots() {
+  const index = dan.selectedScrollSnap()
+  dots.forEach((dot, i) =>
+    dot.classList.toggle('is-active', i === index)
+  )
+}
+
+updateDots()
+dan.on('select', updateDots)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="snap-counter">
+
+    <h2>Snap Counter Display</h2>
+    <p>
+      • Displays current scroll position<br>
+      • Counter reflects snap index, not slide count<br>
+      • Updates automatically on selection
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-counter {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-counter .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-counter .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-counter .dan__slide {
+        flex: 0 0 100%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-counter .dan__counter {
+        text-align: center;
+        margin-top: 12px;
+        opacity: 0.7;
+        font-size: 14px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-counter">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dan__counter"></div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootCounter = document.getElementById('dan-counter')
+      const danCounter = initDanBase(rootCounter)
+      const counterEl = rootCounter.querySelector('.dan__counter')
+
+      const totalSnaps = danCounter.scrollSnapList().length
+
+      function updateCounter() {
+        const current = danCounter.selectedScrollSnap() + 1
+        counterEl.textContent = `${current} / ${totalSnaps}`
+      }
+
+      updateCounter()
+      danCounter.on('select', updateCounter)
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-counter {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-counter .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-counter .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-counter .dan__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-counter .dan__counter {
+  text-align: center;
+  margin-top: 12px;
+  opacity: 0.7;
+  font-size: 14px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const root = document.getElementById('dan-counter')
+const dan = initDanBase(root)
+const counter = root.querySelector('.dan__counter')
+
+const total = dan.scrollSnapList().length
+
+function updateCounter() {
+  const current = dan.selectedScrollSnap() + 1
+  counter.textContent = `${current} / ${total}`
+}
+
+updateCounter()
+dan.on('select', updateCounter)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="section-controlled-navigation">
+
+    <h2>Section‑Controlled Navigation</h2>
+    <p>
+      • External controls navigate the carousel<br>
+      • Buttons represent logical sections<br>
+      • Uses public carousel API
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-section-control {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-section-control .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-section-control .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-section-control .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-section-control .dan__sections {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      #dan-section-control .dan__sections button {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #fff;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-section-control">
+
+      <!-- External section controls -->
+      <div class="dan__sections">
+        <button data-index="0">Section 1</button>
+        <button data-index="1">Section 2</button>
+        <button data-index="2">Section 3</button>
+      </div>
+
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootSectionControl = document.getElementById('dan-section-control')
+      const danSectionControl = initDanBase(rootSectionControl)
+
+      rootSectionControl.querySelectorAll('[data-index]')
+        .forEach(button => {
+          button.addEventListener('click', () => {
+            const index = Number(button.dataset.index)
+            danSectionControl.scrollTo(index)
+          })
+        })
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-section-control {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-section-control .dan__sections {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#dan-section-control .dan__sections button {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  cursor: pointer;
+  border-radius: 6px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const root = document.getElementById('dan-section-control')
+const dan = initDanBase(root)
+
+root.querySelectorAll('[data-index]')
+  .forEach(button => {
+    button.addEventListener('click', () => {
+      dan.scrollTo(Number(button.dataset.index))
+    })
+  })
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="click-to-scroll-api">
+
+    <h2>Click‑to‑Scroll API</h2>
+    <p>
+      • Programmatic slide navigation<br>
+      • Scroll to a specific position or step forward/backward<br>
+      • Uses public carousel methods
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-api {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-api .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-api .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-api .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-api .dan__controls {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      #dan-api .dan__controls button {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #fff;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-api">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dan__controls">
+        prevscrollPrev()</button>
+        nextscrollNext()</button>
+        <buttonlTo(2)< /button>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootApi = document.getElementById('dan-api')
+      const danApi = initDanBase(rootApi)
+
+      rootApi.querySelectorAll('[data-action]')
+        .forEach(button => {
+          button.addEventListener('click', () => {
+            const action = button.dataset.action
+
+            if (action === 'prev') {
+              danApi.scrollPrev()
+            }
+
+            if (action === 'next') {
+              danApi.scrollNext()
+            }
+
+            if (action === 'to') {
+              danApi.scrollTo(2)
+            }
+          })
+        })
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-api {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-api .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-api .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-api .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-api .dan__controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#dan-api .dan__controls button {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  cursor: pointer;
+  border-radius: 6px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const root = document.getElementById('dan-api')
+const dan = initDanBase(root)
+
+root.querySelectorAll('[data-action]')
+  .forEach(button => {
+    button.addEventListener('click', () => {
+      const action = button.dataset.action
+
+      if (action === 'prev') dan.scrollPrev()
+      if (action === 'next') dan.scrollNext()
+      if (action === 'to') dan.scrollTo(2)
+    })
+  })
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="autoplay">
+
+    <h2>Autoplay</h2>
+    <p>
+      • Autoplay starts on load<br>
+      • Uses scrollNext API<br>
+      • Fully controlled by developer
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-autoplay {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+        position: relative;
+      }
+
+      #dan-autoplay .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-autoplay .dan__container {
+        display: flex;
+        will-change: transform;
+      }
+
+      #dan-autoplay .dan__slide {
+        flex: 0 0 33.33%;
+        min-width: 0;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-autoplay">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      const rootAutoplay = document.getElementById('dan-autoplay')
+      const danAutoplay = initDanBase(rootAutoplay, { loop: true })
+
+      setInterval(() => {
+        danAutoplay.scrollNext()
+      }, 600)
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-autoplay {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-autoplay .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-autoplay .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-autoplay .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+const root = document.getElementById('dan-autoplay')
+const dan = initDanBase(root, { loop: true })
+
+setInterval(() => {
+  dan.scrollNext()
+}, 600)
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="autoplay-play-pause">
+
+    <h2>Play / Pause Autoplay</h2>
+    <p>
+      • Autoplay starts on load<br>
+      • User can pause and resume autoplay<br>
+      • Implemented using the public API
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-autoplay-pp {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+      }
+
+      #dan-autoplay-pp .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-autoplay-pp .dan__container {
+        display: flex;
+      }
+
+      #dan-autoplay-pp .dan__slide {
+        flex: 0 0 33.33%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-autoplay-pp .controls {
+        margin-top: 12px;
+        text-align: center;
+      }
+
+      #dan-autoplay-pp .controls button {
+        padding: 6px 14px;
+        margin: 0 6px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: transparent;
+        color: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-autoplay-pp">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">A</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">B</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">C</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">D</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="autoplay-play">Play</button>
+        <button id="autoplay-pause">Pause</button>
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      (() => {
+        const root = document.getElementById('dan-autoplay-pp')
+        const dan = initDanBase(root, { loop: true })
+
+        let autoplayTimer = null
+
+        function playAutoplay() {
+          if (!autoplayTimer) {
+            autoplayTimer = setInterval(() => {
+              dan.scrollNext()
+            }, 600)
+          }
+        }
+
+        function pauseAutoplay() {
+          clearInterval(autoplayTimer)
+          autoplayTimer = null
+        }
+
+        playAutoplay()
+
+        root.querySelector('#autoplay-play').addEventListener('click', playAutoplay)
+        root.querySelector('#autoplay-pause').addEventListener('click', pauseAutoplay)
+      })()
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-autoplay-pp {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+}
+
+#dan-autoplay-pp .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-autoplay-pp .dan__container {
+  display: flex;
+}
+
+#dan-autoplay-pp .dan__slide {
+  flex: 0 0 33.33%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-autoplay-pp .controls {
+  margin-top: 12px;
+  text-align: center;
+}
+
+#dan-autoplay-pp .controls button {
+  padding: 6px 14px;
+  margin: 0 6px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: transparent;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+(() => {
+  const root = document.getElementById('dan-autoplay-pp')
+  const dan = initDanBase(root, { loop: true })
+
+  let autoplayTimer = null
+
+  function playAutoplay() {
+    if (!autoplayTimer) {
+      autoplayTimer = setInterval(() => {
+        dan.scrollNext()
+      }, 600)
+    }
+  }
+
+  function pauseAutoplay() {
+    clearInterval(autoplayTimer)
+    autoplayTimer = null
+  }
+
+  playAutoplay()
+
+  root.querySelector('#autoplay-play').addEventListener('click', playAutoplay)
+  root.querySelector('#autoplay-pause').addEventListener('click', pauseAutoplay)
+})()
+      </code></pre>
+      </div>
+    </div>
+
+  </section>
+
+  <section name="stop-on-interaction">
+
+    <h2>Stop on Interaction</h2>
+    <p>
+      • Autoplay starts automatically<br>
+      • Any user interaction stops autoplay<br>
+      • Demonstrates respect for user intent
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-stop-interaction {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+      }
+
+      #dan-stop-interaction .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-stop-interaction .dan__container {
+        display: flex;
+      }
+
+      #dan-stop-interaction .dan__slide {
+        flex: 0 0 33.33%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-stop-interaction .hint {
+        margin-top: 12px;
+        text-align: center;
+        opacity: 0.7;
+        font-size: 14px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-stop-interaction">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        Click or drag the carousel to stop autoplay
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      (() => {
+        const root = document.getElementById('dan-stop-interaction')
+        const dan = initDanBase(root, { loop: true })
+
+        let autoplayTimer = setInterval(() => {
+          dan.scrollNext()
+        }, 600)
+
+        function stopAutoplay() {
+          clearInterval(autoplayTimer)
+          autoplayTimer = null
+        }
+
+        root.addEventListener('pointerdown', stopAutoplay, { once: true })
+        root.addEventListener('mousedown', stopAutoplay, { once: true })
+        root.addEventListener('touchstart', stopAutoplay, { once: true })
+      })()
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-stop-interaction {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+}
+
+#dan-stop-interaction .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-stop-interaction .dan__container {
+  display: flex;
+}
+
+#dan-stop-interaction .dan__slide {
+  flex: 0 0 33.33%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-stop-interaction .hint {
+  margin-top: 12px;
+  text-align: center;
+  opacity: 0.7;
+  font-size: 14px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+(() => {
+  const root = document.getElementById('dan-stop-interaction')
+  const dan = initDanBase(root, { loop: true })
+
+  let autoplayTimer = setInterval(() => {
+    dan.scrollNext()
+  }, 600)
+
+  function stopAutoplay() {
+    clearInterval(autoplayTimer)
+    autoplayTimer = null
+  }
+
+  root.addEventListener('pointerdown', stopAutoplay, { once: true })
+  root.addEventListener('mousedown', stopAutoplay, { once: true })
+  root.addEventListener('touchstart', stopAutoplay, { once: true })
+})()
+      </code></pre>
+      </div>
+    </div>
+
+  </section>
+
+  <section name="stop-on-focus">
+
+    <h2>Stop on Focus</h2>
+    <p>
+      • Autoplay starts automatically<br>
+      • Autoplay stops when carousel receives focus<br>
+      • Improves keyboard and accessibility behavior
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-stop-focus {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+      }
+
+      #dan-stop-focus .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-stop-focus .dan__container {
+        display: flex;
+      }
+
+      #dan-stop-focus .dan__slide {
+        flex: 0 0 33.33%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-stop-focus .hint {
+        margin-top: 12px;
+        text-align: center;
+        opacity: 0.7;
+        font-size: 14px;
+      }
+
+      #dan-stop-focus:focus-visible {
+        outline: 2px solid #7f5cff;
+        outline-offset: 4px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-stop-focus" tabindex="0">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        Press Tab to focus the carousel — autoplay will stop
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      (() => {
+        const root = document.getElementById('dan-stop-focus')
+        const dan = initDanBase(root, { loop: true })
+
+        let autoplayTimer = setInterval(() => {
+          dan.scrollNext()
+        }, 700)
+
+        function stopAutoplay() {
+          clearInterval(autoplayTimer)
+          autoplayTimer = null
+        }
+
+        root.addEventListener('focusin', stopAutoplay, { once: true })
+      })()
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-stop-focus {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+}
+
+#dan-stop-focus .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-stop-focus .dan__container {
+  display: flex;
+}
+
+#dan-stop-focus .dan__slide {
+  flex: 0 0 33.33%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-stop-focus .hint {
+  margin-top: 12px;
+  text-align: center;
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+#dan-stop-focus:focus-visible {
+  outline: 2px solid #7f5cff;
+  outline-offset: 4px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+(() => {
+  const root = document.getElementById('dan-stop-focus')
+  const dan = initDanBase(root, { loop: true })
+
+  let autoplayTimer = setInterval(() => {
+    dan.scrollNext()
+  }, 700)
+
+  function stopAutoplay() {
+    clearInterval(autoplayTimer)
+    autoplayTimer = null
+  }
+
+  root.addEventListener('focusin', stopAutoplay, { once: true })
+})()
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section name="stop-on-visibility">
+
+    <h2>Stop on Visibility Change</h2>
+    <p>
+      • Autoplay starts automatically<br>
+      • Autoplay pauses when page is hidden<br>
+      • Autoplay resumes when page becomes visible
+    </p>
+
+    <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+    <style>
+      #dan-stop-visibility {
+        max-width: 1200px;
+        width: 100%;
+        margin: 16px auto;
+      }
+
+      #dan-stop-visibility .dan__viewport {
+        overflow: hidden;
+      }
+
+      #dan-stop-visibility .dan__container {
+        display: flex;
+      }
+
+      #dan-stop-visibility .dan__slide {
+        flex: 0 0 33.33%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #dan-stop-visibility .hint {
+        margin-top: 12px;
+        text-align: center;
+        opacity: 0.7;
+        font-size: 14px;
+      }
+    </style>
+
+    <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+    <div class="dan" id="dan-stop-visibility">
+      <div class="dan__viewport">
+        <div class="dan__container">
+          <div class="dan__slide">
+            <div class="card">1</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">2</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">3</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">4</div>
+          </div>
+          <div class="dan__slide">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint">
+        Switch browser tabs — autoplay will pause and resume
+      </div>
+    </div>
+
+    <!-- ===============================
+       DEMO: Script
+       =============================== -->
+    <script>
+      (() => {
+        const root = document.getElementById('dan-stop-visibility')
+        const dan = initDanBase(root, { loop: true })
+
+        let autoplayTimer = null
+
+        function startAutoplay() {
+          if (!autoplayTimer) {
+            autoplayTimer = setInterval(() => {
+              dan.scrollNext()
+            }, 500)
+          }
+        }
+
+        function stopAutoplay() {
+          clearInterval(autoplayTimer)
+          autoplayTimer = null
+        }
+
+        startAutoplay()
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            stopAutoplay()
+          } else {
+            startAutoplay()
+          }
+        })
+      })()
+    </script>
+
+    <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+    <div class="code">
+
+      <div>
+        <p>Style</p>
+        <pre><code>
+#dan-stop-visibility {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+}
+
+#dan-stop-visibility .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-stop-visibility .dan__container {
+  display: flex;
+}
+
+#dan-stop-visibility .dan__slide {
+  flex: 0 0 33.33%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#dan-stop-visibility .hint {
+  margin-top: 12px;
+  text-align: center;
+  opacity: 0.7;
+  font-size: 14px;
+}
+      </code></pre>
+      </div>
+
+      <div>
+        <p>Script</p>
+        <pre><code>
+(() => {
+  const dan = initDanBase(root, { loop: true })
+  let timer = null
+
+  function start() {
+    if (!timer) {
+      timer = setInterval(() => dan.scrollNext(), 500)
+    }
+  }
+
+  function stop() {
+    clearInterval(timer)
+    timer = null
+  }
+
+  start()
+
+  document.addEventListener('visibilitychange', () => {
+    document.hidden ? stop() : start()
+  })
+})()
+      </code></pre>
+      </div>
+
+    </div>
+
+  </section>
+
+<section name="marquee">
+
+  <h2>Marquee / Continuous Scrolling</h2>
+  <p>
+    • Continuous horizontal scrolling<br>
+    • Pure CSS implementation<br>
+    • Pauses on hover for accessibility
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #marquee {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #marquee .track {
+      display: flex;
+      width: max-content;
+      animation: marquee-scroll 20s linear infinite;
+    }
+
+    #marquee:hover .track {
+      animation-play-state: paused;
+    }
+
+    #marquee .item {
+      flex: 0 0 auto;
+      width: 240px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    @keyframes marquee-scroll {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(-50%);
+      }
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div id="marquee">
+    <div class="track">
+      <!-- Original items -->
+      <div class="item"><div class="card">1</div></div>
+      <div class="item"><div class="card">2</div></div>
+      <div class="item"><div class="card">3</div></div>
+      <div class="item"><div class="card">4</div></div>
+      <div class="item"><div class="card">5</div></div>
+
+      <!-- Duplicated items for seamless loop -->
+      <div class="item"><div class="card">1</div></div>
+      <div class="item"><div class="card">2</div></div>
+      <div class="item"><div class="card">3</div></div>
+      <div class="item"><div class="card">4</div></div>
+      <div class="item"><div class="card">5</div></div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    // No JavaScript required for this marquee.
+    // CSS animation handles continuous scrolling.
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#marquee {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  overflow: hidden;
+  position: relative;
+}
+
+#marquee .track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 20s linear infinite;
+}
+
+#marquee:hover .track {
+  animation-play-state: paused;
+}
+
+#marquee .item {
+  flex: 0 0 auto;
+  width: 240px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+// No JavaScript required.
+// CSS handles continuous scrolling.
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="marquee">
+
+  <h2>Marquee / Continuous Scrolling</h2>
+  <p>
+    • True infinite carousel‑style marquee<br>
+    • Items are recycled, not wrapped<br>
+    • Direction toggle + hover pause
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-marquee {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #dan-marquee .track {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-marquee .item {
+      flex: 0 0 auto;
+      width: 240px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-marquee .controls {
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    #dan-marquee button {
+      padding: 6px 14px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: transparent;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div id="dan-marquee">
+    <div class="track">
+      <div class="item"><div class="card">1</div></div>
+      <div class="item"><div class="card">2</div></div>
+      <div class="item"><div class="card">3</div></div>
+      <div class="item"><div class="card">4</div></div>
+      <div class="item"><div class="card">5</div></div>
+    </div>
+
+    <div class="controls">
+      <button id="marquee-toggle">Toggle Direction</button>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      const marquee = document.getElementById('dan-marquee')
+      const track = marquee.querySelector('.track')
+      const toggle = document.getElementById('marquee-toggle')
+
+      let direction = -1   // -1 = left, 1 = right
+      let speed = 0.5
+      let offset = 0
+      let raf
+
+      const step = () => {
+        offset += speed * direction
+        track.style.transform = `translateX(${offset}px)`
+
+        if (direction === -1) {
+          const first = track.firstElementChild
+          const width = first.offsetWidth
+
+          if (-offset >= width) {
+            track.appendChild(first)
+            offset += width
+          }
+        } else {
+          const last = track.lastElementChild
+          const width = last.offsetWidth
+
+          if (offset >= width) {
+            track.insertBefore(last, track.firstElementChild)
+            offset -= width
+          }
+        }
+
+        raf = requestAnimationFrame(step)
+      }
+
+      const start = () => {
+        if (!raf) step()
+      }
+
+      const stop = () => {
+        cancelAnimationFrame(raf)
+        raf = null
+      }
+
+      toggle.addEventListener('click', () => {
+        direction *= -1
+      })
+
+      marquee.addEventListener('mouseenter', stop)
+      marquee.addEventListener('mouseleave', start)
+
+      start()
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-marquee {
+  max-width: 1200px;
+  overflow: hidden;
+}
+
+#dan-marquee .track {
+  display: flex;
+}
+
+#dan-marquee .item {
+  width: 240px;
+  padding: 20px;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+(() => {
+  let offset = 0
+  let direction = -1
+
+  function step() {
+    offset += 0.5 * direction
+    track.style.transform = `translateX(${offset}px)`
+  }
+
+  requestAnimationFrame(step)
+})()
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+  <h1>Core Carousel Mechanics</h1>
+
+<section name="loop">
+
+  <h2>Loop</h2>
+  <p>
+    • Infinite scrolling carousel<br>
+    • Slides wrap around seamlessly<br>
+    • Enabled using <code>loop: true</code>
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-loop {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-loop .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-loop .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-loop .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-loop">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-loop'),
+      { loop: true }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-loop {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-loop .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-loop .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-loop .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-loop'),
+  { loop: true }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="start-index">
+
+  <h2>Start Index</h2>
+  <p>
+    • Set the initial slide on load<br>
+    • Uses <code>startIndex</code> option<br>
+    • Zero‑based index
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-start-index {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-start-index .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-start-index .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-start-index .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-start-index">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-start-index'),
+      { startIndex: 2 }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-start-index {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-start-index .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-start-index .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-start-index .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-start-index'),
+  { startIndex: 2 }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="snap-based-scrolling">
+
+  <h2>Snap‑based Scrolling</h2>
+  <p>
+    • Carousel snaps to fixed positions<br>
+    • Dragging always settles on a snap<br>
+    • Snap positions are calculated automatically
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-snap {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-snap .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-snap .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-snap .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-snap .snap-info {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-snap">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+
+    <div class="snap-info">
+      Drag the carousel — it will always snap to a position
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-snap')
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-snap {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-snap .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-snap .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-snap .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-snap')
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="slides-per-scroll">
+
+  <h2>Slides per Scroll</h2>
+  <p>
+    • Scroll multiple slides at once<br>
+    • Uses <code>slidesToScroll</code> option<br>
+    • Snap positions are grouped
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-slides-per-scroll {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-slides-per-scroll .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-slides-per-scroll .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-slides-per-scroll .dan__slide {
+      flex: 0 0 50%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-slides-per-scroll">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+        <div class="dan__slide"><div class="card">6</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-slides-per-scroll'),
+      { slidesToScroll: 2 }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-slides-per-scroll {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-slides-per-scroll .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-slides-per-scroll .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-slides-per-scroll .dan__slide {
+  flex: 0 0 50%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-slides-per-scroll'),
+  { slidesToScroll: 2 }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="skip-snaps">
+
+  <h2>Skip Snaps</h2>
+  <p>
+    • Allows skipping snap positions on fast flicks<br>
+    • Uses <code>skipSnaps</code> option<br>
+    • Momentum can advance multiple snaps
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-skip-snaps {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-skip-snaps .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-skip-snaps .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-skip-snaps .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-skip-snaps .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-skip-snaps">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+        <div class="dan__slide"><div class="card">6</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Try a fast flick — multiple slides can be skipped
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-skip-snaps'),
+      { skipSnaps: true }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-skip-snaps {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-skip-snaps .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-skip-snaps .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-skip-snaps .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-skip-snaps'),
+  { skipSnaps: true }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="drag-free">
+
+  <h2>Drag‑free Scrolling</h2>
+  <p>
+    • Momentum‑based scrolling<br>
+    • No snap locking while dragging<br>
+    • Enabled using <code>dragFree</code>
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-drag-free {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-drag-free .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-drag-free .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-drag-free .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-drag-free .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-drag-free">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Drag freely — slides follow momentum before settling
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-drag-free'),
+      { dragFree: true }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-drag-free {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-drag-free .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-drag-free .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-drag-free .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-drag-free'),
+  { dragFree: true }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="drag-threshold">
+
+  <h2>Drag Threshold</h2>
+  <p>
+    • Set minimum movement before drag starts<br>
+    • Uses <code>dragThreshold</code> option<br>
+    • Prevents accidental drags
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-drag-threshold {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-drag-threshold .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-drag-threshold .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-drag-threshold .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-drag-threshold .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-drag-threshold">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Try a small movement — drag starts only after the threshold
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-drag-threshold'),
+      { dragThreshold: 40 }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-drag-threshold {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-drag-threshold .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-drag-threshold .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-drag-threshold .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-drag-threshold'),
+  { dragThreshold: 40 }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="contain-scroll">
+
+  <h2>Contain Scroll</h2>
+  <p>
+    • Prevents empty space at the edges<br>
+    • Uses <code>containScroll</code> option<br>
+    • Controls edge snap behavior
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-contain-scroll {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-contain-scroll .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-contain-scroll .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-contain-scroll .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-contain-scroll .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-contain-scroll">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Scroll to the edges — no empty space is shown
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-contain-scroll'),
+      { containScroll: 'trimSnaps' }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-contain-scroll {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-contain-scroll .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-contain-scroll .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-contain-scroll .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-contain-scroll'),
+  { containScroll: 'trimSnaps' }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="variable-slide-widths">
+
+  <h2>Variable Slide Widths</h2>
+  <p>
+    • Slides can have different widths<br>
+    • Widths are controlled by CSS<br>
+    • Snap points adapt automatically
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-variable-widths {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-variable-widths .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-variable-widths .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    /* Variable widths */
+    #dan-variable-widths .dan__slide {
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-variable-widths .dan__slide.small {
+      flex: 0 0 20%;
+    }
+
+    #dan-variable-widths .dan__slide.medium {
+      flex: 0 0 30%;
+    }
+
+    #dan-variable-widths .dan__slide.large {
+      flex: 0 0 40%;
+    }
+
+    #dan-variable-widths .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-variable-widths">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide small"><div class="card">Small</div></div>
+        <div class="dan__slide large"><div class="card">Large</div></div>
+        <div class="dan__slide medium"><div class="card">Medium</div></div>
+        <div class="dan__slide small"><div class="card">Small</div></div>
+        <div class="dan__slide large"><div class="card">Large</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Slide widths vary, but snapping remains accurate
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-variable-widths')
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-variable-widths .dan__slide.small {
+  flex: 0 0 20%;
+}
+
+#dan-variable-widths .dan__slide.medium {
+  flex: 0 0 30%;
+}
+
+#dan-variable-widths .dan__slide.large {
+  flex: 0 0 40%;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-variable-widths')
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="slides-per-view">
+
+  <h2>Slides per View</h2>
+  <p>
+    • Controls how many slides are visible at once<br>
+    • Implemented using CSS only<br>
+    • Snapping adapts automatically
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-slides-per-view {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-slides-per-view .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-slides-per-view .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    /* 3 slides per view */
+    #dan-slides-per-view .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-slides-per-view .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-slides-per-view">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+        <div class="dan__slide"><div class="card">6</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Three slides are visible at the same time
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-slides-per-view')
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-slides-per-view .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-slides-per-view')
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="vertical-axis">
+
+  <h2>Vertical Axis</h2>
+  <p>
+    • Vertical scrolling carousel<br>
+    • Uses <code>axis: 'y'</code> option<br>
+    • Drag and snapping follow the vertical direction
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-vertical {
+      max-width: 600px;
+      height: 400px;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-vertical .dan__viewport {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #dan-vertical .dan__container {
+      display: flex;
+      flex-direction: column;
+      will-change: transform;
+    }
+
+    #dan-vertical .dan__slide {
+      flex: 0 0 33.33%;
+      min-height: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-vertical .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-vertical">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">Item 1</div></div>
+        <div class="dan__slide"><div class="card">Item 2</div></div>
+        <div class="dan__slide"><div class="card">Item 3</div></div>
+        <div class="dan__slide"><div class="card">Item 4</div></div>
+        <div class="dan__slide"><div class="card">Item 5</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Drag up or down — snapping is vertical
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-vertical'),
+      { axis: 'y' }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-vertical {
+  max-width: 600px;
+  height: 400px;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-vertical .dan__viewport {
+  height: 100%;
+  overflow: hidden;
+}
+
+#dan-vertical .dan__container {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+#dan-vertical .dan__slide {
+  flex: 0 0 33.33%;
+  min-height: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-vertical'),
+  { axis: 'y' }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="rtl">
+
+  <h2>RTL Support</h2>
+  <p>
+    • Right‑to‑Left carousel direction<br>
+    • Uses <code>direction: 'rtl'</code> option<br>
+    • Dragging and snapping are reversed
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-rtl {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-rtl .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-rtl .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-rtl .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-rtl" dir="rtl">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-rtl'),
+      { direction: 'rtl' }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-rtl {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-rtl .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-rtl .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-rtl .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-rtl'),
+  { direction: 'rtl' }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="alignment">
+
+  <h2>Alignment</h2>
+  <p>
+    • Control how slides align in the viewport<br>
+    • Uses <code>align</code> option<br>
+    • Default is <code>'center'</code>
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-align {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-align .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-align .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-align .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #dan-align .hint {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-align">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Slides are centered in the viewport
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-align'),
+      { align: 'center' }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-align .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-align'),
+  { align: 'center' }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="align-start">
+
+  <h2>Alignment: Start</h2>
+  <p>
+    • Slides align to the start edge of the viewport<br>
+    • Uses <code>align: 'start'</code><br>
+    • Common for content lists
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-align-start {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-align-start .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-align-start .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-align-start .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-align-start">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-align-start'),
+      { align: 'start' }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+    <div>
+      <p>Script</p>
+      <pre><code>
+initDanBase(
+  document.getElementById('dan-align-start'),
+  { align: 'start' }
+)
+      </code></pre>
+    </div>
+  </div>
+
+</section>
+
+<section name="align-end">
+
+  <h2>Alignment: End</h2>
+  <p>
+    • Slides align to the end edge of the viewport<br>
+    • Uses <code>align: 'end'</code><br>
+    • Useful for right‑bounded layouts
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-align-end {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-align-end .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-align-end .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-align-end .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-align-end">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-align-end'),
+      { align: 'end' }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+    <div>
+      <p>Script</p>
+      <pre><code>
+initDanBase(
+  document.getElementById('dan-align-end'),
+  { align: 'end' }
+)
+      </code></pre>
+    </div>
+  </div>
+
+</section>
+
+<section name="align-custom">
+
+  <h2>Alignment: Custom</h2>
+  <p>
+    • Custom snap alignment logic<br>
+    • Uses a function for alignment<br>
+    • Full control over snap offset
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-align-custom {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-align-custom .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-align-custom .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-align-custom .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-align-custom">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-align-custom'),
+      {
+        align: function (viewSize, slideSize) {
+          // Align slide 20px from the start edge
+          return 20
+        }
+      }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+    <div>
+      <p>Script</p>
+      <pre><code>
+initDanBase(
+  document.getElementById('dan-align-custom'),
+  {
+    align: function (viewSize, slideSize) {
+      return 20
+    }
+  }
+)
+      </code></pre>
+    </div>
+  </div>
+
+</section>
+
+<section name="breakpoints">
+
+  <h2>Breakpoint Configuration</h2>
+  <p>
+    • Change carousel behavior across screen sizes<br>
+    • Uses <code>breakpoints</code> option<br>
+    • Options are merged dynamically
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-breakpoints {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-breakpoints .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-breakpoints .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-breakpoints .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Layout change handled via CSS */
+    @media (max-width: 768px) {
+      #dan-breakpoints .dan__slide {
+        flex: 0 0 50%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #dan-breakpoints .dan__slide {
+        flex: 0 0 100%;
+      }
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-breakpoints">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-breakpoints'),
+      {
+        slidesToScroll: 2,
+        breakpoints: {
+          '(max-width: 768px)': {
+            slidesToScroll: 1
+          },
+          '(max-width: 480px)': {
+            slidesToScroll: 1,
+            dragFree: true
+          }
+        }
+      }
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-breakpoints {
+  max-width: 1200px;
+  width: 100%;
+  margin: 16px auto;
+  position: relative;
+}
+
+#dan-breakpoints .dan__viewport {
+  overflow: hidden;
+}
+
+#dan-breakpoints .dan__container {
+  display: flex;
+  will-change: transform;
+}
+
+#dan-breakpoints .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  #dan-breakpoints .dan__slide {
+    flex: 0 0 50%;
+  }
+}
+
+@media (max-width: 480px) {
+  #dan-breakpoints .dan__slide {
+    flex: 0 0 100%;
+  }
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-breakpoints'),
+  {
+    slidesToScroll: 2,
+    breakpoints: {
+      '(max-width: 768px)': {
+        slidesToScroll: 1
+      },
+      '(max-width: 480px)': {
+        slidesToScroll: 1,
+        dragFree: true
+      }
+    }
+  }
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="responsive-resizing">
+
+  <h2>Responsive Resizing</h2>
+  <p>
+    • Automatically reacts to viewport resizing<br>
+    • Slide sizes and snap points are recalculated<br>
+    • Powered by <code>ResizeObserver</code>
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-responsive {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto;
+      position: relative;
+    }
+
+    #dan-responsive .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-responsive .dan__container {
+      display: flex;
+      will-change: transform;
+    }
+
+    #dan-responsive .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Responsive layout change */
+    @media (max-width: 768px) {
+      #dan-responsive .dan__slide {
+        flex: 0 0 50%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #dan-responsive .dan__slide {
+        flex: 0 0 100%;
+      }
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-responsive">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    initDanBase(
+      document.getElementById('dan-responsive')
+    )
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-responsive .dan__slide {
+  flex: 0 0 33.33%;
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  #dan-responsive .dan__slide {
+    flex: 0 0 50%;
+  }
+}
+
+@media (max-width: 480px) {
+  #dan-responsive .dan__slide {
+    flex: 0 0 100%;
+  }
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+function initDanBase(root, options = {}) {
+  if (!root) return null
+  const viewport = root.querySelector('.dan__viewport')
+  return DanCarousel(viewport, options)
+}
+
+initDanBase(
+  document.getElementById('dan-responsive')
+)
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="fade-transitions">
+
+  <h2>Fade Transitions</h2>
+  <p>
+    • Active slide fades in<br>
+    • Inactive slides fade out<br>
+    • Embla‑style baseline fade pattern
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-fade {
+      max-width: 800px;
+      width: 100%;
+      margin: 40px auto;
+      position: relative;
+    }
+
+    #dan-fade .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-fade .dan__container {
+      display: flex;
+    }
+
+    #dan-fade .dan__slide {
+      flex: 0 0 100%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* IMPORTANT: fade the INNER element */
+    #dan-fade .dan__slide__inner {
+      opacity: 0.3;
+      transition: opacity 0.3s ease;
+      will-change: opacity;
+    }
+
+    #dan-fade .dan__slide__inner.is-active {
+      opacity: 1;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-fade">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">1</div>
+          </div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">2</div>
+          </div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const danFade = initDanBase(
+        document.getElementById('dan-fade')
+      )
+
+      const innerSlides =
+        document.querySelectorAll('#dan-fade .dan__slide__inner')
+
+      function updateFade() {
+        const selectedIndex = danFade.selectedScrollSnap()
+
+        innerSlides.forEach((slide, index) => {
+          slide.classList.toggle('is-active', index === selectedIndex)
+        })
+      }
+
+      danFade.on('init', updateFade)
+      danFade.on('select', updateFade)
+    })()
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.dan__slide__inner {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.dan__slide__inner.is-active {
+  opacity: 1;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('select', () => {
+  const active = danCarousel.selectedScrollSnap()
+  slideInners.forEach((el, i) =>
+    el.classList.toggle('is-active', i === active)
+  )
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="scale-active-slide">
+
+  <h2>Scale Active Slide</h2>
+  <p>
+    • Active slide scales up<br>
+    • Inactive slides scale down<br>
+    • Embla‑style baseline implementation
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-scale {
+      max-width: 800px;
+      width: 100%;
+      margin: 40px auto;
+    }
+
+    #dan-scale .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-scale .dan__container {
+      display: flex;
+    }
+
+    #dan-scale .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* IMPORTANT: scale the INNER element, not the slide */
+    #dan-scale .dan__slide__inner {
+      background: #eee;
+      border-radius: 8px;
+      text-align: center;
+      padding: 60px 0;
+
+      transform: scale(0.85);
+      transition: transform 0.3s ease;
+      will-change: transform;
+    }
+
+    #dan-scale .dan__slide__inner.is-active {
+      transform: scale(1);
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-scale">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide">
+          <div class="dan__slide__inner">1</div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">2</div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">3</div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">4</div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    function initDanBase(root, options = {}) {
+      if (!root) return null
+      const viewport = root.querySelector('.dan__viewport')
+      return DanCarousel(viewport, options)
+    }
+
+    const danCarousel = initDanBase(
+      document.getElementById('dan-scale')
+    )
+
+    const innerSlides =
+      document.querySelectorAll('#dan-scale .dan__slide__inner')
+
+    function updateScale() {
+      const selectedIndex = danCarousel.selectedScrollSnap()
+
+      innerSlides.forEach((slide, index) => {
+        slide.classList.toggle('is-active', index === selectedIndex)
+      })
+    }
+
+    danCarousel.on('init', updateScale)
+    danCarousel.on('select', updateScale)
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.dan__slide__inner {
+  transform: scale(0.85);
+  transition: transform 0.3s ease;
+}
+
+.dan__slide__inner.is-active {
+  transform: scale(1);
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+const danCarousel = initDanBase(root)
+
+danCarousel.on('select', () => {
+  const active = danCarousel.selectedScrollSnap()
+  slideInners.forEach((el, i) =>
+    el.classList.toggle('is-active', i === active)
+  )
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="opacity-emphasis">
+
+  <h2>Opacity Emphasis</h2>
+  <p>
+    • Active slide is visually emphasized<br>
+    • Neighbouring slides appear subdued<br>
+    • Embla‑style baseline opacity pattern
+  </p>
+
+  <!-- ===============================
+     DEMO: Styles
+     =============================== -->
+  <style>
+    #dan-opacity {
+      max-width: 800px;
+      width: 100%;
+      margin: 40px auto;
+      position: relative;
+    }
+
+    #dan-opacity .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-opacity .dan__container {
+      display: flex;
+    }
+
+    #dan-opacity .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* IMPORTANT: opacity applied to INNER element */
+    #dan-opacity .dan__slide__inner {
+      opacity: 0.5;
+      transition: opacity 0.3s ease;
+      will-change: opacity;
+    }
+
+    #dan-opacity .dan__slide__inner.is-active {
+      opacity: 1;
+    }
+  </style>
+
+  <!-- ===============================
+     DEMO: Markup
+     =============================== -->
+  <div class="dan" id="dan-opacity">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">1</div>
+          </div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">2</div>
+          </div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">3</div>
+          </div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">4</div>
+          </div>
+        </div>
+        <div class="dan__slide">
+          <div class="dan__slide__inner">
+            <div class="card">5</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+     DEMO: Script
+     =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const danOpacity = initDanBase(
+        document.getElementById('dan-opacity')
+      )
+
+      const innerSlides =
+        document.querySelectorAll('#dan-opacity .dan__slide__inner')
+
+      function updateOpacity() {
+        const selectedIndex = danOpacity.selectedScrollSnap()
+
+        innerSlides.forEach((slide, index) => {
+          slide.classList.toggle('is-active', index === selectedIndex)
+        })
+      }
+
+      danOpacity.on('init', updateOpacity)
+      danOpacity.on('select', updateOpacity)
+    })()
+  </script>
+
+  <!-- ===============================
+     DOCUMENTATION: Code Reference
+     =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.dan__slide__inner {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.dan__slide__inner.is-active {
+  opacity: 1;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('select', () => {
+  const active = danCarousel.selectedScrollSnap()
+  slideInners.forEach((el, i) =>
+    el.classList.toggle('is-active', i === active)
+  )
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="parallax-effects">
+
+  <h2>Parallax Effects</h2>
+  <p>
+    • Image parallax based on scroll position<br>
+    • Three slides visible for clear comparison<br>
+    • Directly based on Embla documentation pattern
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-parallax {
+      max-width: 1000px;
+      margin: 40px auto;
+    }
+
+    #dan-parallax .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-parallax .dan__container {
+      display: flex;
+    }
+
+    /* 3 slides per view */
+    #dan-parallax .dan__slide {
+      flex: 0 0 50%;
+      position: relative;
+    }
+
+    /* Parallax wrapper */
+    #dan-parallax .dan__slide__parallax {
+      position: relative;
+      overflow: hidden;
+      height: 320px;
+    }
+
+    /* Image intentionally wider than slide */
+    #dan-parallax .dan__slide__parallax img {
+      width: 130%;
+      height: 100%;
+      object-fit: cover;
+      transform: translateX(0);
+      will-change: transform;
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-parallax">
+    <div class="dan__viewport">
+      <div class="dan__container">
+
+        <div class="dan__slide">
+          <div class="dan__slide__parallax">
+            <img src="1.jpg" alt="Parallax image 1">
+          </div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__parallax">
+            <img src="2.jpg" alt="Parallax image 2">
+          </div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__parallax">
+            <img src="3.jpg" alt="Parallax image 3">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const danParallax = initDanBase(
+        document.getElementById('dan-parallax')
+      )
+
+      const slides = danParallax.slideNodes()
+      const snapPoints = danParallax.scrollSnapList()
+      const PARALLAX_FACTOR = 0.4
+
+      function updateParallax() {
+        const progress = danParallax.scrollProgress()
+
+        slides.forEach((slide, index) => {
+          const img = slide.querySelector('img')
+          const diff = snapPoints[index] - progress
+          const translate = diff * 100 * PARALLAX_FACTOR
+          img.style.transform = `translateX(${translate}%)`
+        })
+      }
+
+      danParallax.on('scroll', updateParallax)
+      danParallax.on('reInit', updateParallax)
+      updateParallax()
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+#dan-parallax .dan__slide {
+  flex: 0 0 50%;
+}
+
+#dan-parallax .dan__slide__parallax {
+  position: relative;
+  overflow: hidden;
+  height: 320px;
+}
+
+#dan-parallax .dan__slide__parallax img {
+  width: 130%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('scroll', () => {
+  const progress = danCarousel.scrollProgress()
+  slides.forEach((slide, i) => {
+    const diff = snapPoints[i] - progress
+    slide.querySelector('img').style.transform =
+      `translateX(${diff * 40}%)`
+  })
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="progress-bar">
+
+  <h2>Progress Bar Indicator</h2>
+  <p>
+    • Shows carousel scroll progress<br>
+    • Updates smoothly during drag<br>
+    • Based on Embla documentation pattern
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-progress {
+      max-width: 800px;
+      margin: 40px auto;
+    }
+
+    #dan-progress .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-progress .dan__container {
+      display: flex;
+    }
+
+    #dan-progress .dan__slide {
+      flex: 0 0 33.33%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Progress bar styles */
+    #dan-progress .progress {
+      height: 4px;
+      background: #ffffff;
+      margin-top: 12px;
+      overflow: hidden;
+      border-radius: 2px;
+    }
+
+    #dan-progress .progress__bar {
+      height: 100%;
+      width: 100%;
+      background: #000;
+      transform: scaleX(0);
+      transform-origin: left center;
+      will-change: transform;
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-progress">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide"><div class="card">1</div></div>
+        <div class="dan__slide"><div class="card">2</div></div>
+        <div class="dan__slide"><div class="card">3</div></div>
+        <div class="dan__slide"><div class="card">4</div></div>
+        <div class="dan__slide"><div class="card">5</div></div>
+      </div>
+    </div>
+
+    <div class="progress">
+      <div class="progress__bar"></div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const dan = initDanBase(
+        document.getElementById('dan-progress')
+      )
+
+      const progressBar =
+        document.querySelector('#dan-progress .progress__bar')
+
+      function updateProgress() {
+        const progress = dan.scrollProgress()
+        progressBar.style.transform = `scaleX(${progress})`
+      }
+
+      dan.on('scroll', updateProgress)
+      dan.on('reInit', updateProgress)
+
+      updateProgress()
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.progress {
+  height: 4px;
+  background: #ffffff;
+}
+
+.progress__bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('scroll', () => {
+  const progress = danCarousel.scrollProgress()
+  progressBar.style.transform = `scaleX(${progress})`
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="auto-height">
+
+  <h2>Auto Height Adjustment</h2>
+  <p>
+    • Carousel height adapts to the active slide<br>
+    • Prevents layout jumps between slides<br>
+    • Embla‑style auto height implementation
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-auto-height {
+      max-width: 800px;
+      margin: 40px auto;
+    }
+
+    #dan-auto-height .dan__viewport {
+      overflow: hidden;
+      transition: height 0.3s ease;
+    }
+
+    #dan-auto-height .dan__container {
+      display: flex;
+    }
+
+    #dan-auto-height .dan__slide {
+      flex: 0 0 100%;
+      min-width: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Just to clearly show differing heights */
+    #dan-auto-height .card.small {
+      height: 120px;
+    }
+
+    #dan-auto-height .card.medium {
+      height: 200px;
+    }
+
+    #dan-auto-height .card.large {
+      height: 300px;
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-auto-height">
+    <div class="dan__viewport">
+      <div class="dan__container">
+        <div class="dan__slide">
+          <div class="card small">Short content</div>
+        </div>
+        <div class="dan__slide">
+          <div class="card medium">Medium content</div>
+        </div>
+        <div class="dan__slide">
+          <div class="card large">Tall content</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const danAutoHeight = initDanBase(
+        document.getElementById('dan-auto-height')
+      )
+
+      const viewport =
+        document.querySelector('#dan-auto-height .dan__viewport')
+
+      const slides = danAutoHeight.slideNodes()
+
+      function updateHeight() {
+        const activeIndex = danAutoHeight.selectedScrollSnap()
+        const activeSlide = slides[activeIndex]
+
+        const slideHeight = activeSlide.offsetHeight
+        viewport.style.height = `${slideHeight}px`
+      }
+
+      danAutoHeight.on('init', updateHeight)
+      danAutoHeight.on('select', updateHeight)
+      danAutoHeight.on('reInit', updateHeight)
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.dan__viewport {
+  transition: height 0.3s ease;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('select', () => {
+  const index = danCarousel.selectedScrollSnap()
+  const height =
+    danCarousel.slideNodes()[index].offsetHeight
+
+  viewport.style.height = `${height}px`
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="class-based-state-styling">
+
+  <h2>Class‑based State Styling</h2>
+  <p>
+    • Adds state classes to slides<br>
+    • Enables advanced visual styling<br>
+    • Based on Embla documentation pattern
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-state {
+      max-width: 900px;
+      margin: 40px auto;
+    }
+
+    #dan-state .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-state .dan__container {
+      display: flex;
+    }
+
+    #dan-state .dan__slide {
+      flex: 0 0 33.33%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Base style */
+    #dan-state .dan__slide__inner {
+      padding: 50px 0;
+      text-align: center;
+      background: #eee;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    /* Active slide */
+    #dan-state .dan__slide.is-selected .dan__slide__inner {
+      background: #000;
+      color: #fff;
+      transform: scale(1);
+    }
+
+    /* Previous & next slides */
+    #dan-state .dan__slide.is-prev .dan__slide__inner,
+    #dan-state .dan__slide.is-next .dan__slide__inner {
+      opacity: 0.6;
+      transform: scale(0.9);
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-state">
+    <div class="dan__viewport">
+      <div class="dan__container">
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">1</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">2</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">3</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">4</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">5</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const dan = initDanBase(
+        document.getElementById('dan-state')
+      )
+
+      const slides = dan.slideNodes()
+
+      function updateStates() {
+        const selectedIndex = dan.selectedScrollSnap()
+
+        slides.forEach((slide, index) => {
+          slide.classList.toggle('is-selected', index === selectedIndex)
+          slide.classList.toggle('is-prev', index === selectedIndex - 1)
+          slide.classList.toggle('is-next', index === selectedIndex + 1)
+        })
+      }
+
+      dan.on('init', updateStates)
+      dan.on('select', updateStates)
+      dan.on('reInit', updateStates)
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.dan__slide.is-selected { }
+.dan__slide.is-prev { }
+.dan__slide.is-next { }
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('select', () => {
+  const selected = danCarousel.selectedScrollSnap()
+
+  slides.forEach((slide, i) => {
+    slide.classList.toggle('is-selected', i === selected)
+    slide.classList.toggle('is-prev', i === selected - 1)
+    slide.classList.toggle('is-next', i === selected + 1)
+  })
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="custom-animation-timing">
+
+  <h2>Custom Animation Timing</h2>
+  <p>
+    • Control how snapping animations feel<br>
+    • Separate engine timing from visual transitions<br>
+    • Embla‑style timing customization
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-timing {
+      max-width: 900px;
+      margin: 40px auto;
+    }
+
+    #dan-timing .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-timing .dan__container {
+      display: flex;
+    }
+
+    #dan-timing .dan__slide {
+      flex: 0 0 33.33%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Visual animation timing (presentation layer) */
+    #dan-timing .dan__slide__inner {
+      background: #eee;
+      padding: 50px 0;
+      text-align: center;
+      border-radius: 8px;
+
+      transform: scale(0.9);
+      transition:
+        transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #dan-timing .dan__slide.is-selected .dan__slide__inner {
+      transform: scale(1);
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-timing">
+    <div class="dan__viewport">
+      <div class="dan__container">
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">1</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">2</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">3</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">4</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">5</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      /* Engine timing configuration */
+      const danTiming = initDanBase(
+        document.getElementById('dan-timing'),
+        {
+          duration: 45 // slower snap animation
+        }
+      )
+
+      const slides = danTiming.slideNodes()
+
+      function updateState() {
+        const selected = danTiming.selectedScrollSnap()
+
+        slides.forEach((slide, index) => {
+          slide.classList.toggle('is-selected', index === selected)
+        })
+      }
+
+      danTiming.on('init', updateState)
+      danTiming.on('select', updateState)
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style (Visual Timing)</p>
+      <pre><code>
+.dan__slide__inner {
+  transition:
+    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script (Engine Timing)</p>
+      <pre><code>
+DanCarousel(viewport, {
+  duration: 45
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="hardware-accelerated-transforms">
+
+  <h2>Hardware‑Accelerated Transforms</h2>
+  <p>
+    • Ensures smooth GPU‑accelerated animations<br>
+    • Uses transform and opacity only<br>
+    • Embla‑style performance best practices
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-gpu {
+      max-width: 900px;
+      margin: 40px auto;
+    }
+
+    #dan-gpu .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-gpu .dan__container {
+      display: flex;
+    }
+
+    #dan-gpu .dan__slide {
+      flex: 0 0 33.33%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* GPU‑accelerated visual layer */
+    #dan-gpu .dan__slide__inner {
+      padding: 50px 0;
+      text-align: center;
+      background: #eee;
+      border-radius: 8px;
+
+      /* ✅ GPU acceleration */
+      transform: translateZ(0) scale(0.95);
+      will-change: transform, opacity;
+
+      transition:
+        transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.3s ease;
+    }
+
+    #dan-gpu .dan__slide.is-selected .dan__slide__inner {
+      transform: translateZ(0) scale(1);
+      opacity: 1;
+    }
+
+    #dan-gpu .dan__slide:not(.is-selected) .dan__slide__inner {
+      opacity: 0.6;
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-gpu">
+    <div class="dan__viewport">
+      <div class="dan__container">
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">1</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">2</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">3</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">4</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">5</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const danGPU = initDanBase(
+        document.getElementById('dan-gpu')
+      )
+
+      const slides = danGPU.slideNodes()
+
+      function updateState() {
+        const selected = danGPU.selectedScrollSnap()
+
+        slides.forEach((slide, index) => {
+          slide.classList.toggle('is-selected', index === selected)
+        })
+      }
+
+      danGPU.on('init', updateState)
+      danGPU.on('select', updateState)
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+.dan__slide__inner {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('select', () => {
+  slides.forEach((slide, i) =>
+    slide.classList.toggle(
+      'is-selected',
+      i === danCarousel.selectedScrollSnap()
+    )
+  )
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<section name="reduced-motion">
+
+  <h2>Reduced Motion Friendly Behavior</h2>
+  <p>
+    • Respects user’s “Reduce Motion” system setting<br>
+    • Disables visual animations when preferred<br>
+    • Embla‑style accessibility pattern
+  </p>
+
+  <!-- ===============================
+       DEMO: Styles
+       =============================== -->
+  <style>
+    #dan-reduced-motion {
+      max-width: 900px;
+      margin: 40px auto;
+    }
+
+    #dan-reduced-motion .dan__viewport {
+      overflow: hidden;
+    }
+
+    #dan-reduced-motion .dan__container {
+      display: flex;
+    }
+
+    #dan-reduced-motion .dan__slide {
+      flex: 0 0 33.33%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Normal motion styles */
+    #dan-reduced-motion .dan__slide__inner {
+      padding: 50px 0;
+      text-align: center;
+      background: #eee;
+      border-radius: 8px;
+
+      transform: scale(0.9);
+      transition:
+        transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.3s ease;
+    }
+
+    #dan-reduced-motion .dan__slide.is-selected
+      .dan__slide__inner {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    /* 🔑 Reduced motion handling */
+    @media (prefers-reduced-motion: reduce) {
+      #dan-reduced-motion .dan__slide__inner {
+        transition: none;
+        transform: none;
+      }
+    }
+  </style>
+
+  <!-- ===============================
+       DEMO: Markup
+       =============================== -->
+  <div class="dan" id="dan-reduced-motion">
+    <div class="dan__viewport">
+      <div class="dan__container">
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">1</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">2</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">3</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">4</div>
+        </div>
+
+        <div class="dan__slide">
+          <div class="dan__slide__inner">5</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================
+       DEMO: Script
+       =============================== -->
+  <script>
+    (() => {
+      function initDanBase(root, options = {}) {
+        if (!root) return null
+        const viewport = root.querySelector('.dan__viewport')
+        return DanCarousel(viewport, options)
+      }
+
+      const danReduced = initDanBase(
+        document.getElementById('dan-reduced-motion')
+      )
+
+      const slides = danReduced.slideNodes()
+
+      function updateState() {
+        const selected = danReduced.selectedScrollSnap()
+
+        slides.forEach((slide, index) => {
+          slide.classList.toggle('is-selected', index === selected)
+        })
+      }
+
+      danReduced.on('init', updateState)
+      danReduced.on('select', updateState)
+    })()
+  </script>
+
+  <!-- ===============================
+       DOCUMENTATION: Code Reference
+       =============================== -->
+  <div class="code">
+
+    <div>
+      <p>Style</p>
+      <pre><code>
+@media (prefers-reduced-motion: reduce) {
+  .dan__slide__inner {
+    transition: none;
+    transform: none;
+  }
+}
+      </code></pre>
+    </div>
+
+    <div>
+      <p>Script</p>
+      <pre><code>
+danCarousel.on('select', () => {
+  slides.forEach((slide, i) =>
+    slide.classList.toggle(
+      'is-selected',
+      i === danCarousel.selectedScrollSnap()
+    )
+  )
+})
+      </code></pre>
+    </div>
+
+  </div>
+
+</section>
+
+<div class="dan" id="dan-keyboard">
+  <div class="dan__viewport" tabindex="0">
+    <div class="dan__container">
+      <div class="dan__slide">1</div>
+      <div class="dan__slide">2</div>
+      <div class="dan__slide">3</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const dan = DanCarousel(
+    document.querySelector('#dan-keyboard .dan__viewport')
+  )
+})()
+</script>
+
+<div class="dan" id="dan-focus">
+  <div class="dan__viewport">
+    <div class="dan__container">
+      <div class="dan__slide"><button>Slide 1</button></div>
+      <div class="dan__slide"><button>Slide 2</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const dan = DanCarousel(
+    document.querySelector('#dan-focus .dan__viewport')
+  )
+
+  dan.on('slideFocus', () => {
+    console.log('Slide received focus')
+  })
+})()
+</script>
+
+4️⃣ Accessibility & Usability
+
+Keyboard operability
+Focus management
+Screen reader support
+ARIA roles and labels
+aria-live announcements
+Reduced motion support (prefers-reduced-motion)
+Non‑blocking page scrolling
+Touch‑safe interaction handling
+
+
+5️⃣ Lifecycle & Engine Behavior
+
+Automatic resize handling (ResizeObserver)
+Automatic slide mutation handling (MutationObserver)
+Dynamic content support
+reInit() for layout recalculation
+destroy() for cleanup
+Visibility awareness (document visibility state)
+Slide registry management
+Engine re‑initialization on breakpoint changes
+
+
+6️⃣ Observability & State Awareness
+
+Scroll progress tracking
+Current snap index tracking
+Previous snap tracking
+Slide visibility detection
+Slides in view detection
+Slides not in view detection
+Intersection‑based slide observation
+In‑view threshold configuration
+
+
+7️⃣ Public API & Utilities
+
+scrollNext()
+scrollPrev()
+scrollTo(index)
+scrollSnapList()
+selectedScrollSnap()
+previousScrollSnap()
+slidesInView()
+slidesNotInView()
+slideNodes()
+containerNode()
+rootNode()
+internalEngine() (advanced)
+Event listener system (on, off, emit)
+
+
+8️⃣ Event Lifecycle
+
+init
+select
+scroll
+settle
+resize
+slidesChanged
+slideFocusStart
+slideFocus
+destroy
+Autoplay lifecycle events
+
+
+9️⃣ Plugin Support
+
+Autoplay plugin
+Plugin lifecycle management
+Plugin breakpoint awareness
+Plugin interaction rules
+Plugin cleanup on destroy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+<script>
+    (function () {
+      const sections = Array.from(document.querySelectorAll('section[name]'))
+      const nav = document.getElementById('section-pagination')
+
+      if (!sections.length || !nav) return
+
+      const buttons = sections.map((section, index) => {
+        const btn = document.createElement('button')
+        btn.textContent = index + 1
+        btn.setAttribute(
+          'aria-label',
+          `Go to section ${index + 1}: ${section.getAttribute('name')}`
+        )
+
+        btn.addEventListener('click', () => {
+          section.scrollIntoView({ behavior: 'smooth' })
+        })
+
+        nav.appendChild(btn)
+        return btn
+      })
+
+      function updateActive() {
+        let activeIndex = 0
+
+        sections.forEach((section, index) => {
+          const rect = section.getBoundingClientRect()
+          const middle = rect.top + rect.height / 2
+
+          if (middle < window.innerHeight / 2) {
+            activeIndex = index
+          }
+        })
+
+        buttons.forEach((btn, i) =>
+          btn.classList.toggle('is-active', i === activeIndex)
+        )
+      }
+
+      updateActive()
+      window.addEventListener('scroll', updateActive)
+    })()
+</script>
+
+</html>
