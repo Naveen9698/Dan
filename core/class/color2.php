@@ -1,0 +1,15 @@
+.bg-primary           { background-color: var(--color-primary); }
+.bg-primary-hover     { background-color: var(--color-primary-hover); }
+.bg-secondary         { background-color: var(--color-secondary); }
+.bg-secondary-hover   { background-color: var(--color-secondary-hover); }
+.bg-black             { background-color: var(--color-black); }
+.bg-white             { background-color: var(--color-white); }
+.bg-gray-10           { background-color: var(--color-gray-10); }
+.bg-gray-20           { background-color: var(--color-gray-20); }
+.bg-gray-30           { background-color: var(--color-gray-30); }
+.bg-gray-40           { background-color: var(--color-gray-40); }
+.bg-gray-50           { background-color: var(--color-gray-50); }
+.bg-gray-60           { background-color: var(--color-gray-60); }
+.bg-gray-70           { background-color: var(--color-gray-70); }
+.bg-gray-80           { background-color: var(--color-gray-80); }
+.bg-gray-90           { background-color: var(--color-gray-90); }

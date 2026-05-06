@@ -4,17 +4,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <link rel="stylesheet" href="css/index.css">
+  <title>Style Guide</title>
 </head>
 
 <body>
+  <style>
+    <?php include 'core_css.php'; ?>
+  </style>
 
   <div class="d-app">
-    <?php include 'index-left-nav.php'; ?>
+    <?php include 'style_guide_layout.php'; ?>
     <main class="d-main">
 
       <?php include 'core/base.php'; ?>
+      <?php include 'core/color_system.php'; ?>
+      <?php include 'core/space_system.php'; ?>
+      <?php include 'core/typography_system.php'; ?>
 
 
 

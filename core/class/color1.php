@@ -1,0 +1,15 @@
+.text-primary           { color: var(--color-primary); }
+.text-primary-hover     { color: var(--color-primary-hover); }
+.text-secondary         { color: var(--color-secondary); }
+.text-secondary-hover   { color: var(--color-secondary-hover); }
+.text-black             { color: var(--color-black); }
+.text-white             { color: var(--color-white); }
+.text-gray-10           { color: var(--color-gray-10); }
+.text-gray-20           { color: var(--color-gray-20); }
+.text-gray-30           { color: var(--color-gray-30); }
+.text-gray-40           { color: var(--color-gray-40); }
+.text-gray-50           { color: var(--color-gray-50); }
+.text-gray-60           { color: var(--color-gray-60); }
+.text-gray-70           { color: var(--color-gray-70); }
+.text-gray-80           { color: var(--color-gray-80); }
+.text-gray-90           { color: var(--color-gray-90); }

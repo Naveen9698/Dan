@@ -1,4 +1,4 @@
-const navItems = document.querySelectorAll('.nav-item');
+const navItems = document.querySelectorAll('.d-nav-item');
 const sections = Array.from(navItems).map(item =>
   document.getElementById(item.dataset.target)
 );
@@ -14,8 +14,8 @@ function onScroll() {
 
   if (activeIndex === -1) activeIndex = 0;
 
-  navItems.forEach(item => item.classList.remove('active'));
-  navItems[activeIndex].classList.add('active');
+  navItems.forEach(item => item.classList.remove('d-active'));
+  navItems[activeIndex].classList.add('d-active');
 }
 
 window.addEventListener('scroll', onScroll);
