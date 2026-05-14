@@ -1,0 +1,9 @@
+.mw-100 {--mw-base: 100px;}
+.mw-200 {--mw-base: 200px;}
+.mw-300 {--mw-base: 300px;}
+.mw-400 {--mw-base: 400px;}
+.mw-500 {--mw-base: 500px;}
+.mw-600 {--mw-base: 600px;}
+.mw-700 {--mw-base: 700px;}
+.mw-800 {--mw-base: 800px;}
+.mw-900 {--mw-base: 900px;}

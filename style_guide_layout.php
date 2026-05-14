@@ -141,11 +141,16 @@
     <div class="d-nav-item d-active" data-target="base">Base</div>
     <div class="d-nav-item" data-target="color-system">Color</div>
     <div class="d-nav-item" data-target="space-system">Space</div>
+    <div class="d-nav-item" data-target="auto-margin-system">Auto Margin</div>
     <div class="d-nav-item" data-target="typography-system">Typography</div>
     <div class="d-nav-item" data-target="border-radius-system">Border & Radius</div>
     <div class="d-nav-item" data-target="max-width-system">Max Width</div>
+    <div class="d-nav-item" data-target="image-system">Image</div>
+    <h4 class="d-h4">Display</h4>
     <div class="d-nav-item" data-target="grid-system">Grid</div>
     <div class="d-nav-item" data-target="flex-system">Flex</div>
+    <h4 class="d-h4">Position</h4>
+
   </div>
   <div class="d-nav-group">
     <h3 class="d-h3">Interaction</h3>

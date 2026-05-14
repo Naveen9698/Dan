@@ -1,0 +1,12 @@
+.dp-1  { grid-column: span 1; }
+.dp-2  { grid-column: span 2; }
+.dp-3  { grid-column: span 3; }
+.dp-4  { grid-column: span 4; }
+.dp-5  { grid-column: span 5; }
+.dp-6  { grid-column: span 6; }
+.dp-7  { grid-column: span 7; }
+.dp-8  { grid-column: span 8; }
+.dp-9  { grid-column: span 9; }
+.dp-10 { grid-column: span 10; }
+.dp-11 { grid-column: span 11; }
+.dp-12 { grid-column: span 12; }

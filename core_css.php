@@ -9,6 +9,12 @@ foreach (glob('core/root/*.php') as $file) {
 
 
 <?php
+foreach (glob('core/prefix/*.php') as $file) {
+    include $file;
+}
+?>
+
+<?php
 foreach (glob('core/class/*.php') as $file) {
     include $file;
 }

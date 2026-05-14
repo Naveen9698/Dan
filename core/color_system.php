@@ -9,7 +9,7 @@
 }</code></pre>
   </div>
   <p class="d-note">
-    * The color system is based on a set of CSS variables that define the primary, secondary, and neutral colors, as well as their respective shades. <br>
+    * The color system is based on a set of CSS variables that define the main, sub, and neutral colors, as well as their respective shades. <br>
     * These variables can be easily customized to create a unique color palette for the project. <br>
     * The utility classes provide a convenient way to apply these colors to the elements, ensuring consistency across the design. <br>
     * By using the color system, you can maintain a cohesive and visually appealing design while also allowing for flexibility and customization.
@@ -35,7 +35,7 @@
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .color_system-card:hover {
+    .color_system-card:h {
       transform: translateY(-2px);
       box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
     }
@@ -77,34 +77,34 @@
   <div class="color_system-grid">
 
     <div class="color_system-card">
-      <div class="color_system-meta">Primary</div>
-      <div class="color_system-text" style="color:var(--color-primary)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-primary)">
-        <p>--color-primary</p>
+      <div class="color_system-meta">Main</div>
+      <div class="color_system-text" style="color:var(--color-main)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-main)">
+        <p>--color-main</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Primary Hover</div>
-      <div class="color_system-text" style="color:var(--color-primary-hover)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-primary-hover)">
-        <p>--color-primary-hover</p>
+      <div class="color_system-meta">Main hover</div>
+      <div class="color_system-text" style="color:var(--color-main-h)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-main-h)">
+        <p>--color-main-h</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Secondary</div>
-      <div class="color_system-text" style="color:var(--color-secondary)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-secondary)">
-        <p>--color-secondary</p>
+      <div class="color_system-meta">Sub</div>
+      <div class="color_system-text" style="color:var(--color-sub)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-sub)">
+        <p>--color-sub</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Secondary Hover</div>
-      <div class="color_system-text" style="color:var(--color-secondary-hover)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-secondary-hover)">
-        <p>--color-secondary-hover</p>
+      <div class="color_system-meta">Sub hover</div>
+      <div class="color_system-text" style="color:var(--color-sub-h)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-sub-h)">
+        <p>--color-sub-h</p>
       </div>
     </div>
 
@@ -116,76 +116,75 @@
       </div>
     </div>
 
-
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 10</div>
-      <div class="color_system-text" style="color:var(--color-gray-10)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-10)">
-        <p>--color-gray-10</p>
+      <div class="color_system-meta">Gray 9</div>
+      <div class="color_system-text" style="color:var(--color-g9)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g9)">
+        <p style="color:#000;background:rgba(255,255,255,.6)">--color-g9</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 20</div>
-      <div class="color_system-text" style="color:var(--color-gray-20)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-20)">
-        <p>--color-gray-20</p>
+      <div class="color_system-meta">Gray 8</div>
+      <div class="color_system-text" style="color:var(--color-g8)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g8)">
+        <p>--color-g8</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 30</div>
-      <div class="color_system-text" style="color:var(--color-gray-30)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-30)">
-        <p>--color-gray-30</p>
+      <div class="color_system-meta">Gray 7</div>
+      <div class="color_system-text" style="color:var(--color-g7)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g7)">
+        <p>--color-g7</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 40</div>
-      <div class="color_system-text" style="color:var(--color-gray-40)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-40)">
-        <p>--color-gray-40</p>
+      <div class="color_system-meta">Gray 6</div>
+      <div class="color_system-text" style="color:var(--color-g6)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g6)">
+        <p>--color-g6</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 50</div>
-      <div class="color_system-text" style="color:var(--color-gray-50)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-50)">
-        <p>--color-gray-50</p>
+      <div class="color_system-meta">Gray 5</div>
+      <div class="color_system-text" style="color:var(--color-g5)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g5)">
+        <p>--color-g5</p>
+      </div>
+    </div>
+    
+    <div class="color_system-card">
+      <div class="color_system-meta">Gray 4</div>
+      <div class="color_system-text" style="color:var(--color-g4)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g4)">
+        <p>--color-g4</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 60</div>
-      <div class="color_system-text" style="color:var(--color-gray-60)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-60)">
-        <p>--color-gray-60</p>
+      <div class="color_system-meta">Gray 3</div>
+      <div class="color_system-text" style="color:var(--color-g3)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g3)">
+        <p>--color-g3</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 70</div>
-      <div class="color_system-text" style="color:var(--color-gray-70)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-70)">
-        <p>--color-gray-70</p>
+      <div class="color_system-meta">Gray 2</div>
+      <div class="color_system-text" style="color:var(--color-g2)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g2)">
+        <p>--color-g2</p>
       </div>
     </div>
 
     <div class="color_system-card">
-      <div class="color_system-meta">Gray 80</div>
-      <div class="color_system-text" style="color:var(--color-gray-80)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-80)">
-        <p>--color-gray-80</p>
-      </div>
-    </div>
-
-    <div class="color_system-card">
-      <div class="color_system-meta">Gray 90</div>
-      <div class="color_system-text" style="color:var(--color-gray-90)">Abc</div>
-      <div class="color_system-swatch" style="background:var(--color-gray-90)">
-        <p style="color:#000;background:rgba(255,255,255,.6)">--color-gray-90</p>
+      <div class="color_system-meta">Gray 1</div>
+      <div class="color_system-text" style="color:var(--color-g1)">Abc</div>
+      <div class="color_system-swatch" style="background:var(--color-g1)">
+        <p>--color-g1</p>
       </div>
     </div>
 

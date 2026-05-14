@@ -1,0 +1,9 @@
+.mw-add-1 {--mw-add1: 1px;}
+.mw-add-2 {--mw-add1: 2px;}
+.mw-add-3 {--mw-add1: 3px;}
+.mw-add-4 {--mw-add1: 4px;}
+.mw-add-5 {--mw-add1: 5px;}
+.mw-add-6 {--mw-add1: 6px;}
+.mw-add-7 {--mw-add1: 7px;}
+.mw-add-8 {--mw-add1: 8px;}
+.mw-add-9 {--mw-add1: 9px;}

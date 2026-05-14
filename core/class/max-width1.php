@@ -1,0 +1,9 @@
+.mw-10 {--mw-base: 10px;}
+.mw-20 {--mw-base: 20px;}
+.mw-30 {--mw-base: 30px;}
+.mw-40 {--mw-base: 40px;}
+.mw-50 {--mw-base: 50px;}
+.mw-60 {--mw-base: 60px;}
+.mw-70 {--mw-base: 70px;}
+.mw-80 {--mw-base: 80px;}
+.mw-90 {--mw-base: 90px;}
