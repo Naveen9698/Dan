@@ -1,0 +1,9 @@
+.w-add-1 { --w-add1: 1%; }
+.w-add-2 { --w-add1: 2%; }
+.w-add-3 { --w-add1: 3%; }
+.w-add-4 { --w-add1: 4%; }
+.w-add-5 { --w-add1: 5%; }
+.w-add-6 { --w-add1: 6%; }
+.w-add-7 { --w-add1: 7%; }
+.w-add-8 { --w-add1: 8%; }
+.w-add-9 { --w-add1: 9%; }

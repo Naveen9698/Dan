@@ -10,7 +10,7 @@
   <p class="d-note">
     * This typography system is based on <b>HTML</b> that define the font sizes.<br>
     * Font weights is static, like 400 for regular text and 600 for headings and emphasized text. <br>
-    * line heights scaling automatically with font size, such as 1.2 or 1.5, which means “1.2 × the font size” or “1.5 × the font size”.
+    * line heights scaling automatically with font size.
   </p>
 
   <h3 class="d-h3 demo">Font Sizes Utility Classes</h3>
@@ -112,7 +112,9 @@
     </script>
   </div>
   <p class="d-note">
-    * Line-height values like 1.2 mean “1.2 × the font size”, so at 16px text the line height becomes 19.2px, scaling automatically with font size.
+    * Line-height values like 1.2 mean “1.2 × the font size”. <br>
+    * At 16px text the line height becomes 19.2px. <br>
+    * Scaling automatically with font size.
   </p>
   <h3 class="d-h3 demo">Live Demo</h3>
   <style>

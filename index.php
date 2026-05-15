@@ -19,9 +19,11 @@
       <?php include 'core/base.php'; ?>
       <?php include 'core/color_system.php'; ?>
       <?php include 'core/space_system.php'; ?>
-      <?php include 'core/auto-margin_system.php'; ?>
+      <?php include 'core/margin-auto_system.php'; ?>
       <?php include 'core/typography_system.php'; ?>
+      <?php include 'core/text-align_system.php'; ?>
       <?php include 'core/border_radius_system.php'; ?>
+      <?php include 'core/width_system.php'; ?>
       <?php include 'core/max-width_system.php'; ?>
       <?php include 'core/image_system.php'; ?>
       <?php include 'core/grid_system.php'; ?>

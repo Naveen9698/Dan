@@ -55,25 +55,25 @@
 
   <div class="border-radius-system-demo bg-g1 p-md ra-xl">
 
-    <div class="border-radius-system-sample ra-full">
-      ra-full
+    <div class="border-radius-system-sample ra-max">
+      ra-max
     </div>
 
-    <div class="border-radius-system-sample bl-3 ra-full clr-main">
-      bl-3 <br> ra-full <br> clr-main
+    <div class="border-radius-system-sample bl-3 ra-max clr-main">
+      bl-3 <br> ra-max <br> clr-main
     </div>
 
-    <div class="border-radius-system-sample bw-2 ra-full clr-sub">
+    <div class="border-radius-system-sample bw-2 ra-max clr-sub">
       bw-2<br>
-      ra-full<br>
+      ra-max<br>
       clr-sub
     </div>
 
-    <div class="border-radius-system-sample bl-3 br-3 bb-3 ra-full clr-g3">
+    <div class="border-radius-system-sample bl-3 br-3 bb-3 ra-max clr-g3">
       br-3 .
       bb-3 .
       bl-3<br>
-      ra-full<br>
+      ra-max<br>
       clr-g3
     </div>
 

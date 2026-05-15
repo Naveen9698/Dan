@@ -1,5 +1,5 @@
-.dp-left     { align-items: flex-start; }
-.dp-center   { align-items: center; }
-.dp-right    { align-items: flex-end; }
-.dp-stretch  { align-items: stretch; }
-.dp-baseline { align-items: baseline; }
+.f-left     { align-items: flex-start; }
+.f-center   { align-items: center; }
+.f-right    { align-items: flex-end; }
+.f-stretch  { align-items: stretch; }
+.f-baseline { align-items: baseline; }

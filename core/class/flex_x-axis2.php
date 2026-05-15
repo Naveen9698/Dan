@@ -1,7 +1,7 @@
 @media (max-width: 991px) {
-  .tb-left     { align-items: flex-start; }
-  .tb-center   { align-items: center; }
-  .tb-right    { align-items: flex-end; }
-  .tb-stretch  { align-items: stretch; }
-  .tb-baseline { align-items: baseline; }
+  .f-tb-left     { align-items: flex-start; }
+  .f-tb-center   { align-items: center; }
+  .f-tb-right    { align-items: flex-end; }
+  .f-tb-stretch  { align-items: stretch; }
+  .f-tb-baseline { align-items: baseline; }
 }

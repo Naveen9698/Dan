@@ -5,4 +5,4 @@
 .ra-lg   { border-radius: 25px;   }
 .ra-xl   { border-radius: 30px;   }
 .ra-xxl  { border-radius: 35px;   }
-.ra-full { border-radius: 9999px; }
+.ra-max { border-radius: 9999px; }

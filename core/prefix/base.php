@@ -11,6 +11,6 @@ body {
   line-height: 1.2;
 }
 
-.inset-0{
+.inset-0 {
   inset: 0;
 }

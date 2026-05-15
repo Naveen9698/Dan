@@ -11,8 +11,8 @@
     * Direct images participate in normal document flow.<br>
     * Intrinsic dimensions are preserved by default.<br>
     * <b>max-width: 100%</b> prevents overflow without forcing scaling.<br>
-    * Use <b>.img-full</b> only for explicit full‑width intent. <br>
-    * Height utilitie <b>.img-h-full</b> only behave predictably when container height is defined.
+    * Use <b>.img-max</b> only for explicit max‑width intent. <br>
+    * Height utilitie <b>.img-h-max</b> only behave predictably when container height is defined.
   </p>
 
   <h3 class="d-h3 demo">Background Like Image Prefixes / Classes</h3>
@@ -132,7 +132,7 @@
           <div class="demo-label">
             <b>Background like image</b>
             <pre><code>&lt;div class="bg-container ar-16x9"&gt;
-  &lt;img src="" alt=""&gt;
+  &lt;img class="bg-img" src="" alt=""&gt;
 &lt;/div&gt;</code></pre>
             Detached from flow · layered · clipped
           </div>

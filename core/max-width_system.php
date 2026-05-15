@@ -80,7 +80,7 @@
       font-weight: 500;
       position: absolute;
       left: 575px;
-      top: 9px;
+      top: 15px;
     }
 
     .max-width_system-total-550 {
@@ -88,7 +88,7 @@
       font-weight: 500;
       position: absolute;
       left: 570px;
-      top: 9px;
+      top: 15px;
     }
 
     .max-width_system-total-500 {
@@ -96,7 +96,7 @@
       font-weight: 500;
       position: absolute;
       left: 520px;
-      top: 9px;
+      top: 15px;
     }
 
     .dot {
