@@ -23,6 +23,7 @@
       <?php include 'core/typography_system.php'; ?>
       <?php include 'core/text-align_system.php'; ?>
       <?php include 'core/border_radius_system.php'; ?>
+      <?php include 'core/opacity_system.php'; ?>
       <?php include 'core/width_system.php'; ?>
       <?php include 'core/max-width_system.php'; ?>
       <?php include 'core/image_system.php'; ?>

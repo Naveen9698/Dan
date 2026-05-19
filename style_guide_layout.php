@@ -145,6 +145,7 @@
     <div class="d-nav-item" data-target="typography-system">Typography</div>
     <div class="d-nav-item" data-target="text-align-system">Text Align</div>
     <div class="d-nav-item" data-target="border-radius-system">Border & Radius</div>
+    <div class="d-nav-item" data-target="opacity-system">Opacity</div>
     <div class="d-nav-item" data-target="width-system">Width</div>
     <div class="d-nav-item" data-target="max-width-system">Max Width</div>
     <div class="d-nav-item" data-target="image-system">Image</div>
