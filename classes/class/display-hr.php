@@ -1,0 +1,9 @@
+.hr-dis-block        { --hr-dis: block; }
+.hr-dis-inline       { --hr-dis: inline; }
+.hr-dis-inline-block { --hr-dis: inline-block; }
+.hr-dis-flex         { --hr-dis: flex; }
+.hr-dis-inline-flex  { --hr-dis: inline-flex; }
+.hr-dis-grid         { --hr-dis: grid; }
+.hr-dis-inline-grid  { --hr-dis: inline-grid; }
+.hr-dis-none         { --hr-dis: none; }
+.hr-dis-contents     { --hr-dis: contents; }

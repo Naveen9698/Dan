@@ -1,0 +1,9 @@
+.dis-mb-block        { display: block;        }
+.dis-mb-inline       { display: inline;       }
+.dis-mb-inline-block { display: inline-block; }
+.dis-mb-flex         { display: flex;         }
+.dis-mb-inline-flex  { display: inline-flex;  }
+.dis-mb-grid         { display: grid;         }
+.dis-mb-inline-grid  { display: inline-grid;  }
+.dis-mb-none         { display: none;         }
+.dis-mb-contents     { display: contents;     }

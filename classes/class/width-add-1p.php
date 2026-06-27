@@ -1,0 +1,9 @@
+.w-add-1p { --w-add-p: 1%; }
+.w-add-2p { --w-add-p: 2%; }
+.w-add-3p { --w-add-p: 3%; }
+.w-add-4p { --w-add-p: 4%; }
+.w-add-5p { --w-add-p: 5%; }
+.w-add-6p { --w-add-p: 6%; }
+.w-add-7p { --w-add-p: 7%; }
+.w-add-8p { --w-add-p: 8%; }
+.w-add-9p { --w-add-p: 9%; }

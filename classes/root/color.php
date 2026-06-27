@@ -1,0 +1,18 @@
+--color-main    : hsl(244, 100%, 68%);
+--color-main-h  : hsl(244, 100%, 78%);
+--color-sub     : hsl(124, 100%, 68%);
+--color-sub-h   : hsl(124, 100%, 78%);
+--color-acnt    : hsl(14, 100%, 68%);
+--color-acnt-h  : hsl(14, 100%, 78%);
+--color-black   : hsl(0, 0%, 0%);
+--color-g9      : hsl(0, 0%, 10%);
+--color-g8      : hsl(0, 0%, 20%);
+--color-g7      : hsl(0, 0%, 30%);
+--color-g6      : hsl(0, 0%, 40%);
+--color-g5      : hsl(0, 0%, 50%);
+--color-g4      : hsl(0, 0%, 60%);
+--color-g3      : hsl(0, 0%, 70%);
+--color-g2      : hsl(0, 0%, 80%);
+--color-g1      : hsl(0, 0%, 90%);
+--color-white   : hsl(0, 0%, 100%);
+--color-0       : hsla(0, 0%, 100%, 0.00);

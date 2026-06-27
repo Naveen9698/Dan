@@ -1,0 +1,7 @@
+--sp-xxs: calc(var(--space-unit) * 1);
+--sp-xs : calc(var(--space-unit) * 2);
+--sp-sm : calc(var(--space-unit) * 3);
+--sp-md : calc(var(--space-unit) * 4);
+--sp-lg : calc(var(--space-unit) * 6);
+--sp-xl : calc(var(--space-unit) * 8);
+--sp-xxl: calc(var(--space-unit) * 12);

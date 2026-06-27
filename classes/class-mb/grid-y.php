@@ -1,0 +1,12 @@
+.gy-mb-1 { grid-row: span 1; }
+.gy-mb-2 { grid-row: span 2; }
+.gy-mb-3 { grid-row: span 3; }
+.gy-mb-4 { grid-row: span 4; }
+.gy-mb-5 { grid-row: span 5; }
+.gy-mb-6 { grid-row: span 6; }
+.gy-mb-7 { grid-row: span 7; }
+.gy-mb-8 { grid-row: span 8; }
+.gy-mb-9 { grid-row: span 9; }
+.gy-mb-10 { grid-row: span 10; }
+.gy-mb-11 { grid-row: span 11; }
+.gy-mb-12 { grid-row: span 12; }

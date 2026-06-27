@@ -1,0 +1,13 @@
+.of-auto     { overflow: auto;     }
+.of-x-auto   { overflow-x: auto;   }
+.of-y-auto   { overflow-y: auto;   }
+.of-hidden   { overflow: hidden;   }
+.of-x-hidden { overflow-x: hidden; }
+.of-y-hidden { overflow-y: hidden; }
+.of-scroll   { overflow: scroll;   }
+.of-x-scroll { overflow-x: scroll; }
+.of-y-scroll { overflow-y: scroll; }
+.of-clip     { overflow: clip;     }
+.of-x-clip   { overflow-x: clip;   }
+.of-y-clip   { overflow-y: clip;   }
+.of-visible  { overflow: visible;  }

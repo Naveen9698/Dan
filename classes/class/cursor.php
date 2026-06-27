@@ -1,0 +1,12 @@
+.cur-auto     { cursor: auto;        }
+.cur-default  { cursor: default;     }
+.cur-pointer  { cursor: pointer;     }
+.cur-text     { cursor: text;        }
+.cur-grab     { cursor: grab;        }
+.cur-grabbing { cursor: grabbing;    }
+.cur-na       { cursor: not-allowed; }
+.cur-wait     { cursor: wait;        }
+.cur-progress { cursor: progress;    }
+.cur-zoom-in  { cursor: zoom-in;     }
+.cur-zoom-out { cursor: zoom-out;    }
+.cur-none     { cursor: none;        }

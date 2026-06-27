@@ -1,0 +1,9 @@
+.r-add-1p { --r-add-p: 1%; }
+.r-add-2p { --r-add-p: 2%; }
+.r-add-3p { --r-add-p: 3%; }
+.r-add-4p { --r-add-p: 4%; }
+.r-add-5p { --r-add-p: 5%; }
+.r-add-6p { --r-add-p: 6%; }
+.r-add-7p { --r-add-p: 7%; }
+.r-add-8p { --r-add-p: 8%; }
+.r-add-9p { --r-add-p: 9%; }

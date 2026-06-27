@@ -4,52 +4,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Style Guide</title>
+  <title>System Guide</title>
 </head>
 
-<body>
+<body class="flex-x">
   <style>
-    <?php include 'core_css.php'; ?>
+    <?php include 'classes-css.php'; ?>
   </style>
 
-  <div class="d-app">
-    <?php include 'style_guide_layout.php'; ?>
-    <main class="d-main">
+  <?php include 'style-guide-layout.php'; ?>
+  <main class="w-100p stack-y-md ma-auto">
 
-      <?php include 'core/base.php'; ?>
-      <?php include 'core/color_system.php'; ?>
-      <?php include 'core/space_system.php'; ?>
-      <?php include 'core/margin-auto_system.php'; ?>
-      <?php include 'core/typography_system.php'; ?>
-      <?php include 'core/text-align_system.php'; ?>
-      <?php include 'core/border_radius_system.php'; ?>
-      <?php include 'core/opacity_system.php'; ?>
-      <?php include 'core/width_system.php'; ?>
-      <?php include 'core/max-width_system.php'; ?>
-      <?php include 'core/image_system.php'; ?>
-      <?php include 'core/grid_system.php'; ?>
-      <?php include 'core/flex_system.php'; ?>
-
-
-
-
-
-
-
-
-
-
-
+    <?php include 'classes/base.php'; ?>
+    <?php include 'classes/background-image-system.php'; ?>
+    <?php include 'classes/border-system.php'; ?>
+    <?php include 'classes/color-system.php'; ?>
+    <?php include 'classes/cursor-system.php'; ?>
+    <?php include 'classes/display-system.php'; ?>
+    <?php include 'classes/flex-system.php'; ?>
+    <?php include 'classes/grid-system.php'; ?>
+    <?php include 'classes/height-system.php'; ?>
+    <?php include 'classes/margin-auto-system.php'; ?>
+    <?php include 'classes/offset-system.php'; ?>
+    <?php include 'classes/opacity-system.php'; ?>
+    <?php include 'classes/overflow-system.php'; ?>
+    <?php include 'classes/position-system.php'; ?>
+    <?php include 'classes/radius-system.php'; ?>
+    <?php include 'classes/shadow-system.php'; ?>
+    <?php include 'classes/space-system.php'; ?>
+    <?php include 'classes/text-align-system.php'; ?>
+    <?php include 'classes/transition-system.php'; ?>
+    <?php include 'classes/typography-system.php'; ?>
+    <?php include 'classes/visibility-system.php'; ?>
+    <?php include 'classes/width-system.php'; ?>
+    <?php include 'classes/z-index-system.php'; ?>
 
 
-
-
+    <?php include 'interactions/states-pseudo-interactions.php'; ?>
+    <?php include 'interactions/states-class-interactions.php'; ?>
 
 
 
-    </main>
-  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </main>
+
 </body>
-<script src="js/index.js"></script>
+
+<?php include 'classes/js/system-guide.php'; ?>
 
 </html>

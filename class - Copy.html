@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+ charset="UTF-8" /><html lang="en">
+<title>Border System Test</title>
+
+<style>
+/* RESET */
+* {
+  box-sizing: border-box;
+}
+
+/* DEMO BASE */
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background: #f4f4f4;
+}
+
+.grid {
+  display: flex;
+  gap: 20px;
+}
+
+.box {
+  padding: 20px;
+  background: white;
+}
+
+/* =========================
+   VARIABLES
+========================= */
+:root {
+  --ba-xxs: 1px;
+  --ba-xs : 3px;
+  --ba-sm : 5px;
+  --ba-md : 7px;
+  --ba-lg : 10px;
+  --ba-xl : 15px;
+  --ba-xxl: 20px;
+}
+
+/* =========================
+   BORDER ENGINE
+========================= */
+[class^="ba-"], [class*=" ba-"],
+[class^="bt-"], [class*=" bt-"],
+[class^="br-"], [class*=" br-"],
+[class^="bb-"], [class*=" bb-"],
+[class^="bl-"], [class*=" bl-"] {
+  border-style: var(--bs, solid);
+  border-color: currentColor;
+
+  border-width: var(--ba, 0);
+  border-top-width: var(--ba-t, var(--ba));
+  border-right-width: var(--ba-r, var(--ba));
+  border-bottom-width: var(--ba-b, var(--ba));
+  border-left-width: var(--ba-l, var(--ba));
+}
+
+/* =========================
+   UTILITIES
+========================= */
+
+/* ALL */
+.ba-sm  { --ba: var(--ba-sm); }
+
+/* TOP */
+.bt-sm  { --ba-t: var(--ba-sm); }
+
+/* RIGHT */
+.br-sm  { --ba-r: var(--ba-sm); }
+
+/* BOTTOM */
+.bb-sm  { --ba-b: var(--ba-sm); }
+
+/* LEFT */
+.bl-sm  { --ba-l: var(--ba-sm); }
+
+/* STYLE */
+.bs-solid  { --bs: solid; }
+.bs-dashed { --bs: dashed; }
+
+/* COLOR */
+.clr-main { color: #6c63ff; }
+
+/* DEBUG HELP */
+.debug {
+  outline: 1px dashed red;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Border Test</h2>
+
+<div class="grid">
+
+  <div class="box ba-sm clr-main">
+    ba-sm
+  </div>
+
+  <div class="box bt-sm clr-main">
+    bt-sm
+  </div>
+
+  <div class="box br-sm clr-main">
+    br-sm
+  </div>
+
+  <div class="box bb-sm clr-main">
+    bb-sm
+  </div>
+
+  <div class="box bl-sm clr-main">
+    bl-sm
+  </div>
+
+</div>
+
+<br>
+
+<h3>Combination Test</h3>
+
+<div class="grid">
+
+  <div class="box ba-sm bt-sm clr-main">
+    ba-sm + bt-sm
+  </div>
+
+  <div class="box bt-sm br-sm clr-main">
+    bt-sm + br-sm
+  </div>
+
+  <div class="box bl-sm bb-sm clr-main">
+    bl-sm + bb-sm
+  </div>
+
+</div>
+
+</body>
+</html>
+<head>

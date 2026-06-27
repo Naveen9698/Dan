@@ -1,0 +1,10 @@
+.tr-1  { transition: all 0.1s ease-in-out; }
+.tr-2  { transition: all 0.2s ease-in-out; }
+.tr-3  { transition: all 0.3s ease-in-out; }
+.tr-4  { transition: all 0.4s ease-in-out; }
+.tr-5  { transition: all 0.5s ease-in-out; }
+.tr-6  { transition: all 0.6s ease-in-out; }
+.tr-7  { transition: all 0.7s ease-in-out; }
+.tr-8  { transition: all 0.8s ease-in-out; }
+.tr-9  { transition: all 0.9s ease-in-out; }
+.tr-10 { transition: all 1s ease-in-out;   }

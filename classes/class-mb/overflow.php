@@ -1,0 +1,13 @@
+.of-mb-auto     { overflow: auto;     }
+.of-mb-x-auto   { overflow-x: auto;   }
+.of-mb-y-auto   { overflow-y: auto;   }
+.of-mb-hidden   { overflow: hidden;   }
+.of-mb-x-hidden { overflow-x: hidden; }
+.of-mb-y-hidden { overflow-y: hidden; }
+.of-mb-scroll   { overflow: scroll;   }
+.of-mb-x-scroll { overflow-x: scroll; }
+.of-mb-y-scroll { overflow-y: scroll; }
+.of-mb-clip     { overflow: clip;     }
+.of-mb-x-clip   { overflow-x: clip;   }
+.of-mb-y-clip   { overflow-y: clip;   }
+.of-mb-visible  { overflow: visible;  }

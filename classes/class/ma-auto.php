@@ -1,0 +1,5 @@
+.ma-auto { margin: auto;        }
+.mt-auto { margin-top: auto;    }
+.mr-auto { margin-right: auto;  }
+.mb-auto { margin-bottom: auto; }
+.ml-auto { margin-left: auto;   }

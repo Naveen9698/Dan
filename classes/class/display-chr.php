@@ -1,0 +1,9 @@
+.chr-dis-block        { --chr-dis: block; }
+.chr-dis-inline       { --chr-dis: inline; }
+.chr-dis-inline-block { --chr-dis: inline-block; }
+.chr-dis-flex         { --chr-dis: flex; }
+.chr-dis-inline-flex  { --chr-dis: inline-flex; }
+.chr-dis-grid         { --chr-dis: grid; }
+.chr-dis-inline-grid  { --chr-dis: inline-grid; }
+.chr-dis-none         { --chr-dis: none; }
+.chr-dis-contents     { --chr-dis: contents; }

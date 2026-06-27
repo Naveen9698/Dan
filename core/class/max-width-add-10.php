@@ -1,9 +1,0 @@
-.mw-add-10 {--mw-add10: 10px;}
-.mw-add-20 {--mw-add10: 20px;}
-.mw-add-30 {--mw-add10: 30px;}
-.mw-add-40 {--mw-add10: 40px;}
-.mw-add-50 {--mw-add10: 50px;}
-.mw-add-60 {--mw-add10: 60px;}
-.mw-add-70 {--mw-add10: 70px;}
-.mw-add-80 {--mw-add10: 80px;}
-.mw-add-90 {--mw-add10: 90px;}

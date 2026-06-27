@@ -1,3 +1,0 @@
-.ta-left   { text-align: left;  }
-.ta-center { text-align: center;}
-.ta-right  { text-align: right; }

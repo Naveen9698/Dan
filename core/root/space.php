@@ -1,7 +1,0 @@
---xxs: calc(var(--space-unit) * 1);
---xs:  calc(var(--space-unit) * 2);
---sm:  calc(var(--space-unit) * 3);
---md:  calc(var(--space-unit) * 4);
---lg:  calc(var(--space-unit) * 6);
---xl:  calc(var(--space-unit) * 8);
---xxl: calc(var(--space-unit) * 12);

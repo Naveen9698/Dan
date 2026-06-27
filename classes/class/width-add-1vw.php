@@ -1,0 +1,9 @@
+.w-add-1vw { --w-add-vw: 1vw; }
+.w-add-2vw { --w-add-vw: 2vw; }
+.w-add-3vw { --w-add-vw: 3vw; }
+.w-add-4vw { --w-add-vw: 4vw; }
+.w-add-5vw { --w-add-vw: 5vw; }
+.w-add-6vw { --w-add-vw: 6vw; }
+.w-add-7vw { --w-add-vw: 7vw; }
+.w-add-8vw { --w-add-vw: 8vw; }
+.w-add-9vw { --w-add-vw: 9vw; }

@@ -1,0 +1,9 @@
+.t-add-1p { --t-add-p: 1%; }
+.t-add-2p { --t-add-p: 2%; }
+.t-add-3p { --t-add-p: 3%; }
+.t-add-4p { --t-add-p: 4%; }
+.t-add-5p { --t-add-p: 5%; }
+.t-add-6p { --t-add-p: 6%; }
+.t-add-7p { --t-add-p: 7%; }
+.t-add-8p { --t-add-p: 8%; }
+.t-add-9p { --t-add-p: 9%; }

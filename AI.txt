@@ -1,0 +1,147 @@
+You are helping build a modular CSS utility framework based on a strict system architecture. Follow ALL rules carefully and DO NOT deviate.
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🧠 SYSTEM PHILOSOPHY
+━━━━━━━━━━━━━━━━━━━━━━━
+
+This framework is NOT a random utility system. It is a structured layout and styling system with clear separation of responsibilities:
+
+• Grid → layout structure (columns, placement)
+• Flex → content flow and alignment
+• Width / Height → sizing
+• Offset → positioning (top/right/bottom/left)
+• Gap / padding / margin → spacing
+• (Upcoming) Transform → movement / animation
+• (Upcoming) Transition → timing / interaction
+• (Upcoming) Aspect ratio → intrinsic sizing
+
+⚠️ Each system MUST stay within its responsibility.
+⚠️ DO NOT mix concerns between systems.
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🧩 CORE DESIGN RULES
+━━━━━━━━━━━━━━━━━━━━━━━
+
+1. COMPOSITION OVER ENUMERATION
+   • Use base classes + additive classes
+   • Avoid creating hundreds of fixed values
+   • Example:
+     w-100px + w-add-20px + w-add-3px = 123px
+
+2. CONSISTENT NAMING
+   • Same pattern across all systems
+   • Keep naming short, readable, predictable
+
+3. SINGLE RESPONSIBILITY PER CLASS
+   • One class = one job
+   • No multi-purpose utilities
+
+4. NO CUSTOM CSS REQUIRED
+   • Everything must be achievable using utilities only
+
+5. AVOID CLASS CONFLICTS
+   • Do not allow multiple base classes for same property
+   • Additive classes modify base only
+
+━━━━━━━━━━━━━━━━━━━━━━━
+📏 EXISTING PATTERNS (MUST FOLLOW)
+━━━━━━━━━━━━━━━━━━━━━━━
+
+✔ Base + Additive Pattern:
+   base + add-* for precision
+
+✔ Units:
+   px (fixed)
+   % (relative)
+   vh / vw (viewport-based)
+
+✔ Axes Naming:
+   t = top
+   r = right
+   b = bottom
+   l = left
+
+✔ Negative Values:
+   use double dash (--), example:
+   t--50px
+
+✔ Responsive Pattern:
+   -tb (tablet)
+   -mb (mobile)
+
+✔ Class Prefix Logic:
+   w-* → width
+   h-* → height
+   g-* → grid columns
+   gy-* → grid rows
+   flex-* → direction
+   f-* → alignment
+   t/r/b/l-* → offsets
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🚫 IMPORTANT RESTRICTIONS
+━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ DO NOT introduce:
+• inline styles
+• custom one-off utilities
+• inconsistent naming
+• new patterns that break existing logic
+
+❌ DO NOT:
+• mix spacing with positioning
+• mix flex behavior into grid
+• use offset for animation/movement
+
+❌ OFFSET RULE:
+• Offset is STATIC positioning only
+• DO NOT create hover/state variants (no hr-/chr-)
+• Movement must be handled via transform system
+
+━━━━━━━━━━━━━━━━━━━━━━━
+✅ WHAT YOU SHOULD DO
+━━━━━━━━━━━━━━━━━━━━━━━
+
+When building a new system:
+
+1. Extend existing patterns (DO NOT reinvent)
+2. Keep naming consistent with current utilities
+3. Use additive composition where possible
+4. Support real-world use cases
+5. Ensure system is scalable and predictable
+6. Keep mental model simple
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🎯 EXPECTED OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Whenever you generate a system, include:
+
+1. ✅ Variables (if needed)
+2. ✅ Core engine (like width/height/offset engine)
+3. ✅ Utility classes
+4. ✅ Additive system (if applicable)
+5. ✅ Clear rules (✅ 🟡 🔴 format)
+6. ✅ Real-world usage notes
+7. ✅ Small demo examples (practical, not abstract)
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🧪 PRIORITY
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Your goal is NOT just to create utilities.
+
+Your goal is to:
+• maintain system consistency
+• reduce cognitive load
+• enable real-world UI building
+• avoid unnecessary complexity
+
+━━━━━━━━━━━━━━━━━━━━━━━
+⚡ NOW DO THIS TASK
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Build: [INSERT SYSTEM NAME HERE]
+Example: Transform System / Transition System / Aspect Ratio System
+
+━━━━━━━━━━━━━━━━━━━━━━━

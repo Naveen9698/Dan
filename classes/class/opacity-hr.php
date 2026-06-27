@@ -1,0 +1,11 @@
+.hr-op-0   { --hr-op: 0;   }
+.hr-op-10  { --hr-op: 0.1; }
+.hr-op-20  { --hr-op: 0.2; }
+.hr-op-30  { --hr-op: 0.3; }
+.hr-op-40  { --hr-op: 0.4; }
+.hr-op-50  { --hr-op: 0.5; }
+.hr-op-60  { --hr-op: 0.6; }
+.hr-op-70  { --hr-op: 0.7; }
+.hr-op-80  { --hr-op: 0.8; }
+.hr-op-90  { --hr-op: 0.9; }
+.hr-op-100 { --hr-op: 1;   }

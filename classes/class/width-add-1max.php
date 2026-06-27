@@ -1,0 +1,9 @@
+.w-add-1max { --w-add-max-1: 1px; }
+.w-add-2max { --w-add-max-1: 2px; }
+.w-add-3max { --w-add-max-1: 3px; }
+.w-add-4max { --w-add-max-1: 4px; }
+.w-add-5max { --w-add-max-1: 5px; }
+.w-add-6max { --w-add-max-1: 6px; }
+.w-add-7max { --w-add-max-1: 7px; }
+.w-add-8max { --w-add-max-1: 8px; }
+.w-add-9max { --w-add-max-1: 9px; }

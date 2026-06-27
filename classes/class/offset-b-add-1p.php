@@ -1,0 +1,9 @@
+.b-add-1p { --b-add-p: 1%; }
+.b-add-2p { --b-add-p: 2%; }
+.b-add-3p { --b-add-p: 3%; }
+.b-add-4p { --b-add-p: 4%; }
+.b-add-5p { --b-add-p: 5%; }
+.b-add-6p { --b-add-p: 6%; }
+.b-add-7p { --b-add-p: 7%; }
+.b-add-8p { --b-add-p: 8%; }
+.b-add-9p { --b-add-p: 9%; }

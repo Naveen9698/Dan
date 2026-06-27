@@ -1,0 +1,13 @@
+.of-tb-auto     { overflow: auto;     }
+.of-tb-x-auto   { overflow-x: auto;   }
+.of-tb-y-auto   { overflow-y: auto;   }
+.of-tb-hidden   { overflow: hidden;   }
+.of-tb-x-hidden { overflow-x: hidden; }
+.of-tb-y-hidden { overflow-y: hidden; }
+.of-tb-scroll   { overflow: scroll;   }
+.of-tb-x-scroll { overflow-x: scroll; }
+.of-tb-y-scroll { overflow-y: scroll; }
+.of-tb-clip     { overflow: clip;     }
+.of-tb-x-clip   { overflow-x: clip;   }
+.of-tb-y-clip   { overflow-y: clip;   }
+.of-tb-visible  { overflow: visible;  }

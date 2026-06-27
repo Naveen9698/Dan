@@ -1,3 +1,0 @@
-  --mw-base: 100%;
-  --mw-add1: 0px;
-  --mw-add10: 0px;

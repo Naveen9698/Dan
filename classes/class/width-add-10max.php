@@ -1,0 +1,9 @@
+.w-add-10max { --w-add-max-10: 10px; }
+.w-add-20max { --w-add-max-10: 20px; }
+.w-add-30max { --w-add-max-10: 30px; }
+.w-add-40max { --w-add-max-10: 40px; }
+.w-add-50max { --w-add-max-10: 50px; }
+.w-add-60max { --w-add-max-10: 60px; }
+.w-add-70max { --w-add-max-10: 70px; }
+.w-add-80max { --w-add-max-10: 80px; }
+.w-add-90max { --w-add-max-10: 90px; }

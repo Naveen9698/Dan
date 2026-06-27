@@ -1,30 +1,44 @@
-const navItems = document.querySelectorAll('.d-nav-item');
-const sections = Array.from(navItems).map(item =>
-  document.getElementById(item.dataset.target)
-);
+document.querySelectorAll('[data-ut="guide-nav"]').forEach(scope => {
 
-function onScroll() {
-  const scrollPos = window.scrollY + 120;
+  const items = scope.querySelectorAll(':scope a');
 
-  let activeIndex = sections.findIndex((section, index) => {
-    const current = section.offsetTop;
-    const next = sections[index + 1]?.offsetTop ?? Infinity;
-    return scrollPos >= current && scrollPos < next;
+  const sections = Array.from(items).map(item =>
+    document.querySelector(item.getAttribute('href'))
+  );
+
+  function onScroll() {
+
+    const scrollPos = window.scrollY + 120;
+    let activeIndex = 0;
+
+    sections.forEach((section, index) => {
+      if (section && scrollPos >= section.offsetTop) {
+        activeIndex = index;
+      }
+    });
+
+    items.forEach(i => i.classList.remove('active'));
+    if (items[activeIndex]) {
+      items[activeIndex].classList.add('active');
+    }
+  }
+
+  window.addEventListener('scroll', onScroll);
+  onScroll();
+
+  items.forEach(item => {
+    item.addEventListener('click', e => {
+
+      e.preventDefault();
+
+      const target = document.querySelector(item.getAttribute('href'));
+      if (!target) return;
+
+      target.scrollIntoView({
+        behavior: 'smooth'
+      });
+
+    });
   });
 
-  if (activeIndex === -1) activeIndex = 0;
-
-  navItems.forEach(item => item.classList.remove('d-active'));
-  navItems[activeIndex].classList.add('d-active');
-}
-
-window.addEventListener('scroll', onScroll);
-onScroll(); // run once on load
-
-navItems.forEach(item => {
-  item.addEventListener('click', () => {
-    document
-      .getElementById(item.dataset.target)
-      .scrollIntoView({ behavior: 'smooth' });
-  });
 });

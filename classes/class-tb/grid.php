@@ -1,0 +1,12 @@
+.g-tb-1 { grid-column: span 1; }
+.g-tb-2 { grid-column: span 2; }
+.g-tb-3 { grid-column: span 3; }
+.g-tb-4 { grid-column: span 4; }
+.g-tb-5 { grid-column: span 5; }
+.g-tb-6 { grid-column: span 6; }
+.g-tb-7 { grid-column: span 7; }
+.g-tb-8 { grid-column: span 8; }
+.g-tb-9 { grid-column: span 9; }
+.g-tb-10 { grid-column: span 10; }
+.g-tb-11 { grid-column: span 11; }
+.g-tb-12 { grid-column: span 12; }
