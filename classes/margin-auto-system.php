@@ -1,16 +1,16 @@
-<h2 class="fs-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="margin-auto-system">Margin Auto System</h2>
+<h2 class="fz-28 fw-700 clr-g9 bg-g2 txt-center pa-xs" id="margin-auto-system">Margin Auto System</h2>
 
 <section class="px-md stack-y-sm">
 
   <h3>Margin Auto Utility Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/ma-auto.php'; ?></code></pre>
-    <pre><code>@media (max-width: 990px) {
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/ma-auto.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
 <?php include 'class-tb/ma-auto.php'; ?>
 
 }</code></pre>
-    <pre><code>@media (max-width: 770px) {
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
 <?php include 'class-mb/ma-auto.php'; ?>
 
 }</code></pre>
@@ -19,11 +19,11 @@
 
   <h3>Helper Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/ma-auto-helper.php'; ?></code></pre>
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/ma-auto-helper.php'; ?></code></pre>
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>ma-auto</b> utilities provide <b>layout alignment behavior</b>, not fixed spacing.<br>
     🟢 In ma-auto <b>"a"</b> represents <b>all sides</b> (top, right, bottom, left) <br>
     🟢 Works by consuming <b>available free space</b> in the layout.<br>

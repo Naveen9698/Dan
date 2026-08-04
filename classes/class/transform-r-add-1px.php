@@ -1,0 +1,9 @@
+.tr-add-1px { --tr-add-px: 1px; }
+.tr-add-2px { --tr-add-px: 2px; }
+.tr-add-3px { --tr-add-px: 3px; }
+.tr-add-4px { --tr-add-px: 4px; }
+.tr-add-5px { --tr-add-px: 5px; }
+.tr-add-6px { --tr-add-px: 6px; }
+.tr-add-7px { --tr-add-px: 7px; }
+.tr-add-8px { --tr-add-px: 8px; }
+.tr-add-9px { --tr-add-px: 9px; }

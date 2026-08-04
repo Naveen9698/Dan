@@ -1,0 +1,9 @@
+.hs-dis-block        { --hs-dis: block;        }
+.hs-dis-inline       { --hs-dis: inline;       }
+.hs-dis-inline-block { --hs-dis: inline-block; }
+.hs-dis-flex         { --hs-dis: flex;         }
+.hs-dis-inline-flex  { --hs-dis: inline-flex;  }
+.hs-dis-grid         { --hs-dis: grid;         }
+.hs-dis-inline-grid  { --hs-dis: inline-grid;  }
+.hs-dis-none         { --hs-dis: none;         }
+.hs-dis-contents     { --hs-dis: contents;     }

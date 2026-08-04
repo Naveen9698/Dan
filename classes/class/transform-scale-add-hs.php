@@ -1,0 +1,9 @@
+.hs-scale-add-1p { --hs-scale-add: .01; }
+.hs-scale-add-2p { --hs-scale-add: .02; }
+.hs-scale-add-3p { --hs-scale-add: .03; }
+.hs-scale-add-4p { --hs-scale-add: .04; }
+.hs-scale-add-5p { --hs-scale-add: .05; }
+.hs-scale-add-6p { --hs-scale-add: .06; }
+.hs-scale-add-7p { --hs-scale-add: .07; }
+.hs-scale-add-8p { --hs-scale-add: .08; }
+.hs-scale-add-9p { --hs-scale-add: .09; }

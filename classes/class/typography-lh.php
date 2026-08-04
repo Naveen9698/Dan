@@ -1,3 +1,8 @@
+.lh-05 { line-height: 0.5; }
+.lh-06 { line-height: 0.6; }
+.lh-07 { line-height: 0.7; }
+.lh-08 { line-height: 0.8; }
+.lh-09 { line-height: 0.9; }
 .lh-10 { line-height: 1.0; }
 .lh-11 { line-height: 1.1; }
 .lh-12 { line-height: 1.2; }

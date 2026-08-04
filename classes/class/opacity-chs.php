@@ -1,0 +1,11 @@
+.chs-op-0   { --chs-op: 0;   }
+.chs-op-10  { --chs-op: 0.1; }
+.chs-op-20  { --chs-op: 0.2; }
+.chs-op-30  { --chs-op: 0.3; }
+.chs-op-40  { --chs-op: 0.4; }
+.chs-op-50  { --chs-op: 0.5; }
+.chs-op-60  { --chs-op: 0.6; }
+.chs-op-70  { --chs-op: 0.7; }
+.chs-op-80  { --chs-op: 0.8; }
+.chs-op-90  { --chs-op: 0.9; }
+.chs-op-100 { --chs-op: 1;   }

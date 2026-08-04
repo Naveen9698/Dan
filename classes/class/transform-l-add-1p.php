@@ -1,0 +1,9 @@
+.tl-add-1p { --tl-add-p: 1%; }
+.tl-add-2p { --tl-add-p: 2%; }
+.tl-add-3p { --tl-add-p: 3%; }
+.tl-add-4p { --tl-add-p: 4%; }
+.tl-add-5p { --tl-add-p: 5%; }
+.tl-add-6p { --tl-add-p: 6%; }
+.tl-add-7p { --tl-add-p: 7%; }
+.tl-add-8p { --tl-add-p: 8%; }
+.tl-add-9p { --tl-add-p: 9%; }

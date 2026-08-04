@@ -1,0 +1,9 @@
+.hs-tb-add-1px { --hs-tb-add-px: 1px; }
+.hs-tb-add-2px { --hs-tb-add-px: 2px; }
+.hs-tb-add-3px { --hs-tb-add-px: 3px; }
+.hs-tb-add-4px { --hs-tb-add-px: 4px; }
+.hs-tb-add-5px { --hs-tb-add-px: 5px; }
+.hs-tb-add-6px { --hs-tb-add-px: 6px; }
+.hs-tb-add-7px { --hs-tb-add-px: 7px; }
+.hs-tb-add-8px { --hs-tb-add-px: 8px; }
+.hs-tb-add-9px { --hs-tb-add-px: 9px; }

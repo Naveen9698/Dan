@@ -1,35 +1,150 @@
-.h-1px { --h-height: 1px; }
-.h-2px { --h-height: 2px; }
-.h-3px { --h-height: 3px; }
-.h-4px { --h-height: 4px; }
-.h-5px { --h-height: 5px; }
-.h-6px { --h-height: 6px; }
-.h-7px { --h-height: 7px; }
-.h-8px { --h-height: 8px; }
-.h-9px { --h-height: 9px; }
-
-.h-10px { --h-height: calc(10px + var(--h-add-px-1)); }
-.h-20px { --h-height: calc(20px + var(--h-add-px-1)); }
-.h-30px { --h-height: calc(30px + var(--h-add-px-1)); }
-.h-40px { --h-height: calc(40px + var(--h-add-px-1)); }
-.h-50px { --h-height: calc(50px + var(--h-add-px-1)); }
-.h-60px { --h-height: calc(60px + var(--h-add-px-1)); }
-.h-70px { --h-height: calc(70px + var(--h-add-px-1)); }
-.h-80px { --h-height: calc(80px + var(--h-add-px-1)); }
-.h-90px { --h-height: calc(90px + var(--h-add-px-1)); }
-
-.h-100px { --h-height: calc(100px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-200px { --h-height: calc(200px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-300px { --h-height: calc(300px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-400px { --h-height: calc(400px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-500px { --h-height: calc(500px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-600px { --h-height: calc(600px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-700px { --h-height: calc(700px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-800px { --h-height: calc(800px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-900px { --h-height: calc(900px + var(--h-add-px-10) + var(--h-add-px-1)); }
-
-.h-1000px { --h-height: calc(1000px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-1100px { --h-height: calc(1100px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-1200px { --h-height: calc(1200px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-1300px { --h-height: calc(1300px + var(--h-add-px-10) + var(--h-add-px-1)); }
-.h-1400px { --h-height: calc(1400px + var(--h-add-px-10) + var(--h-add-px-1)); }
+.h-0px    { --h-height: 0px;                          }
+.h-1px    { --h-height: 1px;                          }
+.h-2px    { --h-height: 2px;                          }
+.h-3px    { --h-height: 3px;                          }
+.h-4px    { --h-height: 4px;                          }
+.h-5px    { --h-height: 5px;                          }
+.h-6px    { --h-height: 6px;                          }
+.h-7px    { --h-height: 7px;                          }
+.h-8px    { --h-height: 8px;                          }
+.h-9px    { --h-height: 9px;                          }
+.h-10px   { --h-height: calc(10px  + var(--h-a-px));  }
+.h-20px   { --h-height: calc(20px  + var(--h-a-px));  }
+.h-30px   { --h-height: calc(30px  + var(--h-a-px));  }
+.h-40px   { --h-height: calc(40px  + var(--h-a-px));  }
+.h-50px   { --h-height: calc(50px  + var(--h-a-px));  }
+.h-60px   { --h-height: calc(60px  + var(--h-a-px));  }
+.h-70px   { --h-height: calc(70px  + var(--h-a-px));  }
+.h-80px   { --h-height: calc(80px  + var(--h-a-px));  }
+.h-90px   { --h-height: calc(90px  + var(--h-a-px));  }
+.h-100px  { --h-height: calc(100px  + var(--h-a-px)); }
+.h-110px  { --h-height: calc(110px  + var(--h-a-px)); }
+.h-120px  { --h-height: calc(120px  + var(--h-a-px)); }
+.h-130px  { --h-height: calc(130px  + var(--h-a-px)); }
+.h-140px  { --h-height: calc(140px  + var(--h-a-px)); }
+.h-150px  { --h-height: calc(150px  + var(--h-a-px)); }
+.h-160px  { --h-height: calc(160px  + var(--h-a-px)); }
+.h-170px  { --h-height: calc(170px  + var(--h-a-px)); }
+.h-180px  { --h-height: calc(180px  + var(--h-a-px)); }
+.h-190px  { --h-height: calc(190px  + var(--h-a-px)); }
+.h-200px  { --h-height: calc(200px  + var(--h-a-px)); }
+.h-210px  { --h-height: calc(210px  + var(--h-a-px)); }
+.h-220px  { --h-height: calc(220px  + var(--h-a-px)); }
+.h-230px  { --h-height: calc(230px  + var(--h-a-px)); }
+.h-240px  { --h-height: calc(240px  + var(--h-a-px)); }
+.h-250px  { --h-height: calc(250px  + var(--h-a-px)); }
+.h-260px  { --h-height: calc(260px  + var(--h-a-px)); }
+.h-270px  { --h-height: calc(270px  + var(--h-a-px)); }
+.h-280px  { --h-height: calc(280px  + var(--h-a-px)); }
+.h-290px  { --h-height: calc(290px  + var(--h-a-px)); }
+.h-300px  { --h-height: calc(300px  + var(--h-a-px)); }
+.h-310px  { --h-height: calc(310px  + var(--h-a-px)); }
+.h-320px  { --h-height: calc(320px  + var(--h-a-px)); }
+.h-330px  { --h-height: calc(330px  + var(--h-a-px)); }
+.h-340px  { --h-height: calc(340px  + var(--h-a-px)); }
+.h-350px  { --h-height: calc(350px  + var(--h-a-px)); }
+.h-360px  { --h-height: calc(360px  + var(--h-a-px)); }
+.h-370px  { --h-height: calc(370px  + var(--h-a-px)); }
+.h-380px  { --h-height: calc(380px  + var(--h-a-px)); }
+.h-390px  { --h-height: calc(390px  + var(--h-a-px)); }
+.h-400px  { --h-height: calc(400px  + var(--h-a-px)); }
+.h-410px  { --h-height: calc(410px  + var(--h-a-px)); }
+.h-420px  { --h-height: calc(420px  + var(--h-a-px)); }
+.h-430px  { --h-height: calc(430px  + var(--h-a-px)); }
+.h-440px  { --h-height: calc(440px  + var(--h-a-px)); }
+.h-450px  { --h-height: calc(450px  + var(--h-a-px)); }
+.h-460px  { --h-height: calc(460px  + var(--h-a-px)); }
+.h-470px  { --h-height: calc(470px  + var(--h-a-px)); }
+.h-480px  { --h-height: calc(480px  + var(--h-a-px)); }
+.h-490px  { --h-height: calc(490px  + var(--h-a-px)); }
+.h-500px  { --h-height: calc(500px  + var(--h-a-px)); }
+.h-510px  { --h-height: calc(510px  + var(--h-a-px)); }
+.h-520px  { --h-height: calc(520px  + var(--h-a-px)); }
+.h-530px  { --h-height: calc(530px  + var(--h-a-px)); }
+.h-540px  { --h-height: calc(540px  + var(--h-a-px)); }
+.h-550px  { --h-height: calc(550px  + var(--h-a-px)); }
+.h-560px  { --h-height: calc(560px  + var(--h-a-px)); }
+.h-570px  { --h-height: calc(570px  + var(--h-a-px)); }
+.h-580px  { --h-height: calc(580px  + var(--h-a-px)); }
+.h-590px  { --h-height: calc(590px  + var(--h-a-px)); }
+.h-600px  { --h-height: calc(600px  + var(--h-a-px)); }
+.h-610px  { --h-height: calc(610px  + var(--h-a-px)); }
+.h-620px  { --h-height: calc(620px  + var(--h-a-px)); }
+.h-630px  { --h-height: calc(630px  + var(--h-a-px)); }
+.h-640px  { --h-height: calc(640px  + var(--h-a-px)); }
+.h-650px  { --h-height: calc(650px  + var(--h-a-px)); }
+.h-660px  { --h-height: calc(660px  + var(--h-a-px)); }
+.h-670px  { --h-height: calc(670px  + var(--h-a-px)); }
+.h-680px  { --h-height: calc(680px  + var(--h-a-px)); }
+.h-690px  { --h-height: calc(690px  + var(--h-a-px)); }
+.h-700px  { --h-height: calc(700px  + var(--h-a-px)); }
+.h-710px  { --h-height: calc(710px  + var(--h-a-px)); }
+.h-720px  { --h-height: calc(720px  + var(--h-a-px)); }
+.h-730px  { --h-height: calc(730px  + var(--h-a-px)); }
+.h-740px  { --h-height: calc(740px  + var(--h-a-px)); }
+.h-750px  { --h-height: calc(750px  + var(--h-a-px)); }
+.h-760px  { --h-height: calc(760px  + var(--h-a-px)); }
+.h-770px  { --h-height: calc(770px  + var(--h-a-px)); }
+.h-780px  { --h-height: calc(780px  + var(--h-a-px)); }
+.h-790px  { --h-height: calc(790px  + var(--h-a-px)); }
+.h-800px  { --h-height: calc(800px  + var(--h-a-px)); }
+.h-810px  { --h-height: calc(810px  + var(--h-a-px)); }
+.h-820px  { --h-height: calc(820px  + var(--h-a-px)); }
+.h-830px  { --h-height: calc(830px  + var(--h-a-px)); }
+.h-840px  { --h-height: calc(840px  + var(--h-a-px)); }
+.h-850px  { --h-height: calc(850px  + var(--h-a-px)); }
+.h-860px  { --h-height: calc(860px  + var(--h-a-px)); }
+.h-870px  { --h-height: calc(870px  + var(--h-a-px)); }
+.h-880px  { --h-height: calc(880px  + var(--h-a-px)); }
+.h-890px  { --h-height: calc(890px  + var(--h-a-px)); }
+.h-900px  { --h-height: calc(900px  + var(--h-a-px)); }
+.h-910px  { --h-height: calc(910px  + var(--h-a-px)); }
+.h-920px  { --h-height: calc(920px  + var(--h-a-px)); }
+.h-930px  { --h-height: calc(930px  + var(--h-a-px)); }
+.h-940px  { --h-height: calc(940px  + var(--h-a-px)); }
+.h-950px  { --h-height: calc(950px  + var(--h-a-px)); }
+.h-960px  { --h-height: calc(960px  + var(--h-a-px)); }
+.h-970px  { --h-height: calc(970px  + var(--h-a-px)); }
+.h-980px  { --h-height: calc(980px  + var(--h-a-px)); }
+.h-990px  { --h-height: calc(990px  + var(--h-a-px)); }
+.h-1000px { --h-height: calc(1000px + var(--h-a-px)); }
+.h-1010px { --h-height: calc(1010px + var(--h-a-px)); }
+.h-1020px { --h-height: calc(1020px + var(--h-a-px)); }
+.h-1030px { --h-height: calc(1030px + var(--h-a-px)); }
+.h-1040px { --h-height: calc(1040px + var(--h-a-px)); }
+.h-1050px { --h-height: calc(1050px + var(--h-a-px)); }
+.h-1060px { --h-height: calc(1060px + var(--h-a-px)); }
+.h-1070px { --h-height: calc(1070px + var(--h-a-px)); }
+.h-1080px { --h-height: calc(1080px + var(--h-a-px)); }
+.h-1090px { --h-height: calc(1090px + var(--h-a-px)); }
+.h-1100px { --h-height: calc(1100px + var(--h-a-px)); }
+.h-1110px { --h-height: calc(1110px + var(--h-a-px)); }
+.h-1120px { --h-height: calc(1120px + var(--h-a-px)); }
+.h-1130px { --h-height: calc(1130px + var(--h-a-px)); }
+.h-1140px { --h-height: calc(1140px + var(--h-a-px)); }
+.h-1150px { --h-height: calc(1150px + var(--h-a-px)); }
+.h-1160px { --h-height: calc(1160px + var(--h-a-px)); }
+.h-1170px { --h-height: calc(1170px + var(--h-a-px)); }
+.h-1180px { --h-height: calc(1180px + var(--h-a-px)); }
+.h-1190px { --h-height: calc(1190px + var(--h-a-px)); }
+.h-1200px { --h-height: calc(1200px + var(--h-a-px)); }
+.h-1210px { --h-height: calc(1210px + var(--h-a-px)); }
+.h-1220px { --h-height: calc(1220px + var(--h-a-px)); }
+.h-1230px { --h-height: calc(1230px + var(--h-a-px)); }
+.h-1240px { --h-height: calc(1240px + var(--h-a-px)); }
+.h-1250px { --h-height: calc(1250px + var(--h-a-px)); }
+.h-1260px { --h-height: calc(1260px + var(--h-a-px)); }
+.h-1270px { --h-height: calc(1270px + var(--h-a-px)); }
+.h-1280px { --h-height: calc(1280px + var(--h-a-px)); }
+.h-1290px { --h-height: calc(1290px + var(--h-a-px)); }
+.h-1300px { --h-height: calc(1300px + var(--h-a-px)); }
+.h-1310px { --h-height: calc(1310px + var(--h-a-px)); }
+.h-1320px { --h-height: calc(1320px + var(--h-a-px)); }
+.h-1330px { --h-height: calc(1330px + var(--h-a-px)); }
+.h-1340px { --h-height: calc(1340px + var(--h-a-px)); }
+.h-1350px { --h-height: calc(1350px + var(--h-a-px)); }
+.h-1360px { --h-height: calc(1360px + var(--h-a-px)); }
+.h-1370px { --h-height: calc(1370px + var(--h-a-px)); }
+.h-1380px { --h-height: calc(1380px + var(--h-a-px)); }
+.h-1390px { --h-height: calc(1390px + var(--h-a-px)); }
+.h-1400px { --h-height: 1400px;                       }

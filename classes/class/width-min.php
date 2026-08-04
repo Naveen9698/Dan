@@ -1,35 +1,150 @@
-.w-1min { --w-min: 1px; }
-.w-2min { --w-min: 2px; }
-.w-3min { --w-min: 3px; }
-.w-4min { --w-min: 4px; }
-.w-5min { --w-min: 5px; }
-.w-6min { --w-min: 6px; }
-.w-7min { --w-min: 7px; }
-.w-8min { --w-min: 8px; }
-.w-9min { --w-min: 9px; }
-
-.w-10min { --w-min: calc(10px + var(--w-add-min-1)); }
-.w-20min { --w-min: calc(20px + var(--w-add-min-1)); }
-.w-30min { --w-min: calc(30px + var(--w-add-min-1)); }
-.w-40min { --w-min: calc(40px + var(--w-add-min-1)); }
-.w-50min { --w-min: calc(50px + var(--w-add-min-1)); }
-.w-60min { --w-min: calc(60px + var(--w-add-min-1)); }
-.w-70min { --w-min: calc(70px + var(--w-add-min-1)); }
-.w-80min { --w-min: calc(80px + var(--w-add-min-1)); }
-.w-90min { --w-min: calc(90px + var(--w-add-min-1)); }
-
-.w-100min { --w-min: calc(100px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-200min { --w-min: calc(200px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-300min { --w-min: calc(300px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-400min { --w-min: calc(400px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-500min { --w-min: calc(500px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-600min { --w-min: calc(600px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-700min { --w-min: calc(700px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-800min { --w-min: calc(800px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-900min { --w-min: calc(900px + var(--w-add-min-10) + var(--w-add-min-1)); }
-
-.w-1000min { --w-min: calc(1000px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-1100min { --w-min: calc(1100px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-1200min { --w-min: calc(1200px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-1300min { --w-min: calc(1300px + var(--w-add-min-10) + var(--w-add-min-1)); }
-.w-1400min { --w-min: calc(1400px + var(--w-add-min-10) + var(--w-add-min-1)); }
+.w-0min    { --w-min: 0px;                           }
+.w-1min    { --w-min: 1px;                           }
+.w-2min    { --w-min: 2px;                           }
+.w-3min    { --w-min: 3px;                           }
+.w-4min    { --w-min: 4px;                           }
+.w-5min    { --w-min: 5px;                           }
+.w-6min    { --w-min: 6px;                           }
+.w-7min    { --w-min: 7px;                           }
+.w-8min    { --w-min: 8px;                           }
+.w-9min    { --w-min: 9px;                           }
+.w-10min   { --w-min: calc(10px  + var(--w-a-min));  }
+.w-20min   { --w-min: calc(20px  + var(--w-a-min));  }
+.w-30min   { --w-min: calc(30px  + var(--w-a-min));  }
+.w-40min   { --w-min: calc(40px  + var(--w-a-min));  }
+.w-50min   { --w-min: calc(50px  + var(--w-a-min));  }
+.w-60min   { --w-min: calc(60px  + var(--w-a-min));  }
+.w-70min   { --w-min: calc(70px  + var(--w-a-min));  }
+.w-80min   { --w-min: calc(80px  + var(--w-a-min));  }
+.w-90min   { --w-min: calc(90px  + var(--w-a-min));  }
+.w-100min  { --w-min: calc(100px  + var(--w-a-min)); }
+.w-110min  { --w-min: calc(110px  + var(--w-a-min)); }
+.w-120min  { --w-min: calc(120px  + var(--w-a-min)); }
+.w-130min  { --w-min: calc(130px  + var(--w-a-min)); }
+.w-140min  { --w-min: calc(140px  + var(--w-a-min)); }
+.w-150min  { --w-min: calc(150px  + var(--w-a-min)); }
+.w-160min  { --w-min: calc(160px  + var(--w-a-min)); }
+.w-170min  { --w-min: calc(170px  + var(--w-a-min)); }
+.w-180min  { --w-min: calc(180px  + var(--w-a-min)); }
+.w-190min  { --w-min: calc(190px  + var(--w-a-min)); }
+.w-200min  { --w-min: calc(200px  + var(--w-a-min)); }
+.w-210min  { --w-min: calc(210px  + var(--w-a-min)); }
+.w-220min  { --w-min: calc(220px  + var(--w-a-min)); }
+.w-230min  { --w-min: calc(230px  + var(--w-a-min)); }
+.w-240min  { --w-min: calc(240px  + var(--w-a-min)); }
+.w-250min  { --w-min: calc(250px  + var(--w-a-min)); }
+.w-260min  { --w-min: calc(260px  + var(--w-a-min)); }
+.w-270min  { --w-min: calc(270px  + var(--w-a-min)); }
+.w-280min  { --w-min: calc(280px  + var(--w-a-min)); }
+.w-290min  { --w-min: calc(290px  + var(--w-a-min)); }
+.w-300min  { --w-min: calc(300px  + var(--w-a-min)); }
+.w-310min  { --w-min: calc(310px  + var(--w-a-min)); }
+.w-320min  { --w-min: calc(320px  + var(--w-a-min)); }
+.w-330min  { --w-min: calc(330px  + var(--w-a-min)); }
+.w-340min  { --w-min: calc(340px  + var(--w-a-min)); }
+.w-350min  { --w-min: calc(350px  + var(--w-a-min)); }
+.w-360min  { --w-min: calc(360px  + var(--w-a-min)); }
+.w-370min  { --w-min: calc(370px  + var(--w-a-min)); }
+.w-380min  { --w-min: calc(380px  + var(--w-a-min)); }
+.w-390min  { --w-min: calc(390px  + var(--w-a-min)); }
+.w-400min  { --w-min: calc(400px  + var(--w-a-min)); }
+.w-410min  { --w-min: calc(410px  + var(--w-a-min)); }
+.w-420min  { --w-min: calc(420px  + var(--w-a-min)); }
+.w-430min  { --w-min: calc(430px  + var(--w-a-min)); }
+.w-440min  { --w-min: calc(440px  + var(--w-a-min)); }
+.w-450min  { --w-min: calc(450px  + var(--w-a-min)); }
+.w-460min  { --w-min: calc(460px  + var(--w-a-min)); }
+.w-470min  { --w-min: calc(470px  + var(--w-a-min)); }
+.w-480min  { --w-min: calc(480px  + var(--w-a-min)); }
+.w-490min  { --w-min: calc(490px  + var(--w-a-min)); }
+.w-500min  { --w-min: calc(500px  + var(--w-a-min)); }
+.w-510min  { --w-min: calc(510px  + var(--w-a-min)); }
+.w-520min  { --w-min: calc(520px  + var(--w-a-min)); }
+.w-530min  { --w-min: calc(530px  + var(--w-a-min)); }
+.w-540min  { --w-min: calc(540px  + var(--w-a-min)); }
+.w-550min  { --w-min: calc(550px  + var(--w-a-min)); }
+.w-560min  { --w-min: calc(560px  + var(--w-a-min)); }
+.w-570min  { --w-min: calc(570px  + var(--w-a-min)); }
+.w-580min  { --w-min: calc(580px  + var(--w-a-min)); }
+.w-590min  { --w-min: calc(590px  + var(--w-a-min)); }
+.w-600min  { --w-min: calc(600px  + var(--w-a-min)); }
+.w-610min  { --w-min: calc(610px  + var(--w-a-min)); }
+.w-620min  { --w-min: calc(620px  + var(--w-a-min)); }
+.w-630min  { --w-min: calc(630px  + var(--w-a-min)); }
+.w-640min  { --w-min: calc(640px  + var(--w-a-min)); }
+.w-650min  { --w-min: calc(650px  + var(--w-a-min)); }
+.w-660min  { --w-min: calc(660px  + var(--w-a-min)); }
+.w-670min  { --w-min: calc(670px  + var(--w-a-min)); }
+.w-680min  { --w-min: calc(680px  + var(--w-a-min)); }
+.w-690min  { --w-min: calc(690px  + var(--w-a-min)); }
+.w-700min  { --w-min: calc(700px  + var(--w-a-min)); }
+.w-710min  { --w-min: calc(710px  + var(--w-a-min)); }
+.w-720min  { --w-min: calc(720px  + var(--w-a-min)); }
+.w-730min  { --w-min: calc(730px  + var(--w-a-min)); }
+.w-740min  { --w-min: calc(740px  + var(--w-a-min)); }
+.w-750min  { --w-min: calc(750px  + var(--w-a-min)); }
+.w-760min  { --w-min: calc(760px  + var(--w-a-min)); }
+.w-770min  { --w-min: calc(770px  + var(--w-a-min)); }
+.w-780min  { --w-min: calc(780px  + var(--w-a-min)); }
+.w-790min  { --w-min: calc(790px  + var(--w-a-min)); }
+.w-800min  { --w-min: calc(800px  + var(--w-a-min)); }
+.w-810min  { --w-min: calc(810px  + var(--w-a-min)); }
+.w-820min  { --w-min: calc(820px  + var(--w-a-min)); }
+.w-830min  { --w-min: calc(830px  + var(--w-a-min)); }
+.w-840min  { --w-min: calc(840px  + var(--w-a-min)); }
+.w-850min  { --w-min: calc(850px  + var(--w-a-min)); }
+.w-860min  { --w-min: calc(860px  + var(--w-a-min)); }
+.w-870min  { --w-min: calc(870px  + var(--w-a-min)); }
+.w-880min  { --w-min: calc(880px  + var(--w-a-min)); }
+.w-890min  { --w-min: calc(890px  + var(--w-a-min)); }
+.w-900min  { --w-min: calc(900px  + var(--w-a-min)); }
+.w-910min  { --w-min: calc(910px  + var(--w-a-min)); }
+.w-920min  { --w-min: calc(920px  + var(--w-a-min)); }
+.w-930min  { --w-min: calc(930px  + var(--w-a-min)); }
+.w-940min  { --w-min: calc(940px  + var(--w-a-min)); }
+.w-950min  { --w-min: calc(950px  + var(--w-a-min)); }
+.w-960min  { --w-min: calc(960px  + var(--w-a-min)); }
+.w-970min  { --w-min: calc(970px  + var(--w-a-min)); }
+.w-980min  { --w-min: calc(980px  + var(--w-a-min)); }
+.w-990min  { --w-min: calc(990px  + var(--w-a-min)); }
+.w-1000min { --w-min: calc(1000px + var(--w-a-min)); }
+.w-1010min { --w-min: calc(1010px + var(--w-a-min)); }
+.w-1020min { --w-min: calc(1020px + var(--w-a-min)); }
+.w-1030min { --w-min: calc(1030px + var(--w-a-min)); }
+.w-1040min { --w-min: calc(1040px + var(--w-a-min)); }
+.w-1050min { --w-min: calc(1050px + var(--w-a-min)); }
+.w-1060min { --w-min: calc(1060px + var(--w-a-min)); }
+.w-1070min { --w-min: calc(1070px + var(--w-a-min)); }
+.w-1080min { --w-min: calc(1080px + var(--w-a-min)); }
+.w-1090min { --w-min: calc(1090px + var(--w-a-min)); }
+.w-1100min { --w-min: calc(1100px + var(--w-a-min)); }
+.w-1110min { --w-min: calc(1110px + var(--w-a-min)); }
+.w-1120min { --w-min: calc(1120px + var(--w-a-min)); }
+.w-1130min { --w-min: calc(1130px + var(--w-a-min)); }
+.w-1140min { --w-min: calc(1140px + var(--w-a-min)); }
+.w-1150min { --w-min: calc(1150px + var(--w-a-min)); }
+.w-1160min { --w-min: calc(1160px + var(--w-a-min)); }
+.w-1170min { --w-min: calc(1170px + var(--w-a-min)); }
+.w-1180min { --w-min: calc(1180px + var(--w-a-min)); }
+.w-1190min { --w-min: calc(1190px + var(--w-a-min)); }
+.w-1200min { --w-min: calc(1200px + var(--w-a-min)); }
+.w-1210min { --w-min: calc(1210px + var(--w-a-min)); }
+.w-1220min { --w-min: calc(1220px + var(--w-a-min)); }
+.w-1230min { --w-min: calc(1230px + var(--w-a-min)); }
+.w-1240min { --w-min: calc(1240px + var(--w-a-min)); }
+.w-1250min { --w-min: calc(1250px + var(--w-a-min)); }
+.w-1260min { --w-min: calc(1260px + var(--w-a-min)); }
+.w-1270min { --w-min: calc(1270px + var(--w-a-min)); }
+.w-1280min { --w-min: calc(1280px + var(--w-a-min)); }
+.w-1290min { --w-min: calc(1290px + var(--w-a-min)); }
+.w-1300min { --w-min: calc(1300px + var(--w-a-min)); }
+.w-1310min { --w-min: calc(1310px + var(--w-a-min)); }
+.w-1320min { --w-min: calc(1320px + var(--w-a-min)); }
+.w-1330min { --w-min: calc(1330px + var(--w-a-min)); }
+.w-1340min { --w-min: calc(1340px + var(--w-a-min)); }
+.w-1350min { --w-min: calc(1350px + var(--w-a-min)); }
+.w-1360min { --w-min: calc(1360px + var(--w-a-min)); }
+.w-1370min { --w-min: calc(1370px + var(--w-a-min)); }
+.w-1380min { --w-min: calc(1380px + var(--w-a-min)); }
+.w-1390min { --w-min: calc(1390px + var(--w-a-min)); }
+.w-1400min { --w-min: 1400px;                        }

@@ -1,0 +1,11 @@
+.ts-0  { --ts-duration: 0s; }
+.ts-1  { --ts-duration: 0.1s; }
+.ts-2  { --ts-duration: 0.2s; }
+.ts-3  { --ts-duration: 0.3s; }
+.ts-4  { --ts-duration: 0.4s; }
+.ts-5  { --ts-duration: 0.5s; }
+.ts-6  { --ts-duration: 0.6s; }
+.ts-7  { --ts-duration: 0.7s; }
+.ts-8  { --ts-duration: 0.8s; }
+.ts-9  { --ts-duration: 0.9s; }
+.ts-10 { --ts-duration: 1s;   }

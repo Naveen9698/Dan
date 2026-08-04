@@ -1,9 +1,0 @@
-.w-add-10px { --w-add-px-10: 10px; }
-.w-add-20px { --w-add-px-10: 20px; }
-.w-add-30px { --w-add-px-10: 30px; }
-.w-add-40px { --w-add-px-10: 40px; }
-.w-add-50px { --w-add-px-10: 50px; }
-.w-add-60px { --w-add-px-10: 60px; }
-.w-add-70px { --w-add-px-10: 70px; }
-.w-add-80px { --w-add-px-10: 80px; }
-.w-add-90px { --w-add-px-10: 90px; }

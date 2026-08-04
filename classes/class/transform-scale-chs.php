@@ -1,0 +1,21 @@
+.chs-scale-10p  { --chs-scale: calc(.1 + var(--chs-scale-add));  }
+.chs-scale-20p  { --chs-scale: calc(.2 + var(--chs-scale-add));  }
+.chs-scale-30p  { --chs-scale: calc(.3 + var(--chs-scale-add));  }
+.chs-scale-40p  { --chs-scale: calc(.4 + var(--chs-scale-add));  }
+.chs-scale-50p  { --chs-scale: calc(.5 + var(--chs-scale-add));  }
+.chs-scale-60p  { --chs-scale: calc(.6 + var(--chs-scale-add));  }
+.chs-scale-70p  { --chs-scale: calc(.7 + var(--chs-scale-add));  }
+.chs-scale-80p  { --chs-scale: calc(.8 + var(--chs-scale-add));  }
+.chs-scale-90p  { --chs-scale: calc(.9 + var(--chs-scale-add));  }
+.chs-scale-100p { --chs-scale: calc(1 + var(--chs-scale-add));   }
+.chs-scale-110p { --chs-scale: calc(1.1 + var(--chs-scale-add)); }
+.chs-scale-120p { --chs-scale: calc(1.2 + var(--chs-scale-add)); }
+.chs-scale-130p { --chs-scale: calc(1.3 + var(--chs-scale-add)); }
+.chs-scale-140p { --chs-scale: calc(1.4 + var(--chs-scale-add)); }
+.chs-scale-150p { --chs-scale: calc(1.5 + var(--chs-scale-add)); }
+.chs-scale-160p { --chs-scale: calc(1.6 + var(--chs-scale-add)); }
+.chs-scale-170p { --chs-scale: calc(1.7 + var(--chs-scale-add)); }
+.chs-scale-180p { --chs-scale: calc(1.8 + var(--chs-scale-add)); }
+.chs-scale-190p { --chs-scale: calc(1.9 + var(--chs-scale-add)); }
+.chs-scale-200p { --chs-scale: calc(2 + var(--chs-scale-add));   }
+.chs-scale-0p   { --chs-scale: 0;                                }

@@ -1,155 +1,155 @@
 <div class="grid gap-lg">
 
-  <div class="g-4 pa-md bg-white ra-lg sw-sm"
+  <div class="g-4 pa-md bg-white ra-lg bsw-sm"
     style="--space-unit: 8px;">
 
-    <p class="fs-14 fw-600 clr-g8 mb-sm">Desktop · 8px unit</p>
+    <p class="fz-14 fw-600 clr-g8 mb-sm">Desktop · 8px unit</p>
 
     <div class="flex-y gap-xxs">
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XXS</span>
-        <span class="w-30px fs-12 clr-g5">8px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XXS</span>
+        <span class="w-30px fz-12 clr-g5">8px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*1);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XS</span>
-        <span class="w-30px fs-12 clr-g5">16px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XS</span>
+        <span class="w-30px fz-12 clr-g5">16px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*2);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">SM</span>
-        <span class="w-30px fs-12 clr-g5">24px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">SM</span>
+        <span class="w-30px fz-12 clr-g5">24px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*3);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">MD</span>
-        <span class="w-30px fs-12 clr-g5">32px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">MD</span>
+        <span class="w-30px fz-12 clr-g5">32px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*4);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">LG</span>
-        <span class="w-30px fs-12 clr-g5">48px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">LG</span>
+        <span class="w-30px fz-12 clr-g5">48px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*6);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XL</span>
-        <span class="w-30px fs-12 clr-g5">64px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XL</span>
+        <span class="w-30px fz-12 clr-g5">64px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*8);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XXL</span>
-        <span class="w-30px fs-12 clr-g5">96px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XXL</span>
+        <span class="w-30px fz-12 clr-g5">96px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*12);"></div>
       </div>
 
     </div>
   </div>
 
-  <div class="g-4 pa-md bg-white ra-lg sw-sm"
+  <div class="g-4 pa-md bg-white ra-lg bsw-sm"
     style="--space-unit: 6px;">
 
-    <p class="fs-14 fw-600 clr-g8 mb-sm">Tablet · 6px unit</p>
+    <p class="fz-14 fw-600 clr-g8 mb-sm">Tablet · 6px unit</p>
 
     <div class="flex-y gap-xxs">
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XXS</span>
-        <span class="w-30px fs-12 clr-g5">6px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XXS</span>
+        <span class="w-30px fz-12 clr-g5">6px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*1);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XS</span>
-        <span class="w-30px fs-12 clr-g5">12px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XS</span>
+        <span class="w-30px fz-12 clr-g5">12px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*2);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">SM</span>
-        <span class="w-30px fs-12 clr-g5">18px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">SM</span>
+        <span class="w-30px fz-12 clr-g5">18px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*3);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">MD</span>
-        <span class="w-30px fs-12 clr-g5">24px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">MD</span>
+        <span class="w-30px fz-12 clr-g5">24px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*4);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">LG</span>
-        <span class="w-30px fs-12 clr-g5">36px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">LG</span>
+        <span class="w-30px fz-12 clr-g5">36px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*6);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XL</span>
-        <span class="w-30px fs-12 clr-g5">48px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XL</span>
+        <span class="w-30px fz-12 clr-g5">48px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*8);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XXL</span>
-        <span class="w-30px fs-12 clr-g5">72px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XXL</span>
+        <span class="w-30px fz-12 clr-g5">72px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*12);"></div>
       </div>
 
     </div>
   </div>
 
-  <div class="g-4 pa-md bg-white ra-lg sw-sm"
+  <div class="g-4 pa-md bg-white ra-lg bsw-sm"
     style="--space-unit: 4px;">
 
-    <p class="fs-14 fw-600 clr-g8 mb-sm">Mobile · 4px unit</p>
+    <p class="fz-14 fw-600 clr-g8 mb-sm">Mobile · 4px unit</p>
 
     <div class="flex-y gap-xxs">
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XXS</span>
-        <span class="w-30px fs-12 clr-g5">4px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XXS</span>
+        <span class="w-30px fz-12 clr-g5">4px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc((var(--space-unit))*1);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XS</span>
-        <span class="w-30px fs-12 clr-g5">8px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XS</span>
+        <span class="w-30px fz-12 clr-g5">8px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*2);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">SM</span>
-        <span class="w-30px fs-12 clr-g5">12px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">SM</span>
+        <span class="w-30px fz-12 clr-g5">12px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*3);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">MD</span>
-        <span class="w-30px fs-12 clr-g5">16px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">MD</span>
+        <span class="w-30px fz-12 clr-g5">16px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*4);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">LG</span>
-        <span class="w-30px fs-12 clr-g5">24px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">LG</span>
+        <span class="w-30px fz-12 clr-g5">24px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*6);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XL</span>
-        <span class="w-30px fs-12 clr-g5">32px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XL</span>
+        <span class="w-30px fz-12 clr-g5">32px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*8);"></div>
       </div>
 
       <div class="flex-x f-center gap-xxs">
-        <span class="w-40px fs-12 fw-600 clr-g7">XXL</span>
-        <span class="w-30px fs-12 clr-g5">48px</span>
+        <span class="w-40px fz-12 fw-600 clr-g7">XXL</span>
+        <span class="w-30px fz-12 clr-g5">48px</span>
         <div class="bg-main-h ra-xxs h-20px" style="width: calc(var(--space-unit)*12);"></div>
       </div>
 
@@ -171,7 +171,7 @@
     --sp-xxl: calc(var(--space-unit) * 12);
   ">
 
-    <span class="fs-12 clr-g5">
+    <span class="fz-12 clr-g5">
       White → padding · Orange → margin
     </span>
 
@@ -181,20 +181,20 @@
 
     <input class="w-100p" type="range" id="spaceRange" min="300" max="1200" value="300" />
 
-    <div id="spaceWrapper" class="mt-md ma-auto w-300px tr-2 tr-ease">
+    <div id="spaceWrapper" class="mt-md ma-auto w-300px ts-2 ts-ease">
 
       <div class="bg-main-h clr-white pa-md ra-md pn-relative">
-        <span class="fs-12 clr-white py-xxs px-xs ra-sm pn-absolute t--10px l--10px bg-acnt">
+        <span class="fz-12 clr-white py-xxs px-xs ra-sm pn-absolute t--10px l--10px bg-acnt">
           Real Responsive Behavior
         </span>
         <div class="bg-acnt-h pt-xxs w-100p">
-          <div class="bg-white tr-3 clr-black pt-xxs ta-center">pt-xxs mt-xxs</div>
-          <div class="bg-white tr-3 clr-black pt-xs mt-xs ta-center">pt-xs mt-xs</div>
-          <div class="bg-white tr-3 clr-black pt-sm mt-sm ta-center">pt-sm mt-sm</div>
-          <div class="bg-white tr-3 clr-black pt-md mt-md ta-center">pt-md mt-md</div>
-          <div class="bg-white tr-3 clr-black pt-lg mt-lg ta-center">pt-lg mt-lg</div>
-          <div class="bg-white tr-3 clr-black pt-xl mt-xl ta-center">pt-xl mt-xl</div>
-          <div class="bg-white tr-3 clr-black pt-xxl mt-xxl ta-center">pt-xxl mt-xxl</div>
+          <div class="bg-white ts-3 clr-black pt-xxs txt-center">pt-xxs mt-xxs</div>
+          <div class="bg-white ts-3 clr-black pt-xs mt-xs txt-center">pt-xs mt-xs</div>
+          <div class="bg-white ts-3 clr-black pt-sm mt-sm txt-center">pt-sm mt-sm</div>
+          <div class="bg-white ts-3 clr-black pt-md mt-md txt-center">pt-md mt-md</div>
+          <div class="bg-white ts-3 clr-black pt-lg mt-lg txt-center">pt-lg mt-lg</div>
+          <div class="bg-white ts-3 clr-black pt-xl mt-xl txt-center">pt-xl mt-xl</div>
+          <div class="bg-white ts-3 clr-black pt-xxl mt-xxl txt-center">pt-xxl mt-xxl</div>
         </div>
 
       </div>

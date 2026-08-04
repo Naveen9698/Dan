@@ -1,0 +1,21 @@
+.scale-10p  { --scale-value: calc(.1 + var(--scale-add));  }
+.scale-20p  { --scale-value: calc(.2 + var(--scale-add));  }
+.scale-30p  { --scale-value: calc(.3 + var(--scale-add));  }
+.scale-40p  { --scale-value: calc(.4 + var(--scale-add));  }
+.scale-50p  { --scale-value: calc(.5 + var(--scale-add));  }
+.scale-60p  { --scale-value: calc(.6 + var(--scale-add));  }
+.scale-70p  { --scale-value: calc(.7 + var(--scale-add));  }
+.scale-80p  { --scale-value: calc(.8 + var(--scale-add));  }
+.scale-90p  { --scale-value: calc(.9 + var(--scale-add));  }
+.scale-100p { --scale-value: calc(1 + var(--scale-add));   }
+.scale-110p { --scale-value: calc(1.1 + var(--scale-add)); }
+.scale-120p { --scale-value: calc(1.2 + var(--scale-add)); }
+.scale-130p { --scale-value: calc(1.3 + var(--scale-add)); }
+.scale-140p { --scale-value: calc(1.4 + var(--scale-add)); }
+.scale-150p { --scale-value: calc(1.5 + var(--scale-add)); }
+.scale-160p { --scale-value: calc(1.6 + var(--scale-add)); }
+.scale-170p { --scale-value: calc(1.7 + var(--scale-add)); }
+.scale-180p { --scale-value: calc(1.8 + var(--scale-add)); }
+.scale-190p { --scale-value: calc(1.9 + var(--scale-add)); }
+.scale-200p { --scale-value: calc(2 + var(--scale-add));   }
+.scale-0p   { --scale-value: 0;                            }

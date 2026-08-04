@@ -1,0 +1,9 @@
+.hs-tt-add-1p { --hs-tt-add-p: 1%; }
+.hs-tt-add-2p { --hs-tt-add-p: 2%; }
+.hs-tt-add-3p { --hs-tt-add-p: 3%; }
+.hs-tt-add-4p { --hs-tt-add-p: 4%; }
+.hs-tt-add-5p { --hs-tt-add-p: 5%; }
+.hs-tt-add-6p { --hs-tt-add-p: 6%; }
+.hs-tt-add-7p { --hs-tt-add-p: 7%; }
+.hs-tt-add-8p { --hs-tt-add-p: 8%; }
+.hs-tt-add-9p { --hs-tt-add-p: 9%; }

@@ -1,0 +1,9 @@
+.chs-rotate-add-1deg { --chs-rotate-add: 1deg; }
+.chs-rotate-add-2deg { --chs-rotate-add: 2deg; }
+.chs-rotate-add-3deg { --chs-rotate-add: 3deg; }
+.chs-rotate-add-4deg { --chs-rotate-add: 4deg; }
+.chs-rotate-add-5deg { --chs-rotate-add: 5deg; }
+.chs-rotate-add-6deg { --chs-rotate-add: 6deg; }
+.chs-rotate-add-7deg { --chs-rotate-add: 7deg; }
+.chs-rotate-add-8deg { --chs-rotate-add: 8deg; }
+.chs-rotate-add-9deg { --chs-rotate-add: 9deg; }

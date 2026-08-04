@@ -1,0 +1,9 @@
+.ho\:hue-add-1deg { --ho-hue-add: 1deg; }
+.ho\:hue-add-2deg { --ho-hue-add: 2deg; }
+.ho\:hue-add-3deg { --ho-hue-add: 3deg; }
+.ho\:hue-add-4deg { --ho-hue-add: 4deg; }
+.ho\:hue-add-5deg { --ho-hue-add: 5deg; }
+.ho\:hue-add-6deg { --ho-hue-add: 6deg; }
+.ho\:hue-add-7deg { --ho-hue-add: 7deg; }
+.ho\:hue-add-8deg { --ho-hue-add: 8deg; }
+.ho\:hue-add-9deg { --ho-hue-add: 9deg; }

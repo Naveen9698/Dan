@@ -1,0 +1,11 @@
+.ts-d0  { --ts-delay: 0s;  }
+.ts-d1  { --ts-delay: 0.1s;  }
+.ts-d2  { --ts-delay: 0.2s;  }
+.ts-d3  { --ts-delay: 0.3s;  }
+.ts-d4  { --ts-delay: 0.4s;  }
+.ts-d5  { --ts-delay: 0.5s;  }
+.ts-d6  { --ts-delay: 0.6s;  }
+.ts-d7  { --ts-delay: 0.7s;  }
+.ts-d8  { --ts-delay: 0.8s;  }
+.ts-d9  { --ts-delay: 0.9s;  }
+.ts-d10 { --ts-delay: 1s;    }

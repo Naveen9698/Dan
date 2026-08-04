@@ -1,9 +1,11 @@
-.z-0 { z-index: 0;  }
-.z-1 { z-index: 10; }
-.z-2 { z-index: 20; }
-.z-3 { z-index: 30; }
-.z-4 { z-index: 40; }
-
-.z-overlay { z-index: 900;  }
-.z-modal   { z-index: 1000; }
-.z-max     { z-index: 9999; }
+.z-0  { z-index: 0;  }
+.z-1  { z-index: 1;  }
+.z-2  { z-index: 2;  }
+.z-3  { z-index: 3;  }
+.z-4  { z-index: 4;  }
+.z-5  { z-index: 5;  }
+.z-6  { z-index: 6;  }
+.z-7  { z-index: 7;  }
+.z-8  { z-index: 8;  }
+.z-9  { z-index: 9;  }
+.z-10 { z-index: 10; }

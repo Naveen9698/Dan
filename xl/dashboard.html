@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Change Register - Team Dashboard</title>
+    
+    <!-- CryptoJS for AES-256 Decryption -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+    <style>
+        /* Exact UI matching the Admin Panel */
+        :root {
+            --bg-page: #f0f4f8; --bg-surface: #ffffff; --bg-card: #ffffff;
+            --border-light: #e2e8f0; --border-med: #cbd5e1;
+            --text-main: #1e293b; --text-muted: #64748b;
+            --gradient-primary: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); /* Blue theme for Read-Only */
+            --primary: #2563eb; --primary-light: #eff6ff;
+            --shadow-md: 0 8px 16px rgba(17, 12, 46, 0.08);
+            --radius-md: 10px; --radius-lg: 16px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: var(--bg-page); color: var(--text-main); line-height: 1.5; padding: 16px 24px; font-size: 13px; }
+
+        /* Error Screen */
+        #error-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-page); z-index: 2000; display: none; justify-content: center; align-items: center; }
+        .error-card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; border-top: 4px solid #ef4444; text-align: center;}
+
+        /* Header */
+        .app-header { background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border-top: 4px solid var(--primary); }
+        .app-header h1 { font-size: 18px; font-weight: 800; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .vault-notice { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #e0f2fe; color: #0369a1; border-radius: 20px; font-weight: 700; font-size: 11px; margin-top: 8px;}
+
+        /* Buttons */
+        .btn { padding: 10px 24px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; font-size: 13px;}
+        .btn-submit { background: var(--gradient-primary); color: white; }
+        .btn-clear { background-color: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-med); }
+        .btn-clear:hover { background-color: #e2e8f0; }
+
+        /* Table */
+        .table-panel { background-color: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); }
+        .table-controls { padding: 16px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; position: sticky; left: 0;}
+        .filters { display: flex; gap: 12px; flex-grow: 1; justify-content: flex-end; }
+        .filter-input, .filter-select { padding: 8px 14px; border: 1px solid var(--border-med); border-radius: 8px; font-size: 13px; outline: none; }
+        .filter-input:focus, .filter-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        
+        .table-scroll-wrapper { overflow-x: auto; max-height: calc(100vh - 220px); }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; white-space: nowrap; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-light); text-align: left; }
+        th { background-color: #f8fafc; position: sticky; top: 0; z-index: 20; font-size: 11px; text-transform: uppercase; cursor: pointer; border-bottom: 2px solid var(--border-light); }
+        tbody tr:hover { background-color: #f1f5f9; }
+        th:nth-child(1), td:nth-child(1) { position: sticky; left: 0; z-index: 15; background-color: var(--bg-surface); border-right: 1px solid var(--border-light); font-weight: 700;}
+        th:nth-child(1) { z-index: 25; background-color: #f8fafc; }
+        
+        /* Pagination */
+        .pagination-controls { display: flex; justify-content: flex-end; align-items: center; gap: 15px; padding: 12px 20px; border-top: 1px solid var(--border-light); }
+        .page-btn { background: #f1f5f9; border: 1px solid var(--border-med); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+        .badge-success { background-color: #dcfce7; color: #166534; }
+        .badge-danger { background-color: #fee2e2; color: #991b1b; }
+        .badge-warning { background-color: #fef3c7; color: #b45309; }
+        .badge-info { background-color: #e0f2fe; color: #0369a1; }
+        
+        /* Modal for Export */
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.4); z-index: 999; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+        .export-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); background: var(--bg-surface); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); z-index: 1005; width: 400px; display: none; flex-direction: column; gap: 16px; opacity: 0; transition: 0.3s; }
+        .export-modal.open { display: flex; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; }
+        .input-group input, .input-group select { padding: 8px 12px; border: 1px solid var(--border-med); border-radius: 6px; }
+
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.2); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; pointer-events: none;}
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div id="toast">✅ Data Refreshed!</div>
+
+<!-- CONNECT SCREEN -->
+<div id="connect-screen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-page); z-index: 2005; display: flex; justify-content: center; align-items: center;">
+    <div class="error-card" style="border-top: 4px solid var(--primary);">
+        <h2>📁 Connect Database</h2>
+        <p style="margin-bottom: 20px; color: #64748b;">Browser security requires you to select the local file once per session. After connecting, the <strong>Refresh</strong> button will work automatically.</p>
+        <button class="btn btn-submit" onclick="connectFile()" style="margin: 0 auto; background: #2563eb; color: white;">📂 Select register_data.enc</button>
+        <p style="font-size: 11px; margin-top: 15px; color: #94a3b8; word-break: break-all;">Expected Path:<br>C:\Users\NaveenShanmugam\EvonSys\Shri Vanadhi P - Sales and Marketing - Change Management\</p>
+    </div>
+</div>
+
+<!-- ERROR SCREEN -->
+<div id="error-screen">
+    <div class="error-card">
+        <h2>❌ Connection Error</h2>
+        <p>Could not load the data file. Please ensure the `<script src="..."></script>` path is correct in the HTML code and the <strong>register_data.js</strong> file exists.</p>
+    </div>
+</div>
+
+<!-- MAIN APP WRAPPER -->
+<div id="app-wrapper">
+    <div class="app-header">
+        <div>
+            <h1>Change Register Dashboard</h1>
+            <div class="vault-notice">🔒 Auto-Loaded Local File</div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn btn-clear" onclick="fetchData()" style="color: #0369a1; background: #e0f2fe; border-color: #7dd3fc;">🔄 Refresh Data</button>
+            <button class="btn btn-clear" onclick="openExportModal()" style="border: 1px solid #10b981; color: #166534; background: #dcfce7;">⬇️ Export Excel</button>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeExportModal()"></div>
+    <div class="export-modal" id="exportModal">
+        <h2>⬇️ Export as Excel</h2>
+        <div class="input-group"><label>Date (From)</label><input type="date" id="export_date_from"></div>
+        <div class="input-group"><label>Date (To)</label><input type="date" id="export_date_to"></div>
+        <div class="input-group">
+            <label>Status</label>
+            <select id="export_status">
+                <option value="all">All Statuses</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Approved">Approved</option>
+                <option value="Closed">Closed</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button class="btn btn-clear" onclick="closeExportModal()">Cancel</button>
+            <button class="btn btn-submit" onclick="processExport()" style="background: #10b981;">Export Data</button>
+        </div>
+    </div>
+
+    <div class="table-panel">
+        <div class="table-controls">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="font-weight: 700; color: var(--text-muted);">Master Log (<span id="visible_count">0</span>)</span>
+                <select id="pageSize" class="filter-select" onchange="changePageSize()" style="padding: 4px 8px; width: auto;">
+                    <option value="10">10 per page</option>
+                    <option value="50" selected>50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="all">View All</option>
+                </select>
+            </div>
+            <div class="filters">
+                <input type="text" id="searchInput" class="filter-input" placeholder="🔍 Search records..." onkeyup="filterTable()">
+            </div>
+        </div>
+
+        <div class="table-scroll-wrapper">
+            <table id="dataTable">
+                <thead>
+                    <tr id="tableHeaders"></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div class="pagination-controls">
+            <button onclick="prevPage()" id="btnPrev" class="page-btn">◀ Prev</button>
+            <span id="pageInfo" style="font-weight: 600; font-size: 12px; color: var(--text-muted);">Page 1</span>
+            <button onclick="nextPage()" id="btnNext" class="page-btn">Next ▶</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==============================================================================
+    // SECURITY & CONFIGURATION
+    // ==============================================================================
+    const BAKED_PASSPHRASE = 'CompanySecret2026!';
+    
+    // The browser will attempt to silently auto-load this path on startup.
+    // NOTE: If Chrome blocks absolute paths, change this to 'register_data.enc' and put the HTML in the same folder.
+    const AUTO_FETCH_PATH = 'register_data.enc';
+
+    let columnsArray = [];
+    let allTableData = [];
+    let filteredData = [];
+    let currentPage = 1;
+    let rowsPerPage = 50;
+
+    // Variables for memory
+    let fileHandle = null;
+    let loadMethod = null; // Will be set to 'auto' or 'manual'
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Hide everything initially while we check
+        document.getElementById('app-wrapper').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'none';
+        document.getElementById('connect-screen').style.display = 'none';
+
+        try {
+            // 1. ATTEMPT AUTO-LOAD
+            // Browsers often block absolute C:\ paths due to CORS. If it fails, it skips to catch().
+            const response = await fetch(AUTO_FETCH_PATH);
+            if (!response.ok) throw new Error("Auto-fetch failed or blocked by browser.");
+            
+            const cipherText = await response.text();
+            decryptAndRender(cipherText);
+            
+            loadMethod = 'auto'; // Memorize that we used auto-fetch
+            document.getElementById('app-wrapper').style.display = 'block';
+        } catch (error) {
+            // 2. FALLBACK: SHOW CONNECT SCREEN
+            console.warn("Auto-load failed or blocked by browser security. Showing manual connect button.");
+            document.getElementById('connect-screen').style.display = 'flex';
+        }
+    });
+
+    async function connectFile() {
+        try {
+            // Modern Chrome/Edge API to get secure, memorized read access to a local file
+            [fileHandle] = await window.showOpenFilePicker({
+                types: [{ description: 'Encrypted Data', accept: { '*/*': ['.enc'] } }],
+                multiple: false
+            });
+            loadMethod = 'manual'; // Memorize that we used manual file picker
+            await fetchData();
+        } catch (error) {
+            console.error(error);
+            if (error.name !== 'AbortError') {
+                alert("Your browser does not support the Local File API. Please use Google Chrome or Microsoft Edge.");
+            }
+        }
+    }
+
+    async function fetchData() {
+        try {
+            let cipherText = "";
+
+            if (loadMethod === 'auto') {
+                // Refresh using auto-fetch path
+                const response = await fetch(AUTO_FETCH_PATH);
+                if (!response.ok) throw new Error("Failed to auto-refresh");
+                cipherText = await response.text();
+            } else if (loadMethod === 'manual' && fileHandle) {
+                // Refresh using memorized manual file connection
+                const file = await fileHandle.getFile();
+                cipherText = await file.text();
+            } else {
+                return; // No connection established yet
+            }
+            
+            // Decrypt and rebuild the table
+            decryptAndRender(cipherText);
+
+            // Show success toast on refresh
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+            
+            // Ensure app is visible
+            document.getElementById('app-wrapper').style.display = 'block';
+            document.getElementById('connect-screen').style.display = 'none';
+            document.getElementById('error-screen').style.display = 'none';
+
+        } catch (error) {
+            console.error("Read Error:", error);
+            document.getElementById('app-wrapper').style.display = 'none';
+            const errorScreen = document.getElementById('error-screen');
+            errorScreen.querySelector('p').innerHTML = `
+                ❌ Failed to read or decrypt the file.<br><br>
+                Ensure you selected the correct <strong>register_data.enc</strong> file.
+            `;
+            errorScreen.style.display = 'flex';
+        }
+    }
+
+    // --- DECRYPTION & PARSING ---
+    function decryptAndRender(cipherText) {
+        try {
+            // CryptoJS Decryption
+            const decryptedBytes = CryptoJS.AES.decrypt(cipherText, BAKED_PASSPHRASE);
+            const csvText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+            if (!csvText) { throw new Error("Incorrect passcode or corrupted file."); }
+
+            parseCSV(csvText);
+            renderTable();
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('app-wrapper').style.display = 'none';
+            const errorScreen = document.getElementById('error-screen');
+            errorScreen.querySelector('p').innerText = "❌ Decryption Failed. The file might be corrupted, or the security key was rotated.";
+            errorScreen.style.display = 'flex';
+        }
+    }
+
+    function parseCSV(csvText) {
+        const rows = [];
+        let curRow = [];
+        let curCell = "";
+        let inQuotes = false;
+        
+        for (let i = 0; i < csvText.length; i++) {
+            let c = csvText[i];
+            if (c === '"') {
+                if (inQuotes && csvText[i+1] === '"') { curCell += '"'; i++; }
+                else { inQuotes = !inQuotes; }
+            } else if (c === ',' && !inQuotes) {
+                curRow.push(curCell); curCell = "";
+            } else if (c === '\n' && !inQuotes) {
+                curRow.push(curCell); rows.push(curRow); curRow = []; curCell = "";
+            } else if (c !== '\r') {
+                curCell += c;
+            }
+        }
+        if (curCell !== "" || curRow.length > 0) { curRow.push(curCell); rows.push(curRow); }
+
+        if (rows.length >= 2) {
+            columnsArray = rows[1];
+            const headerHtml = columnsArray.map((col, idx) => `<th onclick="sortTable(${idx})">${escapeHtml(col)}</th>`).join('');
+            document.getElementById('tableHeaders').innerHTML = headerHtml;
+
+            allTableData = rows.slice(2).filter(row => row.join('').trim() !== '');
+            allTableData.reverse(); 
+            filteredData = [...allTableData];
+        }
+    }
+
+    // --- TABLE RENDERING & LOGIC ---
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        
+        let start = (currentPage - 1) * rowsPerPage;
+        let end = rowsPerPage === 'all' ? filteredData.length : start + parseInt(rowsPerPage);
+        let pageData = filteredData.slice(start, end);
+        
+        if (filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${columnsArray.length}" style="text-align: center; padding: 20px;">No records found.</td></tr>`;
+        } else {
+            pageData.forEach(row => {
+                let rowHtml = `<tr>`;
+                row.forEach((cell, index) => {
+                    let cellContent = escapeHtml(cell);
+                    if ([7, 8, 20, 28, 29].includes(index) && cellContent !== '') {
+                        let bClass = getBadgeClass(cellContent);
+                        if (bClass) cellContent = `<span class='badge ${bClass}'>${cellContent}</span>`;
+                    }
+                    if ([5, 18, 31].includes(index)) {
+                        rowHtml += `<td style="min-width: 250px; max-width: 350px; white-space: normal; line-height: 1.4;">${cellContent}</td>`;
+                    } else {
+                        rowHtml += `<td>${cellContent}</td>`;
+                    }
+                });
+                tbody.innerHTML += rowHtml + `</tr>`;
+            });
+        }
+        updatePaginationUI();
+    }
+
+    function escapeHtml(text) { return String(text).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])); }
+
+    function getBadgeClass(value) {
+        const v = value.toLowerCase().trim();
+        if (['approved', 'success', 'closed', 'low', 'deployed'].includes(v)) return 'badge-success';
+        if (['rejected', 'failed', 'high', 'critical', 'urgent', 'withdrawn', 'backed out'].includes(v)) return 'badge-danger';
+        if (['pending', 'medium', 'awaiting cab', 'partial success', 'in triage'].includes(v)) return 'badge-warning';
+        if (['submitted', 'minor', 'standard', 'in build', 'in test'].includes(v)) return 'badge-info';
+        return '';
+    }
+
+    // --- SEARCH & PAGINATION ---
+    function filterTable() {
+        let sIn = document.getElementById('searchInput').value.toLowerCase();
+        filteredData = allTableData.filter(row => row.join(" ").toLowerCase().includes(sIn));
+        currentPage = 1; renderTable();
+    }
+
+    function changePageSize() { rowsPerPage = document.getElementById('pageSize').value; currentPage = 1; renderTable(); }
+    function prevPage() { if (currentPage > 1) { currentPage--; renderTable(); } }
+    function nextPage() {
+        const maxPage = rowsPerPage === 'all' ? 1 : Math.ceil(filteredData.length / rowsPerPage);
+        if (currentPage < maxPage) { currentPage++; renderTable(); }
+    }
+    function updatePaginationUI() {
+        const maxPage = rowsPerPage === 'all' ? 1 : Math.ceil(filteredData.length / rowsPerPage);
+        document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${maxPage || 1}`;
+        document.getElementById('btnPrev').disabled = currentPage === 1;
+        document.getElementById('btnNext').disabled = currentPage === maxPage || maxPage === 0;
+        document.getElementById('visible_count').innerText = filteredData.length;
+    }
+
+    let sortDirection = {};
+    function sortTable(n) {
+        let dir = sortDirection[n] === 'asc' ? 'desc' : 'asc';
+        sortDirection[n] = dir;
+        filteredData.sort((a, b) => {
+            let x = (a[n]||"").toLowerCase(); let y = (b[n]||"").toLowerCase();
+            if (!isNaN(x) && !isNaN(y) && x !== '' && y !== '') { x = Number(x); y = Number(y); }
+            if (x < y) return dir === 'asc' ? -1 : 1;
+            if (x > y) return dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        currentPage = 1; renderTable();
+    }
+
+    // --- EXPORT LOGIC ---
+    function openExportModal() { document.getElementById('drawerOverlay').classList.add('open'); document.getElementById('exportModal').classList.add('open'); }
+    function closeExportModal() { document.getElementById('drawerOverlay').classList.remove('open'); document.getElementById('exportModal').classList.remove('open'); }
+    
+    function processExport() {
+        const dateFrom = document.getElementById('export_date_from').value;
+        const dateTo = document.getElementById('export_date_to').value;
+        const status = document.getElementById('export_status').value.toLowerCase();
+
+        let exportData = allTableData;
+        if (status !== 'all') exportData = exportData.filter(row => (row[28] || "").toLowerCase() === status);
+        if (dateFrom || dateTo) exportData = exportData.filter(row => {
+            const rowDate = row[1];
+            if (!rowDate) return false;
+            if (dateFrom && rowDate < dateFrom) return false;
+            if (dateTo && rowDate > dateTo) return false;
+            return true;
+        });
+
+        const wb = XLSX.utils.book_new();
+        const wsData = [["Change Tracking Register (Read-Only)"], columnsArray, ...exportData];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Export");
+        XLSX.writeFile(wb, `Change_Register_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+        closeExportModal();
+    }
+</script>
+</body>
+</html>

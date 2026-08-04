@@ -1,4 +1,5 @@
 * {
+  scroll-behavior: smooth;
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -13,6 +14,16 @@ body {
 
 .inset-0 {
   inset: 0;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+td,
+th {
+  padding: 0;
 }
 
 a {

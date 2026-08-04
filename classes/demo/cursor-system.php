@@ -6,74 +6,74 @@
 
     <div class="grid gap-sm mb-sm">
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-auto">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-auto">
           cur-auto
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-default">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-default">
           cur-default
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-pointer">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-pointer">
           cur-pointer
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-text">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-text">
           cur-text
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-grab">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-grab">
           cur-grab
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-grabbing">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-grabbing">
           cur-grabbing
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-na">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-na">
           cur-na
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <div class="pa-md bg-main-h clr-white ra-sm sw-sm cur-wait">
+      <div class="g-2 txt-center">
+        <div class="pa-md bg-main-h clr-white ra-sm bsw-sm cur-wait">
           cur-wait
         </div>
       </div>
 
-      <div class="g-2 ta-center">
-        <button class="pa-md bg-main-h clr-white ra-sm sw-sm ba-0 w-100p cur-progress">
+      <div class="g-2 txt-center">
+        <button class="pa-md bg-main-h clr-white ra-sm bsw-sm ba-0 w-100p cur-progress">
           cur-progress
         </button>
       </div>
 
-      <div class="g-2 ta-center">
-        <button class="pa-md bg-main-h clr-white ra-sm sw-sm ba-0 w-100p cur-zoom-in">
+      <div class="g-2 txt-center">
+        <button class="pa-md bg-main-h clr-white ra-sm bsw-sm ba-0 w-100p cur-zoom-in">
           cur-zoom-in
         </button>
       </div>
 
-      <div class="g-2 ta-center">
-        <button class="pa-md bg-main-h clr-white ra-sm sw-sm ba-0 w-100p cur-zoom-out">
+      <div class="g-2 txt-center">
+        <button class="pa-md bg-main-h clr-white ra-sm bsw-sm ba-0 w-100p cur-zoom-out">
           cur-zoom-out
         </button>
       </div>
 
-      <div class="g-2 ta-center">
-        <button class="pa-md bg-main-h clr-white ra-sm sw-sm ba-0 w-100p cur-none">
+      <div class="g-2 txt-center">
+        <button class="pa-md bg-main-h clr-white ra-sm bsw-sm ba-0 w-100p cur-none">
           cur-none
         </button>
       </div>
@@ -89,7 +89,7 @@
 
       <div class="g-6">
         <div
-          class="pa-md bg-main-h clr-white ra-md sw-sm cur-grab"
+          class="pa-md bg-main-h clr-white ra-md bsw-sm cur-grab"
           onmousedown="this.classList.replace('cur-grab','cur-grabbing')"
           onmouseup="this.classList.replace('cur-grabbing','cur-grab')"
           onmouseleave="this.classList.replace('cur-grabbing','cur-grab')">
@@ -98,14 +98,14 @@
       </div>
 
       <div class="g-6">
-        <button class="pa-md bg-main-h clr-white ra-md sw-sm w-100p op-50" disabled>
+        <button class="pa-md bg-main-h clr-white ra-md bsw-sm w-100p op-50" disabled>
           Disabled Button (op-50: Added for clarity)
         </button>
       </div>
 
     </div>
 
-    <p class="fs-14 clr-g5 lh-16 ml-md">
+    <p class="fz-14 clr-g5 lh-16 ml-md">
       🟢 Cursor reflects interaction type (click, edit, drag) <br>
       🟡 Use pointer only on clickable elements <br>
       🟢 Buttons and links already use pointer by default <br>

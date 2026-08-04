@@ -1,5 +1,5 @@
-.bs-solid  { border-style: solid;  }
-.bs-dashed { border-style: dashed; }
-.bs-dotted { border-style: dotted; }
-.bs-double { border-style: double; }
-.bs-none   { border-style: none;   }
+.bstyle-solid  { border-style: solid;  }
+.bstyle-dashed { border-style: dashed; }
+.bstyle-dotted { border-style: dotted; }
+.bstyle-double { border-style: double; }
+.bstyle-none   { border-style: none;   }

@@ -1,9 +1,0 @@
-.h-add-10min { --h-add-min-10: 10px; }
-.h-add-20min { --h-add-min-10: 20px; }
-.h-add-30min { --h-add-min-10: 30px; }
-.h-add-40min { --h-add-min-10: 40px; }
-.h-add-50min { --h-add-min-10: 50px; }
-.h-add-60min { --h-add-min-10: 60px; }
-.h-add-70min { --h-add-min-10: 70px; }
-.h-add-80min { --h-add-min-10: 80px; }
-.h-add-90min { --h-add-min-10: 90px; }

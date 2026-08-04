@@ -1,45 +1,45 @@
-<div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+<div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
-  <h3>Static vs Relative (Visual Switch)</h3>
+  <h3>Static vs Relative (Visual bswitch)</h3>
 
   <div class="flex-y gap-xxs">
 
-    <!-- SWITCH -->
+    <!-- bswITCH -->
     <div class="flex-x gap-xs f-center">
 
-      <h3 class="fs-12">Static</h3>
+      <h3 class="fz-12">Static</h3>
 
       <div onclick="togglePosition()"
         class="bg-g3 w-50px h-20px ra-max pn-relative cur-pointer">
 
         <!-- knob -->
-        <div id="switchKnob"
-          class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0 sw-xs"
+        <div id="bswitchKnob"
+          class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0 bsw-xs"
           style="transition: all 0.2s ease;">
         </div>
 
       </div>
 
-      <h3 class="fs-12">Relative</h3>
+      <h3 class="fz-12">Relative</h3>
 
     </div>
 
     <!-- OUTER CONTAINER -->
     <div class="pn-relative h-260px bg-g1 ra-md pa-md mb-sm">
 
-      <div class="fs-12 mb-sm clr-g6">
+      <div class="fz-12 mb-sm clr-g6">
         Viewport reference (fallback anchor)
       </div>
 
       <!-- PARENT BOX -->
       <div id="parentBox" class="bg-g7 h-200px w-500px ra-md pa-xs">
 
-        <div id="stateLabel" class="fs-20 clr-white mb-xs">
+        <div id="stateLabel" class="fz-20 clr-white mb-xs">
           Parent: static
         </div>
 
         <!-- ABSOLUTE CHILD -->
-        <div class="pn-absolute clr-white t-20px r-20px bg-sub pa-xs ra-xs sw-sm fs-20">
+        <div class="pn-absolute clr-white t-20px r-20px bg-sub pa-xs ra-xs bsw-sm fz-20">
           absolute
         </div>
 
@@ -47,7 +47,7 @@
 
     </div>
 
-    <p class="fs-14 clr-g5 lh-16 ml-md">
+    <p class="fz-14 clr-g5 lh-16 ml-md">
       🟢 <b>pn-static</b> and <b>pn-relative</b> appear <b>identical visually</b> — both follow normal document flow.<br>
       🟢 The difference is <b>behavioral</b>: only <b>pn-relative creates a positioning context</b>.<br>
       🟢 <b>pn-absolute</b> children anchor to the nearest <b>pn-relative</b> parent.<br>
@@ -59,51 +59,51 @@
 
 </div>
 
-<div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+<div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
-  <h3>Absolute vs Fixed (Visual Switch)</h3>
+  <h3>Absolute vs Fixed (Visual bswitch)</h3>
 
   <div class="flex-y gap-xxs">
 
-    <!-- SWITCH -->
+    <!-- bswITCH -->
     <div class="flex-x gap-xs f-center">
 
-      <h3 class="fs-12">Absolute</h3>
+      <h3 class="fz-12">Absolute</h3>
 
       <div onclick="toggleFixed()"
         class="bg-g3 w-50px h-20px ra-max pn-relative cur-pointer">
 
         <!-- knob -->
-        <div id="switchKnobFixed"
-          class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0 sw-xs"
+        <div id="bswitchKnobFixed"
+          class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0 bsw-xs"
           style="transition: all 0.2s ease;">
         </div>
 
       </div>
 
-      <h3 class="fs-12">Fixed</h3>
+      <h3 class="fz-12">Fixed</h3>
 
     </div>
 
     <!-- VIEWPORT SIMULATION -->
     <div class="h-260px bg-g1 ra-md pa-md of-auto mb-sm">
 
-      <div class="fs-12 mb-sm clr-g6">
+      <div class="fz-12 mb-sm clr-g6">
         Viewport reference
       </div>
 
       <!-- CONTENT -->
       <div class="pn-relative h-200px w-500px bg-main-h ra-md pa-sm">
 
-        <div class="fs-20 clr-white mb-xs">
+        <div class="fz-20 clr-white mb-xs">
           Parent: relative
         </div>
 
         <!-- TARGET BOX -->
         <div id="targetBox"
-          class="pn-absolute t-20px r-20px bg-sub pa-xs ra-xs sw-md fs-12">
+          class="pn-absolute t-20px r-20px bg-sub pa-xs ra-xs bsw-md fz-12">
 
-          <div id="stateLabelFixed" class="fs-20 clr-white">
+          <div id="stateLabelFixed" class="fz-20 clr-white">
             absolute
           </div>
 
@@ -114,7 +114,7 @@
     </div>
 
     <!-- NOTE -->
-    <p class="fs-14 clr-g5 lh-16 ml-md">
+    <p class="fz-14 clr-g5 lh-16 ml-md">
       🟢 <b>pn-absolute</b> positions relative to a <b>parent container</b>.<br>
       🟢 <b>pn-fixed</b> positions relative to the <b>viewport</b>.<br>
       🟡 Scroll to observe: absolute moves, fixed stays pinned.<br>
@@ -124,27 +124,27 @@
 
 </div>
 
-<div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+<div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
   <h3>Relative vs Sticky (Real Layout)</h3>
 
   <div class="flex-y gap-xxs">
 
-    <!-- SWITCH -->
+    <!-- bswITCH -->
     <div class="flex-x gap-xs f-center">
-      <h3 class="fs-12">Relative</h3>
+      <h3 class="fz-12">Relative</h3>
 
       <div onclick="toggleSticky()"
         class="bg-g3 w-50px h-20px ra-max pn-relative cur-pointer">
 
-        <div id="switchKnobSticky"
-          class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0 sw-xs"
+        <div id="bswitchKnobSticky"
+          class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0 bsw-xs"
           style="transition: all 0.2s ease;">
         </div>
 
       </div>
 
-      <h3 class="fs-12">Sticky</h3>
+      <h3 class="fz-12">Sticky</h3>
     </div>
 
     <!-- VIEWPORT -->
@@ -165,11 +165,11 @@
           <div id="sidebar"
             class="pn-relative bg-main-h clr-white pa-md ra-md">
 
-            <div id="stateLabelSticky" class="fs-14 fw-700 mb-xs">
+            <div id="stateLabelSticky" class="fz-14 fw-700 mb-xs">
               relative
             </div>
 
-            <p class="fs-12">
+            <p class="fz-12">
               Sidebar block<br>
               sticks when enabled
             </p>
@@ -218,7 +218,7 @@
     </div>
 
     <!-- NOTE -->
-    <p class="fs-14 clr-g5 lh-16 ml-md">
+    <p class="fz-14 clr-g5 lh-16 ml-md">
       🟢 <b>pn-relative</b> scrolls normally with content and does not stick.<br>
       🟢 <b>pn-sticky</b> behaves like relative until it reaches an offset (e.g. <b>t-0</b>), then sticks in place.<br>
       🟢 Works for both <b>navbar (top)</b> and <b>sidebar (within layout)</b> in this demo.<br>
@@ -239,7 +239,7 @@
   function togglePosition() {
     const parent = document.getElementById("parentBox");
     const label = document.getElementById("stateLabel");
-    const knob = document.getElementById("switchKnob");
+    const knob = document.getElementById("bswitchKnob");
 
     if (isRelative) {
       // STATIC
@@ -265,7 +265,7 @@
 
   function toggleFixed() {
     const box = document.getElementById("targetBox");
-    const knob = document.getElementById("switchKnobFixed");
+    const knob = document.getElementById("bswitchKnobFixed");
     const label = document.getElementById("stateLabelFixed");
 
     if (isFixed) {
@@ -294,7 +294,7 @@
   function toggleSticky() {
     const sidebar = document.getElementById("sidebar");
     const navbar = document.getElementById("navbar");
-    const knob = document.getElementById("switchKnobSticky");
+    const knob = document.getElementById("bswitchKnobSticky");
     const label = document.getElementById("stateLabelSticky");
     const navbarLabel = document.getElementById("navbarLabel");
 

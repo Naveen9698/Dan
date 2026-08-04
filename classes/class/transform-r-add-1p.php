@@ -1,0 +1,9 @@
+.tr-add-1p { --tr-add-p: 1%; }
+.tr-add-2p { --tr-add-p: 2%; }
+.tr-add-3p { --tr-add-p: 3%; }
+.tr-add-4p { --tr-add-p: 4%; }
+.tr-add-5p { --tr-add-p: 5%; }
+.tr-add-6p { --tr-add-p: 6%; }
+.tr-add-7p { --tr-add-p: 7%; }
+.tr-add-8p { --tr-add-p: 8%; }
+.tr-add-9p { --tr-add-p: 9%; }

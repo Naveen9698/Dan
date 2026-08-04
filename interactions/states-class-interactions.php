@@ -1,9 +1,9 @@
-<h2 class="fs-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="states-class-interactions">States - class Interaction</h2>
+<h2 class="fz-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="states-class-interactions">States - class Interaction</h2>
 
 <section class="px-md stack-y-md">
 
   <!-- INTRO -->
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>State classes</b> define <b>persistent UI states</b> controlled by the application.<br>
     🟢 Unlike pseudo states, these remain active until explicitly changed.<br>
     🟢 Typically managed through <b>JavaScript or interactions</b> (e.g., Webflow).<br>
@@ -15,13 +15,13 @@
   <!-- STATES LIST -->
   <h3>Available State Classes</h3>
 
-  <div class="d-cols">
-    <pre><code>🟢 <b>.active</b>   – indicates the currently active or focused item (nav, tab, etc.).
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>🟢 <b>.active</b>   – indicates the currently active or focused item (nav, tab, etc.).
 🟢 <b>.open</b>     – used for expandable elements (dropdowns, accordions).
 🟢 <b>.selected</b> – marks chosen items (filters, options).
 🟢 <b>.disabled</b> – prevents interaction and visually indicates inactivity.</code></pre>
 
-    <pre><code>[data-ut].active    { ... }
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>[data-ut].active    { ... }
 [data-ut].open      { ... }
 [data-ut].selected  { ... }
 [data-ut].disabled  { ... }</code></pre>
@@ -37,7 +37,7 @@
     }
   </style>
 
-  <div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+  <div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
     <div
       data-ut="active-area"
@@ -75,22 +75,22 @@
     </div>
 
     <!-- ✅ EXPLANATION -->
-    <p class="fs-14 clr-g5">
+    <p class="fz-14 clr-g5">
       🟢 <b>.active</b> updates based on scroll position.<br>
       🟢 Clicking navigation scrolls inside the container.<br>
       🔴 Uses relative positioning for accurate scroll detection.
     </p>
 
 
-    <div class="d-cols">
-      <pre><code>/* CSS */
+    <div class="flex-x gap-md f-wrap">
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* CSS */
         
   [data-ut="active-area"] a.active {
     background: var(--color-main);
     color: #fff;
     font-weight: 600;
   }</code></pre>
-      <pre><code> /* HTML */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code> /* HTML */
 
 &lt;div data-ut="active-area" class="flex-x h-400px of-hidden"&gt;
 
@@ -133,7 +133,7 @@
 
 &lt;/div&gt;    
   </code></pre>
-      <pre><code> /* JS */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code> /* JS */
     
 document.querySelectorAll('[data-ut="active-area"]').forEach(scope => {
 
@@ -262,27 +262,27 @@ document.querySelectorAll('[data-ut="active-area"]').forEach(scope => {
     }
   </style>
 
-  <div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+  <div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
     <div data-ut="open-area" class="stack-y-xs">
 
       <!-- ✅ ITEM -->
-      <article class="sw-sm ra-xs">
+      <article class="bsw-sm ra-xs">
         <button class="pa-xxs w-100p ta-left cur-pointer bg-g1">Base</button>
         <section class="pa-xxs">Base content...</section>
       </article>
 
-      <article class="sw-sm ra-xs">
+      <article class="bsw-sm ra-xs">
         <button class="pa-xxs w-100p ta-left cur-pointer bg-g1">Color</button>
         <section class="pa-xxs">Color content...</section>
       </article>
 
-      <article class="sw-sm ra-xs">
+      <article class="bsw-sm ra-xs">
         <button class="pa-xxs w-100p ta-left cur-pointer bg-g1">Spacing</button>
         <section class="pa-xxs">Spacing content...</section>
       </article>
 
-      <article class="sw-sm ra-xs">
+      <article class="bsw-sm ra-xs">
         <button class="pa-xxs w-100p ta-left cur-pointer bg-g1">Typography</button>
         <section class="pa-xxs">Typography content...</section>
       </article>
@@ -290,7 +290,7 @@ document.querySelectorAll('[data-ut="active-area"]').forEach(scope => {
     </div>
 
     <!-- ✅ INFO -->
-    <p class="fs-14 clr-g5">
+    <p class="fz-14 clr-g5">
       🟢 <b>.open</b> controls visibility.<br>
       🟢 Uses semantic elements (article, button, section).<br>
       🟡 No generic div targeting.<br>
@@ -318,8 +318,8 @@ document.querySelectorAll('[data-ut="active-area"]').forEach(scope => {
       });
     </script>
 
-    <div class="d-cols">
-      <pre><code>/* CSS */
+    <div class="flex-x gap-md f-wrap">
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* CSS */
     
 [data-ut="open-area"] article>section {
   display: none;
@@ -333,18 +333,18 @@ document.querySelectorAll('[data-ut="active-area"]').forEach(scope => {
   background: var(--color-main);
   color: #fff;
 }</code></pre>
-      <pre><code>/* HTML */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* HTML */
     
 &lt;div data-ut="open-area" class="stack-y-xs"&gt;
 
   &lt;!-- ✅ ITEM --&gt;
-  &lt;article class="sw-sm ra-xs"&gt;
+  &lt;article class="bsw-sm ra-xs"&gt;
     &lt;button class="pa-xxs w-100p ta-left cur-pointer bg-g1"&gt;Base&lt;/button&gt;
     &lt;section class="pa-xxs"&gt;Base content...&lt;/section&gt;
   &lt;/article&gt;
 
 &lt;/div&gt;</code></pre>
-      <pre><code>/* JS */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* JS */
         
 document.querySelectorAll('[data-ut="open-area"]').forEach(scope => {
 
@@ -379,7 +379,7 @@ document.querySelectorAll('[data-ut="open-area"]').forEach(scope => {
     }
   </style>
 
-  <div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+  <div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
     <!-- ✅ DEMO AREA -->
     <div data-ut="selected-area" class="flex-x gap-xs fw-wrap">
@@ -407,7 +407,7 @@ document.querySelectorAll('[data-ut="open-area"]').forEach(scope => {
     </div>
 
     <!-- ✅ EXPLANATION -->
-    <p class="fs-14 clr-g5">
+    <p class="fz-14 clr-g5">
       🟢 <b>.selected</b> represents chosen options.<br>
       🟢 Click to toggle selection on/off.<br>
       🟡 Multiple selections allowed.<br>
@@ -415,9 +415,9 @@ document.querySelectorAll('[data-ut="open-area"]').forEach(scope => {
     </p>
 
     <!-- ✅ CODE -->
-    <div class="d-cols">
+    <div class="flex-x gap-md f-wrap">
 
-      <pre><code>/* CSS */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* CSS */
 
 [data-ut="selected-area"] label.selected {
   background: var(--color-main);
@@ -425,7 +425,7 @@ document.querySelectorAll('[data-ut="open-area"]').forEach(scope => {
   border-color: var(--color-main);
 }</code></pre>
 
-      <pre><code>/* HTML */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* HTML */
 
 &lt;div data-ut="selected-area"&gt;
 
@@ -436,7 +436,7 @@ document.querySelectorAll('[data-ut="open-area"]').forEach(scope => {
 
 &lt;/div&gt;</code></pre>
 
-      <pre><code>/* JS */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* JS */
 
 document.querySelectorAll('[data-ut="selected-area"]').forEach(scope =&gt; {
 
@@ -496,7 +496,7 @@ document.querySelectorAll('[data-ut="selected-area"]').forEach(scope =&gt; {
     }
   </style>
 
-  <div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+  <div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
     <!-- ✅ FORM -->
     <form data-ut="disabled-area" class="flex-x w-fit gap-md">
@@ -504,18 +504,18 @@ document.querySelectorAll('[data-ut="selected-area"]').forEach(scope =&gt; {
       <input
         type="text"
         placeholder="Enter name"
-        class="pa-sm ba-0 sw-sm ra-xs w-100p">
+        class="pa-sm ba-0 bsw-sm ra-xs w-100p">
 
       <button
         type="button"
-        class="pa-sm ra-xs sw-sm ba-0 bg-sub clr-white disabled">
+        class="pa-sm ra-xs bsw-sm ba-0 bg-sub clr-white disabled">
         Submit
       </button>
 
     </form>
 
     <!-- ✅ EXPLANATION -->
-    <p class="fs-14 clr-g5">
+    <p class="fz-14 clr-g5">
       🟢 <b>.disabled</b> prevents interaction.<br>
       🟢 Button enables when input has value.<br>
       🟡 State reflects input condition.<br>
@@ -523,16 +523,16 @@ document.querySelectorAll('[data-ut="selected-area"]').forEach(scope =&gt; {
     </p>
 
     <!-- ✅ CODE -->
-    <div class="d-cols">
+    <div class="flex-x gap-md f-wrap">
 
-      <pre><code>/* CSS */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* CSS */
 
 [data-ut="disabled-area"] button.disabled {
   pointer-events: none;
   cursor: not-allowed;
 }</code></pre>
 
-      <pre><code>/* HTML */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* HTML */
 
 &lt;form data-ut="disabled-area"&gt;
 
@@ -544,7 +544,7 @@ document.querySelectorAll('[data-ut="selected-area"]').forEach(scope =&gt; {
 
 &lt;/form&gt;</code></pre>
 
-      <pre><code>/* JS */
+      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>/* JS */
 
 document.querySelectorAll('[data-ut="disabled-area"]').forEach(scope =&gt; {
 

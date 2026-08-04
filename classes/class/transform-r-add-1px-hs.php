@@ -1,0 +1,9 @@
+.hs-tr-add-1px { --hs-tr-add-px: 1px; }
+.hs-tr-add-2px { --hs-tr-add-px: 2px; }
+.hs-tr-add-3px { --hs-tr-add-px: 3px; }
+.hs-tr-add-4px { --hs-tr-add-px: 4px; }
+.hs-tr-add-5px { --hs-tr-add-px: 5px; }
+.hs-tr-add-6px { --hs-tr-add-px: 6px; }
+.hs-tr-add-7px { --hs-tr-add-px: 7px; }
+.hs-tr-add-8px { --hs-tr-add-px: 8px; }
+.hs-tr-add-9px { --hs-tr-add-px: 9px; }

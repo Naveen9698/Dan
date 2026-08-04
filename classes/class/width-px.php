@@ -1,35 +1,150 @@
-.w-1px { --w-width: 1px; }
-.w-2px { --w-width: 2px; }
-.w-3px { --w-width: 3px; }
-.w-4px { --w-width: 4px; }
-.w-5px { --w-width: 5px; }
-.w-6px { --w-width: 6px; }
-.w-7px { --w-width: 7px; }
-.w-8px { --w-width: 8px; }
-.w-9px { --w-width: 9px; }
-
-.w-10px { --w-width: calc(10px + var(--w-add-px-1)); }
-.w-20px { --w-width: calc(20px + var(--w-add-px-1)); }
-.w-30px { --w-width: calc(30px + var(--w-add-px-1)); }
-.w-40px { --w-width: calc(40px + var(--w-add-px-1)); }
-.w-50px { --w-width: calc(50px + var(--w-add-px-1)); }
-.w-60px { --w-width: calc(60px + var(--w-add-px-1)); }
-.w-70px { --w-width: calc(70px + var(--w-add-px-1)); }
-.w-80px { --w-width: calc(80px + var(--w-add-px-1)); }
-.w-90px { --w-width: calc(90px + var(--w-add-px-1)); }
-
-.w-100px { --w-width: calc(100px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-200px { --w-width: calc(200px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-300px { --w-width: calc(300px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-400px { --w-width: calc(400px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-500px { --w-width: calc(500px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-600px { --w-width: calc(600px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-700px { --w-width: calc(700px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-800px { --w-width: calc(800px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-900px { --w-width: calc(900px + var(--w-add-px-10) + var(--w-add-px-1)); }
-
-.w-1000px { --w-width: calc(1000px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-1100px { --w-width: calc(1100px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-1200px { --w-width: calc(1200px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-1300px { --w-width: calc(1300px + var(--w-add-px-10) + var(--w-add-px-1)); }
-.w-1400px { --w-width: calc(1400px + var(--w-add-px-10) + var(--w-add-px-1)); }
+.w-0px    { --w-width: 0px;                          }
+.w-1px    { --w-width: 1px;                          }
+.w-2px    { --w-width: 2px;                          }
+.w-3px    { --w-width: 3px;                          }
+.w-4px    { --w-width: 4px;                          }
+.w-5px    { --w-width: 5px;                          }
+.w-6px    { --w-width: 6px;                          }
+.w-7px    { --w-width: 7px;                          }
+.w-8px    { --w-width: 8px;                          }
+.w-9px    { --w-width: 9px;                          }
+.w-10px   { --w-width: calc(10px  + var(--w-a-px));  }
+.w-20px   { --w-width: calc(20px  + var(--w-a-px));  }
+.w-30px   { --w-width: calc(30px  + var(--w-a-px));  }
+.w-40px   { --w-width: calc(40px  + var(--w-a-px));  }
+.w-50px   { --w-width: calc(50px  + var(--w-a-px));  }
+.w-60px   { --w-width: calc(60px  + var(--w-a-px));  }
+.w-70px   { --w-width: calc(70px  + var(--w-a-px));  }
+.w-80px   { --w-width: calc(80px  + var(--w-a-px));  }
+.w-90px   { --w-width: calc(90px  + var(--w-a-px));  }
+.w-100px  { --w-width: calc(100px  + var(--w-a-px)); }
+.w-110px  { --w-width: calc(110px  + var(--w-a-px)); }
+.w-120px  { --w-width: calc(120px  + var(--w-a-px)); }
+.w-130px  { --w-width: calc(130px  + var(--w-a-px)); }
+.w-140px  { --w-width: calc(140px  + var(--w-a-px)); }
+.w-150px  { --w-width: calc(150px  + var(--w-a-px)); }
+.w-160px  { --w-width: calc(160px  + var(--w-a-px)); }
+.w-170px  { --w-width: calc(170px  + var(--w-a-px)); }
+.w-180px  { --w-width: calc(180px  + var(--w-a-px)); }
+.w-190px  { --w-width: calc(190px  + var(--w-a-px)); }
+.w-200px  { --w-width: calc(200px  + var(--w-a-px)); }
+.w-210px  { --w-width: calc(210px  + var(--w-a-px)); }
+.w-220px  { --w-width: calc(220px  + var(--w-a-px)); }
+.w-230px  { --w-width: calc(230px  + var(--w-a-px)); }
+.w-240px  { --w-width: calc(240px  + var(--w-a-px)); }
+.w-250px  { --w-width: calc(250px  + var(--w-a-px)); }
+.w-260px  { --w-width: calc(260px  + var(--w-a-px)); }
+.w-270px  { --w-width: calc(270px  + var(--w-a-px)); }
+.w-280px  { --w-width: calc(280px  + var(--w-a-px)); }
+.w-290px  { --w-width: calc(290px  + var(--w-a-px)); }
+.w-300px  { --w-width: calc(300px  + var(--w-a-px)); }
+.w-310px  { --w-width: calc(310px  + var(--w-a-px)); }
+.w-320px  { --w-width: calc(320px  + var(--w-a-px)); }
+.w-330px  { --w-width: calc(330px  + var(--w-a-px)); }
+.w-340px  { --w-width: calc(340px  + var(--w-a-px)); }
+.w-350px  { --w-width: calc(350px  + var(--w-a-px)); }
+.w-360px  { --w-width: calc(360px  + var(--w-a-px)); }
+.w-370px  { --w-width: calc(370px  + var(--w-a-px)); }
+.w-380px  { --w-width: calc(380px  + var(--w-a-px)); }
+.w-390px  { --w-width: calc(390px  + var(--w-a-px)); }
+.w-400px  { --w-width: calc(400px  + var(--w-a-px)); }
+.w-410px  { --w-width: calc(410px  + var(--w-a-px)); }
+.w-420px  { --w-width: calc(420px  + var(--w-a-px)); }
+.w-430px  { --w-width: calc(430px  + var(--w-a-px)); }
+.w-440px  { --w-width: calc(440px  + var(--w-a-px)); }
+.w-450px  { --w-width: calc(450px  + var(--w-a-px)); }
+.w-460px  { --w-width: calc(460px  + var(--w-a-px)); }
+.w-470px  { --w-width: calc(470px  + var(--w-a-px)); }
+.w-480px  { --w-width: calc(480px  + var(--w-a-px)); }
+.w-490px  { --w-width: calc(490px  + var(--w-a-px)); }
+.w-500px  { --w-width: calc(500px  + var(--w-a-px)); }
+.w-510px  { --w-width: calc(510px  + var(--w-a-px)); }
+.w-520px  { --w-width: calc(520px  + var(--w-a-px)); }
+.w-530px  { --w-width: calc(530px  + var(--w-a-px)); }
+.w-540px  { --w-width: calc(540px  + var(--w-a-px)); }
+.w-550px  { --w-width: calc(550px  + var(--w-a-px)); }
+.w-560px  { --w-width: calc(560px  + var(--w-a-px)); }
+.w-570px  { --w-width: calc(570px  + var(--w-a-px)); }
+.w-580px  { --w-width: calc(580px  + var(--w-a-px)); }
+.w-590px  { --w-width: calc(590px  + var(--w-a-px)); }
+.w-600px  { --w-width: calc(600px  + var(--w-a-px)); }
+.w-610px  { --w-width: calc(610px  + var(--w-a-px)); }
+.w-620px  { --w-width: calc(620px  + var(--w-a-px)); }
+.w-630px  { --w-width: calc(630px  + var(--w-a-px)); }
+.w-640px  { --w-width: calc(640px  + var(--w-a-px)); }
+.w-650px  { --w-width: calc(650px  + var(--w-a-px)); }
+.w-660px  { --w-width: calc(660px  + var(--w-a-px)); }
+.w-670px  { --w-width: calc(670px  + var(--w-a-px)); }
+.w-680px  { --w-width: calc(680px  + var(--w-a-px)); }
+.w-690px  { --w-width: calc(690px  + var(--w-a-px)); }
+.w-700px  { --w-width: calc(700px  + var(--w-a-px)); }
+.w-710px  { --w-width: calc(710px  + var(--w-a-px)); }
+.w-720px  { --w-width: calc(720px  + var(--w-a-px)); }
+.w-730px  { --w-width: calc(730px  + var(--w-a-px)); }
+.w-740px  { --w-width: calc(740px  + var(--w-a-px)); }
+.w-750px  { --w-width: calc(750px  + var(--w-a-px)); }
+.w-760px  { --w-width: calc(760px  + var(--w-a-px)); }
+.w-770px  { --w-width: calc(770px  + var(--w-a-px)); }
+.w-780px  { --w-width: calc(780px  + var(--w-a-px)); }
+.w-790px  { --w-width: calc(790px  + var(--w-a-px)); }
+.w-800px  { --w-width: calc(800px  + var(--w-a-px)); }
+.w-810px  { --w-width: calc(810px  + var(--w-a-px)); }
+.w-820px  { --w-width: calc(820px  + var(--w-a-px)); }
+.w-830px  { --w-width: calc(830px  + var(--w-a-px)); }
+.w-840px  { --w-width: calc(840px  + var(--w-a-px)); }
+.w-850px  { --w-width: calc(850px  + var(--w-a-px)); }
+.w-860px  { --w-width: calc(860px  + var(--w-a-px)); }
+.w-870px  { --w-width: calc(870px  + var(--w-a-px)); }
+.w-880px  { --w-width: calc(880px  + var(--w-a-px)); }
+.w-890px  { --w-width: calc(890px  + var(--w-a-px)); }
+.w-900px  { --w-width: calc(900px  + var(--w-a-px)); }
+.w-910px  { --w-width: calc(910px  + var(--w-a-px)); }
+.w-920px  { --w-width: calc(920px  + var(--w-a-px)); }
+.w-930px  { --w-width: calc(930px  + var(--w-a-px)); }
+.w-940px  { --w-width: calc(940px  + var(--w-a-px)); }
+.w-950px  { --w-width: calc(950px  + var(--w-a-px)); }
+.w-960px  { --w-width: calc(960px  + var(--w-a-px)); }
+.w-970px  { --w-width: calc(970px  + var(--w-a-px)); }
+.w-980px  { --w-width: calc(980px  + var(--w-a-px)); }
+.w-990px  { --w-width: calc(990px  + var(--w-a-px)); }
+.w-1000px { --w-width: calc(1000px + var(--w-a-px)); }
+.w-1010px { --w-width: calc(1010px + var(--w-a-px)); }
+.w-1020px { --w-width: calc(1020px + var(--w-a-px)); }
+.w-1030px { --w-width: calc(1030px + var(--w-a-px)); }
+.w-1040px { --w-width: calc(1040px + var(--w-a-px)); }
+.w-1050px { --w-width: calc(1050px + var(--w-a-px)); }
+.w-1060px { --w-width: calc(1060px + var(--w-a-px)); }
+.w-1070px { --w-width: calc(1070px + var(--w-a-px)); }
+.w-1080px { --w-width: calc(1080px + var(--w-a-px)); }
+.w-1090px { --w-width: calc(1090px + var(--w-a-px)); }
+.w-1100px { --w-width: calc(1100px + var(--w-a-px)); }
+.w-1110px { --w-width: calc(1110px + var(--w-a-px)); }
+.w-1120px { --w-width: calc(1120px + var(--w-a-px)); }
+.w-1130px { --w-width: calc(1130px + var(--w-a-px)); }
+.w-1140px { --w-width: calc(1140px + var(--w-a-px)); }
+.w-1150px { --w-width: calc(1150px + var(--w-a-px)); }
+.w-1160px { --w-width: calc(1160px + var(--w-a-px)); }
+.w-1170px { --w-width: calc(1170px + var(--w-a-px)); }
+.w-1180px { --w-width: calc(1180px + var(--w-a-px)); }
+.w-1190px { --w-width: calc(1190px + var(--w-a-px)); }
+.w-1200px { --w-width: calc(1200px + var(--w-a-px)); }
+.w-1210px { --w-width: calc(1210px + var(--w-a-px)); }
+.w-1220px { --w-width: calc(1220px + var(--w-a-px)); }
+.w-1230px { --w-width: calc(1230px + var(--w-a-px)); }
+.w-1240px { --w-width: calc(1240px + var(--w-a-px)); }
+.w-1250px { --w-width: calc(1250px + var(--w-a-px)); }
+.w-1260px { --w-width: calc(1260px + var(--w-a-px)); }
+.w-1270px { --w-width: calc(1270px + var(--w-a-px)); }
+.w-1280px { --w-width: calc(1280px + var(--w-a-px)); }
+.w-1290px { --w-width: calc(1290px + var(--w-a-px)); }
+.w-1300px { --w-width: calc(1300px + var(--w-a-px)); }
+.w-1310px { --w-width: calc(1310px + var(--w-a-px)); }
+.w-1320px { --w-width: calc(1320px + var(--w-a-px)); }
+.w-1330px { --w-width: calc(1330px + var(--w-a-px)); }
+.w-1340px { --w-width: calc(1340px + var(--w-a-px)); }
+.w-1350px { --w-width: calc(1350px + var(--w-a-px)); }
+.w-1360px { --w-width: calc(1360px + var(--w-a-px)); }
+.w-1370px { --w-width: calc(1370px + var(--w-a-px)); }
+.w-1380px { --w-width: calc(1380px + var(--w-a-px)); }
+.w-1390px { --w-width: calc(1390px + var(--w-a-px)); }
+.w-1400px { --w-width: 1400px;                       }

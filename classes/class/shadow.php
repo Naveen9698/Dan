@@ -1,8 +1,8 @@
-.sw-xxs { box-shadow: var(--sw-xxs); }
-.sw-xs  { box-shadow: var(--sw-xs);  }
-.sw-sm  { box-shadow: var(--sw-sm);  }
-.sw-md  { box-shadow: var(--sw-md);  }
-.sw-lg  { box-shadow: var(--sw-lg);  }
-.sw-xl  { box-shadow: var(--sw-xl);  }
-.sw-xxl { box-shadow: var(--sw-xxl); }
-.sw-0   { box-shadow: var(--sw-0);   }
+.bsw-xxs { box-shadow: var(--bsw-xxs); }
+.bsw-xs  { box-shadow: var(--bsw-xs);  }
+.bsw-sm  { box-shadow: var(--bsw-sm);  }
+.bsw-md  { box-shadow: var(--bsw-md);  }
+.bsw-lg  { box-shadow: var(--bsw-lg);  }
+.bsw-xl  { box-shadow: var(--bsw-xl);  }
+.bsw-xxl { box-shadow: var(--bsw-xxl); }
+.bsw-0   { box-shadow: var(--bsw-0);   }

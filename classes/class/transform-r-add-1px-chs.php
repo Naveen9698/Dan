@@ -1,0 +1,9 @@
+.chs-tr-add-1px { --chs-tr-add-px: 1px; }
+.chs-tr-add-2px { --chs-tr-add-px: 2px; }
+.chs-tr-add-3px { --chs-tr-add-px: 3px; }
+.chs-tr-add-4px { --chs-tr-add-px: 4px; }
+.chs-tr-add-5px { --chs-tr-add-px: 5px; }
+.chs-tr-add-6px { --chs-tr-add-px: 6px; }
+.chs-tr-add-7px { --chs-tr-add-px: 7px; }
+.chs-tr-add-8px { --chs-tr-add-px: 8px; }
+.chs-tr-add-9px { --chs-tr-add-px: 9px; }

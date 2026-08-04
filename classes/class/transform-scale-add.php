@@ -1,0 +1,9 @@
+.scale-add-1p { --scale-add: .01; }
+.scale-add-2p { --scale-add: .02; }
+.scale-add-3p { --scale-add: .03; }
+.scale-add-4p { --scale-add: .04; }
+.scale-add-5p { --scale-add: .05; }
+.scale-add-6p { --scale-add: .06; }
+.scale-add-7p { --scale-add: .07; }
+.scale-add-8p { --scale-add: .08; }
+.scale-add-9p { --scale-add: .09; }

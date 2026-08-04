@@ -1,16 +1,16 @@
-<h2 class="fs-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="position-system">Position System</h2>
+<h2 class="fz-28 fw-700 clr-g9 bg-g2 txt-center pa-xs" id="position-system">Position System</h2>
 
 <section class="px-md stack-y-sm">
 
   <h3>Position Utility Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/position.php'; ?></code></pre>
-    <pre><code>@media (max-width: 990px) {
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/position.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
 <?php include 'class-tb/position.php'; ?>
 
 }</code></pre>
-    <pre><code>@media (max-width: 770px) {
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
 <?php include 'class-mb/position.php'; ?>
 
 }</code></pre>
@@ -18,12 +18,12 @@
 
   <h3>Helper Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/position-intrinsic.php'; ?></code></pre>
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/position-intrinsic.php'; ?></code></pre>
   </div>
 
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>pn-* utilities</b> (static, relative, absolute, fixed, sticky) define <b>positioning behavior</b>, not spacing.<br>
     🟢 Works by placing elements relative to a <b>parent container or viewport</b> using positioning context.<br>
     🟢 Supports alignment patterns (e.g., <b>pn-center</b>) for precise placement.<br>

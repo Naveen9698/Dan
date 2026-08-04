@@ -1,0 +1,19 @@
+.skewx-add-1deg { --skewx-add: 1deg; }
+.skewx-add-2deg { --skewx-add: 2deg; }
+.skewx-add-3deg { --skewx-add: 3deg; }
+.skewx-add-4deg { --skewx-add: 4deg; }
+.skewx-add-5deg { --skewx-add: 5deg; }
+.skewx-add-6deg { --skewx-add: 6deg; }
+.skewx-add-7deg { --skewx-add: 7deg; }
+.skewx-add-8deg { --skewx-add: 8deg; }
+.skewx-add-9deg { --skewx-add: 9deg; }
+
+.skewy-add-1deg { --skewy-add: 1deg; }
+.skewy-add-2deg { --skewy-add: 2deg; }
+.skewy-add-3deg { --skewy-add: 3deg; }
+.skewy-add-4deg { --skewy-add: 4deg; }
+.skewy-add-5deg { --skewy-add: 5deg; }
+.skewy-add-6deg { --skewy-add: 6deg; }
+.skewy-add-7deg { --skewy-add: 7deg; }
+.skewy-add-8deg { --skewy-add: 8deg; }
+.skewy-add-9deg { --skewy-add: 9deg; }

@@ -5,5 +5,5 @@
 [class^="bl-"], [class*=" bl-"] {
   border-width: 0;
   border-style: solid;
-  border-color: currentColor;
+  border-color: var(--border-color, currentColor);
 }

@@ -1,7 +1,7 @@
 <div class="grid gap-md">
 
-  <div class="g-6 pn-relative sw-sm pa-sm ra-xs">
-    <span class="fs-14 fw-600 clr-g8">Z-index (Stacking Order)</span>
+  <div class="g-6 pn-relative bsw-sm pa-sm ra-xs">
+    <span class="fz-14 fw-600 clr-g8">Z-index (Stacking Order)</span>
     <div class="pn-relative h-200px h-add-20px bg-g1 ra-md pa-md">
       <div id="box1"
         class="pn-absolute w-60p z-1 t-30px l-30px bg-main-h clr-white pa-sm ra-sm">
@@ -17,7 +17,7 @@
       </div>
     </div>
 
-    <p class="fs-14 clr-g5 lh-16 mt-sm ml-md">
+    <p class="fz-14 clr-g5 lh-16 mt-sm ml-md">
       🟢 <b>z-*</b> controls which element appears on top.<br>
       🟢 Higher value = appears above others.<br>
       🟢 Works only on <b>positioned elements</b>.<br>
@@ -26,8 +26,8 @@
 
   </div>
 
-  <div class="g-6 sw-sm pa-sm ra-xs">
-    <span class="fs-14 fw-600 clr-g8">
+  <div class="g-6 bsw-sm pa-sm ra-xs">
+    <span class="fz-14 fw-600 clr-g8">
       Without positioning (z-index does NOT work)
     </span>
 
@@ -46,7 +46,7 @@
       </div>
     </div>
 
-    <p class="fs-14 clr-g5 lh-16 mt-sm ml-md">
+    <p class="fz-14 clr-g5 lh-16 mt-sm ml-md">
       🔴 All elements use <b>z-*</b>, but none are positioned (no pn-*), so z-index has no effect.<br>
       🟡 Elements follow normal document flow instead of overlapping, so stacking cannot occur.<br>
       🟡 Offset utilities (top/left) also require positioning, so they are ignored here.<br>

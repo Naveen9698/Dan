@@ -1,0 +1,9 @@
+.chs-tr-add-1p { --chs-tr-add-p: 1%; }
+.chs-tr-add-2p { --chs-tr-add-p: 2%; }
+.chs-tr-add-3p { --chs-tr-add-p: 3%; }
+.chs-tr-add-4p { --chs-tr-add-p: 4%; }
+.chs-tr-add-5p { --chs-tr-add-p: 5%; }
+.chs-tr-add-6p { --chs-tr-add-p: 6%; }
+.chs-tr-add-7p { --chs-tr-add-p: 7%; }
+.chs-tr-add-8p { --chs-tr-add-p: 8%; }
+.chs-tr-add-9p { --chs-tr-add-p: 9%; }

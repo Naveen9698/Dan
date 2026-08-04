@@ -1,0 +1,9 @@
+.obj-tl { object-position: left top;      }
+.obj-tc { object-position: center top;    }
+.obj-tr { object-position: right top;     }
+.obj-cl { object-position: left center;   }
+.obj-cc { object-position: center center; }
+.obj-cr { object-position: right center;  }
+.obj-bl { object-position: left bottom;   }
+.obj-bc { object-position: center bottom; }
+.obj-br { object-position: right bottom;  }

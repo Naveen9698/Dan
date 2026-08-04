@@ -1,0 +1,9 @@
+.tb-add-1p { --tb-add-p: 1%; }
+.tb-add-2p { --tb-add-p: 2%; }
+.tb-add-3p { --tb-add-p: 3%; }
+.tb-add-4p { --tb-add-p: 4%; }
+.tb-add-5p { --tb-add-p: 5%; }
+.tb-add-6p { --tb-add-p: 6%; }
+.tb-add-7p { --tb-add-p: 7%; }
+.tb-add-8p { --tb-add-p: 8%; }
+.tb-add-9p { --tb-add-p: 9%; }

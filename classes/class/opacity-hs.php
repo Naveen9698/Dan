@@ -1,0 +1,11 @@
+.hs-op-0   { --hs-op: 0;   }
+.hs-op-10  { --hs-op: 0.1; }
+.hs-op-20  { --hs-op: 0.2; }
+.hs-op-30  { --hs-op: 0.3; }
+.hs-op-40  { --hs-op: 0.4; }
+.hs-op-50  { --hs-op: 0.5; }
+.hs-op-60  { --hs-op: 0.6; }
+.hs-op-70  { --hs-op: 0.7; }
+.hs-op-80  { --hs-op: 0.8; }
+.hs-op-90  { --hs-op: 0.9; }
+.hs-op-100 { --hs-op: 1;   }

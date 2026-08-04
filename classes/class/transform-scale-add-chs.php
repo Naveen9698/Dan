@@ -1,0 +1,9 @@
+.chs-scale-add-1p { --chs-scale-add: .01; }
+.chs-scale-add-2p { --chs-scale-add: .02; }
+.chs-scale-add-3p { --chs-scale-add: .03; }
+.chs-scale-add-4p { --chs-scale-add: .04; }
+.chs-scale-add-5p { --chs-scale-add: .05; }
+.chs-scale-add-6p { --chs-scale-add: .06; }
+.chs-scale-add-7p { --chs-scale-add: .07; }
+.chs-scale-add-8p { --chs-scale-add: .08; }
+.chs-scale-add-9p { --chs-scale-add: .09; }

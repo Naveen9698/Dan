@@ -1,21 +1,21 @@
 <div class="g-6 flex-y gap-xxs">
-  <span class="fs-14 fw-600 clr-g8">Visible vs Hidden</span>
+  <span class="fz-14 fw-600 clr-g8">Visible vs Hidden</span>
 
-  <!-- SWITCH -->
+  <!-- bswITCH -->
   <div class="flex-x gap-xs f-center">
-    <span class="fs-12">Visible</span>
+    <span class="fz-12">Visible</span>
 
     <div onclick="toggleOverflow1()"
       class="bg-g3 w-50px h-20px ra-max pn-relative"
       style="cursor:pointer">
 
-      <div id="ofSwitch1"
+      <div id="ofbswitch1"
         class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0"
         style="transition: all 0.2s ease;">
       </div>
     </div>
 
-    <span class="fs-12">Hidden</span>
+    <span class="fz-12">Hidden</span>
   </div>
 
   <!-- DEMO -->
@@ -30,7 +30,7 @@
 
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>visible</b> → content flows outside container.<br>
     🟢 <b>hidden</b> → extra content is clipped.<br>
   </p>
@@ -39,7 +39,7 @@
 <script>
   function toggleOverflow1() {
     const el = document.getElementById("ofBox1");
-    const knob = document.getElementById("ofSwitch1");
+    const knob = document.getElementById("ofbswitch1");
 
     el.classList.toggle("of-hidden");
     el.classList.toggle("of-visible");
@@ -53,21 +53,21 @@
 </script>
 
 <div class="g-6 flex-y gap-xxs">
-  <span class="fs-14 fw-600 clr-g8">Vertical Overflow</span>
+  <span class="fz-14 fw-600 clr-g8">Vertical Overflow</span>
 
-  <!-- SWITCH -->
+  <!-- bswITCH -->
   <div class="flex-x gap-xs f-center">
-    <span class="fs-12">Hidden</span>
+    <span class="fz-12">Hidden</span>
 
     <div onclick="toggleOfY()"
       class="bg-g3 w-50px h-20px ra-max pn-relative">
 
-      <div id="ofSwitchY"
+      <div id="ofbswitchY"
         class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0"
         style="transition: all 0.2s ease;"></div>
     </div>
 
-    <span class="fs-12">Scroll</span>
+    <span class="fz-12">Scroll</span>
   </div>
 
   <!-- DEMO -->
@@ -88,21 +88,21 @@
 </div>
 
 <div class="g-6 flex-y gap-xxs">
-  <span class="fs-14 fw-600 clr-g8">Both Directions</span>
+  <span class="fz-14 fw-600 clr-g8">Both Directions</span>
 
-  <!-- SWITCH -->
+  <!-- bswITCH -->
   <div class="flex-x gap-xs f-center">
-    <span class="fs-12">Hidden</span>
+    <span class="fz-12">Hidden</span>
 
     <div onclick="toggleOfBoth()"
       class="bg-g3 w-50px h-20px ra-max pn-relative">
 
-      <div id="ofSwitchBoth"
+      <div id="ofbswitchBoth"
         class="bg-white w-20px h-20px ra-max pn-absolute t-0 l-0"
         style="transition: all 0.2s ease;"></div>
     </div>
 
-    <span class="fs-12">Scroll</span>
+    <span class="fz-12">Scroll</span>
   </div>
 
   <!-- DEMO -->
@@ -128,7 +128,7 @@
   function toggleOfX() {
     const el = document.getElementById("ofBoxX");
     const label = document.getElementById("ofLabelX");
-    const knob = document.getElementById("ofSwitchX");
+    const knob = document.getElementById("ofbswitchX");
 
     el.classList.toggle("of-x-auto");
     el.classList.toggle("of-x-hidden");
@@ -142,7 +142,7 @@
   function toggleOfY() {
     const el = document.getElementById("ofBoxY");
     const label = document.getElementById("ofLabelY");
-    const knob = document.getElementById("ofSwitchY");
+    const knob = document.getElementById("ofbswitchY");
 
     el.classList.toggle("of-y-auto");
     el.classList.toggle("of-y-hidden");
@@ -156,7 +156,7 @@
   function toggleOfBoth() {
     const el = document.getElementById("ofBoxBoth");
     const label = document.getElementById("ofLabelBoth");
-    const knob = document.getElementById("ofSwitchBoth");
+    const knob = document.getElementById("ofbswitchBoth");
 
     el.classList.toggle("of-auto");
     el.classList.toggle("of-hidden");

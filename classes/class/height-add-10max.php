@@ -1,9 +1,0 @@
-.h-add-10max { --h-add-max-10: 10px; }
-.h-add-20max { --h-add-max-10: 20px; }
-.h-add-30max { --h-add-max-10: 30px; }
-.h-add-40max { --h-add-max-10: 40px; }
-.h-add-50max { --h-add-max-10: 50px; }
-.h-add-60max { --h-add-max-10: 60px; }
-.h-add-70max { --h-add-max-10: 70px; }
-.h-add-80max { --h-add-max-10: 80px; }
-.h-add-90max { --h-add-max-10: 90px; }

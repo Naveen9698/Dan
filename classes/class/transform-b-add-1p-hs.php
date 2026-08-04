@@ -1,0 +1,9 @@
+.hs-tb-add-1p { --hs-tb-add-p: 1%; }
+.hs-tb-add-2p { --hs-tb-add-p: 2%; }
+.hs-tb-add-3p { --hs-tb-add-p: 3%; }
+.hs-tb-add-4p { --hs-tb-add-p: 4%; }
+.hs-tb-add-5p { --hs-tb-add-p: 5%; }
+.hs-tb-add-6p { --hs-tb-add-p: 6%; }
+.hs-tb-add-7p { --hs-tb-add-p: 7%; }
+.hs-tb-add-8p { --hs-tb-add-p: 8%; }
+.hs-tb-add-9p { --hs-tb-add-p: 9%; }

@@ -1,8 +1,8 @@
 
-  --fs-xxs: 12px;
-  --fs-xs : 14px;
-  --fs-sm : 16px;
-  --fs-md : 20px;
-  --fs-lg : 24px;
-  --fs-xl : 32px;
-  --fs-xxl: 48px;
+  --fz-xxs: 12px;
+  --fz-xs : 14px;
+  --fz-sm : 16px;
+  --fz-md : 20px;
+  --fz-lg : 24px;
+  --fz-xl : 32px;
+  --fz-xxl: 48px;

@@ -1,9 +1,0 @@
-.w-add-10min { --w-add-min-10: 10px; }
-.w-add-20min { --w-add-min-10: 20px; }
-.w-add-30min { --w-add-min-10: 30px; }
-.w-add-40min { --w-add-min-10: 40px; }
-.w-add-50min { --w-add-min-10: 50px; }
-.w-add-60min { --w-add-min-10: 60px; }
-.w-add-70min { --w-add-min-10: 70px; }
-.w-add-80min { --w-add-min-10: 80px; }
-.w-add-90min { --w-add-min-10: 90px; }

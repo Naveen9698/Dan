@@ -1,0 +1,9 @@
+.hs-rotate-add-1deg { --hs-rotate-add: 1deg; }
+.hs-rotate-add-2deg { --hs-rotate-add: 2deg; }
+.hs-rotate-add-3deg { --hs-rotate-add: 3deg; }
+.hs-rotate-add-4deg { --hs-rotate-add: 4deg; }
+.hs-rotate-add-5deg { --hs-rotate-add: 5deg; }
+.hs-rotate-add-6deg { --hs-rotate-add: 6deg; }
+.hs-rotate-add-7deg { --hs-rotate-add: 7deg; }
+.hs-rotate-add-8deg { --hs-rotate-add: 8deg; }
+.hs-rotate-add-9deg { --hs-rotate-add: 9deg; }

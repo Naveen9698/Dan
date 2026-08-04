@@ -1,0 +1,19 @@
+.chs-skewx-add-1deg { --chs-skewx-add: 1deg; }
+.chs-skewx-add-2deg { --chs-skewx-add: 2deg; }
+.chs-skewx-add-3deg { --chs-skewx-add: 3deg; }
+.chs-skewx-add-4deg { --chs-skewx-add: 4deg; }
+.chs-skewx-add-5deg { --chs-skewx-add: 5deg; }
+.chs-skewx-add-6deg { --chs-skewx-add: 6deg; }
+.chs-skewx-add-7deg { --chs-skewx-add: 7deg; }
+.chs-skewx-add-8deg { --chs-skewx-add: 8deg; }
+.chs-skewx-add-9deg { --chs-skewx-add: 9deg; }
+
+.chs-skewy-add-1deg { --chs-skewy-add: 1deg; }
+.chs-skewy-add-2deg { --chs-skewy-add: 2deg; }
+.chs-skewy-add-3deg { --chs-skewy-add: 3deg; }
+.chs-skewy-add-4deg { --chs-skewy-add: 4deg; }
+.chs-skewy-add-5deg { --chs-skewy-add: 5deg; }
+.chs-skewy-add-6deg { --chs-skewy-add: 6deg; }
+.chs-skewy-add-7deg { --chs-skewy-add: 7deg; }
+.chs-skewy-add-8deg { --chs-skewy-add: 8deg; }
+.chs-skewy-add-9deg { --chs-skewy-add: 9deg; }

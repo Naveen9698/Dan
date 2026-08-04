@@ -1,9 +1,9 @@
-<h2 class="fs-36 fw-700 clr-white bg-g6 ta-center pa-xs" id="interactions">Interactions</h2>
+<h2 class="fz-36 fw-700 clr-white bg-g6 ta-center pa-xs" id="interactions">Interactions</h2>
 
 <section class="px-md stack-y-xs">
 
   <!-- INTRO -->
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 All interactions must be scoped using <b>[data-ut]</b>.<br>
     🟢 Each <b>[data-ut]</b> acts as an independent component.<br>
     🔴 Never run JavaScript globally across the entire page.<br>
@@ -11,8 +11,8 @@
 
   <!-- UNIVERSAL PATTERN -->
   <h3>Universal Pattern</h3>
-  <div class="d-cols">
-  <pre><code>// ✅ Step 1: Find each component
+  <div class="flex-x gap-md f-wrap">
+  <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>// ✅ Step 1: Find each component
 document.querySelectorAll('[data-ut]').forEach(scope => {
 
   // ✅ Step 2: Get items inside the component
@@ -32,7 +32,7 @@ document.querySelectorAll('[data-ut]').forEach(scope => {
 });
 </code></pre></div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟡 This pattern does not define behavior.<br>
     🟡 It only ensures interactions stay inside the component.<br>
     🟢 You replace the logic depending on the use-case.<br>
@@ -42,29 +42,29 @@ document.querySelectorAll('[data-ut]').forEach(scope => {
   <!-- COMMON VARIATIONS -->
   <h3>Behavior Examples</h3>
 
-  <div class="d-cols">
+  <div class="flex-x gap-md f-wrap">
 
-<pre><code>// Active (navigation, tabs)
+<pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>// Active (navigation, tabs)
 // Only one item can be active
 items.forEach(i => i.classList.remove('active'));
 item.classList.add('active');</code></pre>
 
-<pre><code>// Toggle (dropdown, accordion)
+<pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>// Toggle (dropdown, accordion)
 // Click to open/close
 item.classList.toggle('open');</code></pre>
 
-<pre><code>// Single selection (filters)
+<pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>// Single selection (filters)
 // Choose one option
 items.forEach(i => i.classList.remove('selected'));
 item.classList.add('selected');</code></pre>
 
-<pre><code>// Multi selection (tags, filters)
+<pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>// Multi selection (tags, filters)
 // Toggle multiple options
 item.classList.toggle('selected');</code></pre>
 
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 The <b>selection pattern</b> stays the same.<br>
     🟢 Only the <b>state logic changes</b> (active, open, selected).<br>
   </p>
@@ -76,10 +76,10 @@ item.classList.toggle('selected');</code></pre>
 
 
 
-<h2 class="fs-36 fw-700 clr-white bg-g4 ta-center pa-xs" id="states-interactions">States</h2>
+<h2 class="fz-36 fw-700 clr-white bg-g4 ta-center pa-xs" id="states-interactions">States</h2>
 
 <section class="px-md stack-y-sm">
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>Interaction system</b> controls <b>user behavior & feedback</b>, not layout or spacing.<br>
     🟢 Uses <b>Pseudo classes - :active, :hover, :focus</b> for temporary interaction states.<br>
     🟢 Uses <b>State classes - active, open, disabled, selected</b> for persistent states.<br>
@@ -88,12 +88,12 @@ item.classList.toggle('selected');</code></pre>
   </p>
 </section>
 
-<h2 class="fs-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="states-pseudo-interactions">States - Pseudo Interaction</h2>
+<h2 class="fz-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="states-pseudo-interactions">States - Pseudo Interaction</h2>
 
 <section class="px-md stack-y-md">
 
   <!-- INTRO -->
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>Pseudo states</b> define <b>temporary interaction behavior</b> controlled by the browser.<br>
     🟢 They respond to user actions like hover, click, and keyboard navigation.<br>
     🟢 Always scope pseudo states using <b>[data-ut]</b> to avoid styling conflicts.<br>
@@ -105,15 +105,15 @@ item.classList.toggle('selected');</code></pre>
   <!-- ALL STATES -->
   <h3>Available Pseudo States</h3>
 
-  <div class="d-cols">
-    <pre><code>🟢 <b>:hover</b>         – triggered when a pointer is over an element.
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>🟢 <b>:hover</b>         – triggered when a pointer is over an element.
 🟢 <b>:active</b>        – active during click/press interaction.
 🟢 <b>:focus</b>         – triggered when element receives focus (mouse or keyboard).
 🟢 <b>:focus-visible</b> – shows focus only when needed (keyboard navigation).
 🟡 <b>:checked</b>       – works for form inputs (checkbox, radio).
 🔴 <b>:link/:visited</b> – apply only to anchor links.</code></pre>
 
-    <pre><code>[data-ut]:hover         { ... }
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>[data-ut]:hover         { ... }
 [data-ut]:active        { ... }
 [data-ut]:focus         { ... }
 [data-ut]:focus-visible { ... }</code></pre>
@@ -143,44 +143,44 @@ item.classList.toggle('selected');</code></pre>
     }
   </style>
 
-  <div class="bg-white ra-sm pa-md sw-sm">
+  <div class="bg-white ra-sm pa-md bsw-sm">
 
     <div class="grid gap-md">
 
       <div class="g-4 stack-y-xs">
-        <div data-ut="one" tabindex="0" class="pa-md bg-white ra-sm sw-sm ta-center">
+        <div data-ut="one" tabindex="0" class="pa-md bg-white ra-sm bsw-sm ta-center">
           Hover (move mouse)
         </div>
-        <pre><code>[data-ut="one"]:hover {
+        <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>[data-ut="one"]:hover {
   background: var(--color-sub);
 }</code></pre>
-        <p class="fs-14 clr-g5 lh-16 ml-md">
+        <p class="fz-14 clr-g5 lh-16 ml-md">
           🟢 <b>:hover</b> → pointer interaction feedback.
         </p>
       </div>
 
       <div class="g-4 stack-y-xs">
-        <button data-ut="two" class="pa-md w-100p bg-white ba-0 ra-sm sw-sm">
+        <button data-ut="two" class="pa-md w-100p bg-white ba-0 ra-sm bsw-sm">
           Active (hold click)
         </button>
-        <pre><code>[data-ut="two"]:active {
+        <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>[data-ut="two"]:active {
   transform: scale(0.95);
 }</code></pre>
-        <p class="fs-14 clr-g5 lh-16 ml-md">
+        <p class="fz-14 clr-g5 lh-16 ml-md">
           🟢 <b>:active</b> → press/click feedback (very short duration).
         </p>
       </div>
 
       <div class="g-4 stack-y-xs">
-        <button data-ut="three" class="pa-md w-100p bg-white ba-0 ra-sm sw-sm">
+        <button data-ut="three" class="pa-md w-100p bg-white ba-0 ra-sm bsw-sm">
           Focus (click / tab)
         </button>
 
-        <pre><code>[data-ut="three"]:focus {
+        <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>[data-ut="three"]:focus {
   outline: 3px solid var(--color-main);
 }</code></pre>
 
-        <p class="fs-14 clr-g5 lh-16 ml-md">
+        <p class="fz-14 clr-g5 lh-16 ml-md">
           🟢 <b>:focus</b> → triggered when element is selected (click or tab).<br>
           🟡 Stays visible until focus moves away.
         </p>
@@ -208,7 +208,7 @@ item.classList.toggle('selected');</code></pre>
     }
   </style>
 
-  <div class="bg-white pa-sm stack-y-md ra-sm sw-sm">
+  <div class="bg-white pa-sm stack-y-md ra-sm bsw-sm">
 
     <div
       data-demo="focus-area"
@@ -233,7 +233,7 @@ item.classList.toggle('selected');</code></pre>
       </div>
 
       <div class="g-12">
-        <p class="fs-14 clr-g5">
+        <p class="fz-14 clr-g5">
           🟢 <b>:focus-visible</b> → shown during keyboard navigation (Tab).<br>
           🟡 Use <b>Tab key</b> to navigate. Focus will remain inside this area using js. <br>
           🟡 Hidden on mouse click for cleaner UI.<br>
@@ -241,8 +241,8 @@ item.classList.toggle('selected');</code></pre>
         </p>
       </div>
       <div class="g-12">
-        <p class="fs-14 clr-g5">
-        <pre><code>[data-demo="focus-area"] button:focus {
+        <p class="fz-14 clr-g5">
+        <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>[data-demo="focus-area"] button:focus {
   outline: none;
 }
 

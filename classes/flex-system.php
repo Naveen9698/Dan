@@ -1,19 +1,19 @@
-<h2 class="fs-28 fw-700 clr-g9 bg-g2 ta-center pa-xs" id="flex-system">Flex System</h2>
+<h2 class="fz-28 fw-700 clr-g9 bg-g2 txt-center pa-xs" id="flex-system">Flex System</h2>
 
 <section class="px-md stack-y-sm flex-system">
   <h3>Presets</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/flex.php'; ?></code></pre>
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex.php'; ?></code></pre>
   </div>
 
   <h3>Helper Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/flex-helper.php'; ?></code></pre>
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-helper.php'; ?></code></pre>
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 Flex system controls <b>flow and alignment</b>, not structure or spacing.<br>
     🟢 Combine with <b>grid</b> for layout structure and <b>gap / spacing</b> for spacing.<br>
     🔴 Using flex for everything may reduce clarity and maintainability. <br>
@@ -25,40 +25,64 @@
 
   <h3>Flex Direction Utility Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/flex-direction.php'; ?></code></pre>
-    <pre><code>@media (max-width: 990px) {
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-direction.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
 <?php include 'class-tb/flex-direction.php'; ?>
 
 }</code></pre>
-    <pre><code>@media (max-width: 770px) {
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
 <?php include 'class-mb/flex-direction.php'; ?>
 
 }</code></pre>
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>flex-x</b> = horizontal flow · <b>flex-y</b> = vertical flow.<br>
     🟢 Direction defines the <b>main axis</b> of the layout.<br>
     🟡 Responsive variants (<b>tb / mb</b>) override direction at breakpoints.<br>
     🔴 Changing direction changes how alignment behaves — use with awareness.
   </p>
 
+  <h3>Flex Grow / Shrink Utility Classes</h3>
+
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-gs.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
+<?php include 'class-tb/flex-gs.php'; ?>
+
+}</code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
+<?php include 'class-mb/flex-gs.php'; ?>
+
+}</code></pre>
+  </div>
+
+  <p class="fz-14 clr-g5 lh-16 ml-md">
+    🟢 f-fill is often the simpler alternative when the item should occupy all remaining space. <br>
+    🟢 f-grow allows a flex item to consume available free space. <br>
+    🟢 f-grow-none prevents automatic expansion. <br>
+    🟢 f-shrink allows a flex item to shrink when necessary. <br>
+    🟢 f-shrink-none prevents shrinking and preserves intrinsic size. <br>
+    🟡 Useful for sidebars, logos, navigation items and toolbars. <br>
+    🔴 Grow and shrink affect only flex items, not regular elements.
+  </p>
+
   <h3>Flex (x-axis/align-items) Utility Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/flex-x-axis.php'; ?></code></pre>
-    <pre><code>@media (max-width: 990px) {
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-x-axis.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
 <?php include 'class-tb/flex-x-axis.php'; ?>
 
 }</code></pre>
-    <pre><code>@media (max-width: 770px) {
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
 <?php include 'class-mb/flex-x-axis.php'; ?>
 
 }</code></pre>
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>f-left / f-center / f-right</b> align items on the <b>cross axis</b>.<br>
     🟡 Alignment depends on <b>flex direction</b>: <br>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- In flex-x → f-left/f-center/f-right align vertically <br>
@@ -70,20 +94,20 @@
     🔴 Misunderstanding axis direction may cause unexpected alignment results.
   </p>
 
-  <h3>Flex (y-axis/justiflex-y-content) Utility Classes</h3>
+  <h3>Flex (y-axis/justify-content) Utility Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/flex-y-axis.php'; ?></code></pre>
-    <pre><code>@media (max-width: 990px) {
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-y-axis.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
 <?php include 'class-tb/flex-y-axis.php'; ?>
 
 }</code></pre>
-    <pre><code>@media (max-width: 770px) {
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
 <?php include 'class-mb/flex-y-axis.php'; ?>
 
 }</code></pre>
   </div>
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>f-top / f-middle / f-bottom</b> position items on the <b>main axis</b>.<br>
     🟡 f-top / f-middle / f-bottom always follow the <b>main axis</b> (direction) <br>
     🟢 <b>f-spread</b> → space between items only (no space on edges).<br>
@@ -95,23 +119,45 @@
 
   <h3>Flex (align-content) Utility Classes</h3>
 
-  <div class="d-cols">
-    <pre><code><?php include 'class/flex-align-content.php'; ?></code></pre>
-    <pre><code>@media (max-width: 990px) {
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-align-content.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
 <?php include 'class-tb/flex-align-content.php'; ?>
 
 }</code></pre>
-    <pre><code>@media (max-width: 770px) {
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
 <?php include 'class-mb/flex-align-content.php'; ?>
 
 }</code></pre>
   </div>
 
-  <p class="fs-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>f-lines-*</b> controls alignment of multiple flex rows/columns.<br>
     🟢 Works only when <b>items wrap</b> into more than one line.<br>
     🔴 Has no effect on single-line layouts.<br>
     🟡 Avoid mixing with <b>align-items</b> — may create conflicting alignment.
+  </p>
+
+  <h3>Flex (align-self) Utility Classes</h3>
+
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/flex-align-self.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 990px) {
+<?php include 'class-tb/flex-align-self.php'; ?>
+
+}</code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code>@media (max-width: 770px) {
+<?php include 'class-mb/flex-align-self.php'; ?>
+
+}</code></pre>
+  </div>
+
+  <p class="fz-14 clr-g5 lh-16 ml-md">
+    🟢 f-self-* overrides cross-axis alignment for a single flex item. <br>
+    🟢 Takes precedence over the parent f-left/f-center/f-right alignment. <br>
+    🟢 Useful for badges, buttons, avatars and featured items. <br>
+    🟡 Alignment follows the cross axis of the current flex direction. <br>
+    🔴 Only affects the individual item it is applied to.
   </p>
 
   <h3>Live Demo</h3>

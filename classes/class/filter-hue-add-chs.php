@@ -1,0 +1,9 @@
+.cho\:hue-add-1deg { --cho-hue-add: 1deg; }
+.cho\:hue-add-2deg { --cho-hue-add: 2deg; }
+.cho\:hue-add-3deg { --cho-hue-add: 3deg; }
+.cho\:hue-add-4deg { --cho-hue-add: 4deg; }
+.cho\:hue-add-5deg { --cho-hue-add: 5deg; }
+.cho\:hue-add-6deg { --cho-hue-add: 6deg; }
+.cho\:hue-add-7deg { --cho-hue-add: 7deg; }
+.cho\:hue-add-8deg { --cho-hue-add: 8deg; }
+.cho\:hue-add-9deg { --cho-hue-add: 9deg; }
