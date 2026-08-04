@@ -5,6 +5,9 @@
 
 class DanCarousel {
   static VERSION = '2.2.0';
+  static DEBUG = false; // OBSERVATION #6: Global Debug Flag
+  static _autoInitObserver = null;
+
   static EVENTS = [
     'init', 'resize', 'destroy',
     'dragStart', 'dragMove', 'dragEnd',
@@ -17,6 +20,28 @@ class DanCarousel {
     'syncStart', 'syncUpdate', 'syncStop',
     'debugOpen', 'debugClose'
   ];
+
+  // OBSERVATION #5: Controllable Auto-Init Lifecycle
+  static startAutoInit() {
+    if (typeof document === 'undefined') return;
+    const initAll = () => {
+      document.querySelectorAll('.slider:not(.slider-ready)').forEach(el => {
+        if (!el.__danCarousel) el.__danCarousel = new DanCarousel(el);
+      });
+    };
+    initAll();
+    if (!this._autoInitObserver) {
+      this._autoInitObserver = new MutationObserver(initAll);
+      this._autoInitObserver.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  static stopAutoInit() {
+    if (this._autoInitObserver) {
+      this._autoInitObserver.disconnect();
+      this._autoInitObserver = null;
+    }
+  }
 
   constructor(element) {
     this.root = element;
@@ -136,12 +161,14 @@ class DanCarousel {
 
   get stateData() { return this.state(); }
   
-  snapshot() { return { ...this.state() }; }
+  // OBSERVATION #4: Simplification
+  snapshot() { return this.state(); }
 
   pluginsList() { return this.plugins.map(p => p.name || 'anonymous'); }
 
   buildInfo() {
     return Object.freeze({
+      engine: 'DanCarousel', // OBSERVATION #3
       version: this.version(),
       build: 'stable',
       released: '2026-08'
@@ -149,6 +176,7 @@ class DanCarousel {
   }
 
   capabilities() {
+    // OPTIONAL ADDITION: Enhanced Capabilities Output
     return Object.freeze({
       loop: true,
       dragFree: true,
@@ -162,7 +190,12 @@ class DanCarousel {
       creative: true,
       lazyLoad: true,
       accessibility: true,
-      debug: true
+      debug: true,
+      plugins: true,
+      events: true,
+      diagnostics: true,
+      snapshots: true,
+      observers: true
     });
   }
 
@@ -170,9 +203,21 @@ class DanCarousel {
     return Object.freeze({
       version: this.version(),
       build: this.buildInfo(),
-      plugins: this.pluginsList(),
-      events: this.events(),
-      capabilities: this.capabilities()
+      plugins: Object.freeze(this.pluginsList()), // OBSERVATION #7: Deep Freeze
+      events: Object.freeze(this.events()),       // OBSERVATION #7: Deep Freeze
+      capabilities: this.capabilities(),
+      state: this.state()                         // OBSERVATION #2: Included State
+    });
+  }
+
+  // OPTIONAL ADDITION: Full Runtime Inspection API
+  inspect() {
+    return Object.freeze({
+      info: this.info(),
+      state: this.state(),
+      slidesInView: this.slidesInView(),
+      slidesNotInView: this.slidesNotInView(),
+      activeSlide: this.selectedIndex()
     });
   }
 
@@ -196,7 +241,7 @@ class DanCarousel {
   }
 
   on(event, callback) {
-    if (!DanCarousel.EVENTS.includes(event) && this.root.classList.contains('debug')) {
+    if (DanCarousel.DEBUG && !DanCarousel.EVENTS.includes(event)) {
       console.warn(`[DanCarousel] Unknown event: ${event}`);
     }
     if (!this.listeners[event]) this.listeners[event] = [];
@@ -257,8 +302,8 @@ class DanCarousel {
   }
 
   slidesNotInView() {
-    const visible = this.slidesInView();
-    return this.slides.map((_, idx) => idx).filter(idx => !visible.includes(idx));
+    // OBSERVATION #1: Optimized O(N) filtering using Set.has()
+    return this.slides.map((_, idx) => idx).filter(idx => !this.visibleSlides.has(idx));
   }
 
   // ==========================================
@@ -1166,16 +1211,6 @@ InVw: ${api.slidesInView().join(',')}
 // ==========================================
 // AUTO-INIT SYSTEM
 // ==========================================
-function initDanCarousels() {
-  document.querySelectorAll('.slider:not(.slider-ready)').forEach(el => {
-    if (!el.__danCarousel) {
-      el.__danCarousel = new DanCarousel(el);
-    }
-  });
-}
-
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', initDanCarousels);
-  const observer = new MutationObserver(initDanCarousels);
-  observer.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', () => DanCarousel.startAutoInit());
 }
