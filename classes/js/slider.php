@@ -1,9 +1,24 @@
 /**
- * DANCAROUSEL 2.2 - FINAL ARCHITECTURAL CLEANUP
- * INCLUDES: Advanced Event Semantics, Extended Developer APIs, Hardened Plugins
+ * DANCAROUSEL 2.2 - V1.0 FINAL ARCHITECTURAL CLEANUP & POST-V1 HARDENING
+ * 100% COMPLETION: Event Semantics, DX Polish, State Snapshots, Absolute Memory Safety
  */
 
 class DanCarousel {
+  // POLISH #2 & FIX #2: Static Version & Event Definitions
+  static VERSION = '2.2.0';
+  static EVENTS = [
+    'init', 'resize', 'destroy',
+    'dragStart', 'dragMove', 'dragEnd',
+    'scroll', 'settle',
+    'beforeSelect', 'select', 'afterSelect',
+    'activeSlideChange',
+    'slideEnter', 'slideExit',
+    'loopEnter', 'loopExit', 'loopReposition',
+    'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop',
+    'syncStart', 'syncUpdate', 'syncStop',
+    'debugOpen', 'debugClose'
+  ];
+
   constructor(element) {
     this.root = element;
     this.track = this.root.querySelector('.slides');
@@ -31,7 +46,7 @@ class DanCarousel {
     this.targetPos = 0;
     this.currentIndex = 0;
     this.prevIndex = 0; 
-    this._velocity = 0; // Prefixed internal state (Exposed via API)
+    this._velocity = 0; 
     this.inertia = 0;
     
     this.isDraggingActive = false;
@@ -48,7 +63,7 @@ class DanCarousel {
     this.isClickSuppressed = false;
 
     this.slides = []; 
-    this.visibleSlides = new Set(); // OPTIONAL #1: Visibility State Tracking
+    this.visibleSlides = new Set(); 
 
     this.metrics = {
       viewportSize: 0,
@@ -89,22 +104,24 @@ class DanCarousel {
   }
 
   // ==========================================
-  // PUBLIC API & EVENT SYSTEM
+  // PUBLIC API & DX EXTENSIONS
   // ==========================================
 
-  version() { return '2.2.0'; }
+  version() { return DanCarousel.VERSION; }
   isReady() { return this.root.classList.contains('slider-ready'); }
   isDestroyed() { return this.destroyed; }
+  events() { return [...DanCarousel.EVENTS]; }
   
-  // FINAL ADDITIONS: Extended APIs
   hashGroup() { return this.root.dataset.hashGroup; }
   syncGroup() { return this.root.dataset.syncGroup; }
   velocity() { return this._velocity; }
   currentPosition() { return this.currentPos; }
   targetPosition() { return this.targetPos; }
   
+  // POLISH #1: Enhanced State Payload
   state() {
     return {
+      version: this.version(),
       index: this.currentIndex,
       previousIndex: this.prevIndex,
       position: this.currentPos,
@@ -112,23 +129,29 @@ class DanCarousel {
       velocity: this._velocity,
       progress: this.scrollProgress(),
       dragging: this.isDraggingActive,
-      settled: this.isSettled
+      settled: this.isSettled,
+      looping: this.options.loop,
+      rtl: this.options.rtl,
+      vertical: this.options.vertical
     };
   }
 
-  events() {
-    return [
-      'init', 'resize', 'destroy',
-      'dragStart', 'dragMove', 'dragEnd',
-      'scroll', 'settle',
-      'beforeSelect', 'select', 'afterSelect',
-      'activeSlideChange',
-      'slideEnter', 'slideExit',
-      'loopEnter', 'loopExit', 'loopReposition',
-      'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop',
-      'syncStart', 'syncUpdate', 'syncStop',
-      'debugOpen', 'debugClose'
-    ];
+  // POLISH #7: Read-Only State Getter
+  get stateData() { return this.state(); }
+  
+  // POLISH #5: Immutable State Snapshot
+  snapshot() { return JSON.parse(JSON.stringify(this.state())); }
+
+  // POLISH #6: Plugin Discovery API
+  pluginsList() { return this.plugins.map(p => p.name || 'anonymous'); }
+
+  // POLISH #8: Build Information API
+  buildInfo() {
+    return {
+      version: this.version(),
+      build: 'stable',
+      released: '2026-08'
+    };
   }
 
   getEventPayload() {
@@ -151,6 +174,10 @@ class DanCarousel {
   }
 
   on(event, callback) {
+    // POLISH #4: Event Validation
+    if (!DanCarousel.EVENTS.includes(event)) {
+      console.warn(`[DanCarousel] Unknown event: ${event}`);
+    }
     if (!this.listeners[event]) this.listeners[event] = [];
     this.listeners[event].push(callback);
     return this;
@@ -205,7 +232,11 @@ class DanCarousel {
   }
 
   slidesInView() {
-    return Array.from(this.visibleSlides).sort((a, b) => a - b);
+    const visibleIndexes = new Set();
+    this.track.querySelectorAll('.in-view').forEach(el => {
+      visibleIndexes.add(parseInt(el.getAttribute('data-slide-index'), 10));
+    });
+    return Array.from(visibleIndexes).sort((a, b) => a - b);
   }
 
   slidesNotInView() {
@@ -218,6 +249,9 @@ class DanCarousel {
   // ==========================================
   
   updateMeasurements() {
+    // FIX #1: Reset visibility cache on rebuild
+    this.visibleSlides.clear();
+
     if (this.mutationObserver) this.mutationObserver.disconnect();
     this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
     
@@ -318,7 +352,6 @@ class DanCarousel {
           
           if (!isClone) {
             node.removeAttribute('aria-hidden');
-            // OPTIONAL #1: Visibility State Tracking (No duplicate spam)
             if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
               this.visibleSlides.add(idx);
               this.emit('slideEnter', { index: idx });
@@ -566,9 +599,11 @@ class DanCarousel {
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.unbindEvents();
-    if (this.resizeObserver) this.resizeObserver.disconnect();
-    if (this.mutationObserver) this.mutationObserver.disconnect();
-    if (this.visibilityObserver) this.visibilityObserver.disconnect();
+    
+    // POLISH #3: Safely Null Observers
+    if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
+    if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
+    if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
     
     if (this.announceHandler) this.off('select', this.announceHandler);
 
@@ -594,7 +629,6 @@ class DanCarousel {
     
     const changed = (this.currentIndex !== targetIndex);
 
-    // ISSUE #1 FIX: Only emit beforeSelect if state will change
     if (changed) {
       this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex });
       
@@ -621,7 +655,6 @@ class DanCarousel {
     
     this.updateSlideStates();
 
-    // ISSUE #2 FIX: Only fire select/afterSelect on actual change (or initial boot)
     if (changed || immediate) {
       this.emit('select');
       this.emit('afterSelect'); 
@@ -709,6 +742,7 @@ class DanCarousel {
       const controls = (() => {
         let hPrev, hNext;
         return {
+          name: 'controls',
           init: (api) => {
             hPrev = () => api.scrollPrev();
             hNext = () => api.scrollNext();
@@ -730,6 +764,7 @@ class DanCarousel {
       const dots = (() => {
         let updateDots;
         return {
+          name: 'dots',
           init: (api) => {
             dotsContainer.innerHTML = '';
             api.metrics.snapPoints.forEach((_, idx) => {
@@ -762,6 +797,7 @@ class DanCarousel {
       const counter = (() => {
         let updateCounter;
         return {
+          name: 'counter',
           init: (api) => {
             updateCounter = (api, payload) => {
               counterEl.textContent = `${payload.currentIndex + 1} / ${api.metrics.snapPoints.length}`;
@@ -781,6 +817,7 @@ class DanCarousel {
       const progress = (() => {
         let updateProgress;
         return {
+          name: 'progress',
           init: (api) => {
             updateProgress = (api, payload) => {
               const pct = payload.progress * 100;
@@ -801,6 +838,7 @@ class DanCarousel {
         let isPaused = false;
         let hasStarted = false;
         return {
+          name: 'autoplay',
           init: (api) => {
             play = () => {
               clearTimeout(playTimer);
@@ -864,6 +902,7 @@ class DanCarousel {
         let onWheel, resetTimer;
         let accumulator = 0;
         return {
+          name: 'wheel',
           init: (api) => {
             const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
             onWheel = (e) => {
@@ -897,6 +936,7 @@ class DanCarousel {
       const hashPlugin = (() => {
         let onHash, onSelect;
         return {
+          name: 'hash',
           init: (api) => {
             const updateUrl = api.root.dataset.hashUpdate !== 'false';
             const hashGroup = api.hashGroup(); 
@@ -946,6 +986,7 @@ class DanCarousel {
         let onSelect;
         let hasSynced = false;
         return {
+          name: 'sync',
           init: (api) => {
             onSelect = (api, payload) => {
               let targets = [];
@@ -960,7 +1001,6 @@ class DanCarousel {
               }
               
               if (targets.length) {
-                // ISSUE #3 FIX: Strict syncStart semantics based on targets existing
                 if (!hasSynced) {
                   hasSynced = true;
                   api.emit('syncStart');
@@ -992,6 +1032,7 @@ class DanCarousel {
       const creative = (() => {
         let onScroll;
         return {
+          name: 'creative',
           init: (api) => {
             onScroll = () => {
               api.slides.forEach((slide, idx) => {
@@ -1021,6 +1062,7 @@ class DanCarousel {
       const lazyLoad = (() => {
         let onSelect;
         return {
+          name: 'lazy-load',
           init: (api) => {
             onSelect = (api, payload) => {
               const toLoad = [
@@ -1054,13 +1096,14 @@ class DanCarousel {
       this.plugins.push(lazyLoad);
     }
 
-    // DEBUG PLUGIN 
+    // DEBUG PLUGIN
     if (this.root.classList.contains('debug')) {
       const debugPlugin = (() => {
          let debugEl, onUpdate, lastUpdate = 0;
          return {
+            name: 'debug',
             init: (api) => {
-               const delay = parseInt(api.root.dataset.debugDelay) || 150; // OPTIONAL #2
+               const delay = parseInt(api.root.dataset.debugDelay) || 150; 
                api.emit('debugOpen'); 
                debugEl = document.createElement('div');
                debugEl.className = 'slider-debug-panel';
@@ -1072,15 +1115,16 @@ class DanCarousel {
                   if (now - lastUpdate < delay) return; 
                   lastUpdate = now;
                   
-                  // ISSUE #4 FIX: Access state strictly via public APIs
                   const state = api.state();
                   debugEl.textContent = `
+[DanCarousel v${state.version}]
 Idx:  ${state.index}
 Prog: ${state.progress.toFixed(2)}
 Drag: ${state.dragging}
 Setl: ${state.settled}
-Loop: ${api.isLoop()}
+Loop: ${state.looping}
 Vel:  ${state.velocity.toFixed(2)}
+InVw: ${api.slidesInView().join(',')}
                   `.trim();
                };
                api.on('scroll', onUpdate);
