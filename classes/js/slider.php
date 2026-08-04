@@ -1,6 +1,6 @@
 /**
  * DANCAROUSEL 2.0 - V1.0 FINAL RELEASE
- * INCLUDES: Hardening, API Extensions, Event Payloads, DOM Purity, & Accessibility Polish
+ * 100% COMPLETION: Deep Clone Sanitization, Perfect Destroy Lifecycle, ReInit Stability
  */
 
 class DanCarousel {
@@ -34,9 +34,9 @@ class DanCarousel {
     this.velocity = 0;
     this.inertia = 0;
     
-    this.isDraggingActive = false; // Renamed internally to avoid collision with method
+    this.isDraggingActive = false;
     this.isSettled = true;
-    this.destroyed = false;        // POLISH #4: Destroyed state tracking
+    this.destroyed = false;        
     this.rafId = null;
     this.mutationRaf = null;
 
@@ -88,11 +88,10 @@ class DanCarousel {
   }
 
   // ==========================================
-  // PUBLIC API & POLISH
+  // PUBLIC API 
   // ==========================================
 
   getEventPayload() {
-    // POLISH #8: Extended Event Payload
     return {
       currentIndex: this.currentIndex,
       previousIndex: this.prevIndex,
@@ -125,17 +124,15 @@ class DanCarousel {
   previousIndex() { return this.prevIndex; }
   activeSlide() { return this.slides[this.currentIndex]; }
   slideNodes() { return this.slides; }
-  isDragging() { return this.isDraggingActive; } // POLISH #6
-  isLoop() { return this.options.loop; }         // POLISH #7
+  isDragging() { return this.isDraggingActive; } 
+  isLoop() { return this.options.loop; }         
 
   refresh() {
-    // POLISH #9: Public Refresh API
     if (this.destroyed) return;
     this.updateMeasurements();
   }
 
   reInit() {
-    // POLISH #5: Complete Re-initialization
     this.destroy();
     this.init();
   }
@@ -159,7 +156,6 @@ class DanCarousel {
   }
 
   slidesInView() {
-    // ISSUE #4 & POLISH #10: Resolves loop intersection anomalies by querying data-attributes
     const visibleIndexes = new Set();
     this.track.querySelectorAll('.in-view').forEach(el => {
       visibleIndexes.add(parseInt(el.getAttribute('data-slide-index'), 10));
@@ -183,7 +179,6 @@ class DanCarousel {
     this.slides = Array.from(this.track.children);
     if (!this.slides.length) return;
 
-    // POLISH #10: Store indexes for accurate intersection tracking across clones
     this.slides.forEach((slide, idx) => {
       slide.setAttribute('data-slide-index', idx);
     });
@@ -226,7 +221,6 @@ class DanCarousel {
 
     if (this.visibilityObserver) {
       this.visibilityObserver.disconnect();
-      // Observe both real slides and clones for accurate infinite tracking
       Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
     }
 
@@ -240,15 +234,22 @@ class DanCarousel {
   }
 
   createClone(slide) {
-    // ISSUE #3: DOM Purity - Strip duplicates of IDs and ARIA relations
     const clone = slide.cloneNode(true);
     clone.classList.add('slide-clone');
-    clone.removeAttribute('id');
-    clone.removeAttribute('aria-labelledby');
-    clone.removeAttribute('aria-controls');
     clone.setAttribute('aria-hidden', 'true');
     clone.removeAttribute('aria-current');
     clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
+    
+    // 100% COMPLETION TASK 3: Deep Clone Sanitization
+    const nodes = [clone, ...clone.querySelectorAll('*')];
+    nodes.forEach(node => {
+      node.removeAttribute('id');
+      node.removeAttribute('for');
+      node.removeAttribute('aria-labelledby');
+      node.removeAttribute('aria-describedby');
+      node.removeAttribute('aria-controls');
+    });
+
     return clone;
   }
 
@@ -284,7 +285,6 @@ class DanCarousel {
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.mutationRaf = requestAnimationFrame(() => {
-      // ISSUE #1: Safe state extraction before mutation
       const oldLength = this.slides.length;
       const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('slide-clone'));
       const newLength = realNodes.length;
@@ -296,7 +296,7 @@ class DanCarousel {
   }
 
   // ==========================================
-  // POINTER & EVENTS (RTL & Vertical Support)
+  // POINTER & EVENTS
   // ==========================================
 
   getPointerPos(e) {
@@ -492,7 +492,7 @@ class DanCarousel {
   }
 
   destroy() {
-    this.destroyed = true; // POLISH #4
+    this.destroyed = true; 
     cancelAnimationFrame(this.rafId);
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
@@ -501,16 +501,19 @@ class DanCarousel {
     if (this.mutationObserver) this.mutationObserver.disconnect();
     if (this.visibilityObserver) this.visibilityObserver.disconnect();
     
-    // ISSUE #2: Explicitly remove announcer event
     if (this.announceHandler) this.off('select', this.announceHandler);
 
     this.plugins.forEach(p => p.destroy && p.destroy(this));
+    
+    // 100% COMPLETION TASK 1: Perfect Lifecycle Cleanup
+    this.plugins = []; 
     
     this.root.classList.remove('slider-ready');
     this.track.style.transform = '';
     this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
     
     this.emit('destroy');
+    this.listeners = {}; 
   }
 
   // ==========================================
@@ -601,7 +604,6 @@ class DanCarousel {
       this.root.appendChild(announcer);
     }
     
-    // ISSUE #2: Explicit cleanup of announcer mapping
     this.announceHandler = (api, payload) => {
       announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slides.length}`;
     };
@@ -754,7 +756,10 @@ class DanCarousel {
 }
 
 function initDanCarousels() {
-  document.querySelectorAll('.slider:not(.slider-ready)').forEach(el => new DanCarousel(el));
+  document.querySelectorAll('.slider:not(.slider-ready)').forEach(el => {
+    // Save the instance on the DOM element for external API access
+    el.__danCarousel = new DanCarousel(el);
+  });
 }
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', initDanCarousels);
