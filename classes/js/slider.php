@@ -1,10 +1,9 @@
 /**
- * DANCAROUSEL 2.2 - V1.0 FINAL ARCHITECTURAL CLEANUP & POST-V1 HARDENING
- * 100% COMPLETION: Event Semantics, DX Polish, State Snapshots, Absolute Memory Safety
+ * DANCAROUSEL 2.2 - V1.0 FINAL RELEASE
+ * 100% COMPLETION: Complete Runtime Diagnostics, Memory Safety, and Performance Optimization
  */
 
 class DanCarousel {
-  // POLISH #2 & FIX #2: Static Version & Event Definitions
   static VERSION = '2.2.0';
   static EVENTS = [
     'init', 'resize', 'destroy',
@@ -118,9 +117,8 @@ class DanCarousel {
   currentPosition() { return this.currentPos; }
   targetPosition() { return this.targetPos; }
   
-  // POLISH #1: Enhanced State Payload
   state() {
-    return {
+    return Object.freeze({
       version: this.version(),
       index: this.currentIndex,
       previousIndex: this.prevIndex,
@@ -133,25 +131,49 @@ class DanCarousel {
       looping: this.options.loop,
       rtl: this.options.rtl,
       vertical: this.options.vertical
-    };
+    });
   }
 
-  // POLISH #7: Read-Only State Getter
   get stateData() { return this.state(); }
   
-  // POLISH #5: Immutable State Snapshot
-  snapshot() { return JSON.parse(JSON.stringify(this.state())); }
+  snapshot() { return { ...this.state() }; }
 
-  // POLISH #6: Plugin Discovery API
   pluginsList() { return this.plugins.map(p => p.name || 'anonymous'); }
 
-  // POLISH #8: Build Information API
   buildInfo() {
-    return {
+    return Object.freeze({
       version: this.version(),
       build: 'stable',
       released: '2026-08'
-    };
+    });
+  }
+
+  capabilities() {
+    return Object.freeze({
+      loop: true,
+      dragFree: true,
+      rtl: true,
+      vertical: true,
+      autoplay: true,
+      keyboard: true,
+      wheel: true,
+      hash: true,
+      sync: true,
+      creative: true,
+      lazyLoad: true,
+      accessibility: true,
+      debug: true
+    });
+  }
+
+  info() {
+    return Object.freeze({
+      version: this.version(),
+      build: this.buildInfo(),
+      plugins: this.pluginsList(),
+      events: this.events(),
+      capabilities: this.capabilities()
+    });
   }
 
   getEventPayload() {
@@ -174,8 +196,7 @@ class DanCarousel {
   }
 
   on(event, callback) {
-    // POLISH #4: Event Validation
-    if (!DanCarousel.EVENTS.includes(event)) {
+    if (!DanCarousel.EVENTS.includes(event) && this.root.classList.contains('debug')) {
       console.warn(`[DanCarousel] Unknown event: ${event}`);
     }
     if (!this.listeners[event]) this.listeners[event] = [];
@@ -232,11 +253,7 @@ class DanCarousel {
   }
 
   slidesInView() {
-    const visibleIndexes = new Set();
-    this.track.querySelectorAll('.in-view').forEach(el => {
-      visibleIndexes.add(parseInt(el.getAttribute('data-slide-index'), 10));
-    });
-    return Array.from(visibleIndexes).sort((a, b) => a - b);
+    return [...this.visibleSlides].sort((a, b) => a - b);
   }
 
   slidesNotInView() {
@@ -249,7 +266,6 @@ class DanCarousel {
   // ==========================================
   
   updateMeasurements() {
-    // FIX #1: Reset visibility cache on rebuild
     this.visibleSlides.clear();
 
     if (this.mutationObserver) this.mutationObserver.disconnect();
@@ -599,8 +615,6 @@ class DanCarousel {
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.unbindEvents();
-    
-    // POLISH #3: Safely Null Observers
     if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
     if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
     if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
@@ -614,6 +628,10 @@ class DanCarousel {
     this.track.style.transform = '';
     this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
     this.visibleSlides.clear();
+
+    if (this.root.__danCarousel === this) {
+      delete this.root.__danCarousel;
+    }
 
     this.emit('destroy');
     this.listeners = {}; 
@@ -1096,7 +1114,7 @@ class DanCarousel {
       this.plugins.push(lazyLoad);
     }
 
-    // DEBUG PLUGIN
+    // DEBUG PLUGIN 
     if (this.root.classList.contains('debug')) {
       const debugPlugin = (() => {
          let debugEl, onUpdate, lastUpdate = 0;
