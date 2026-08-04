@@ -1,6 +1,6 @@
 /**
- * DANCAROUSEL 2.0 - V1.0 FINAL RELEASE
- * 100% COMPLETION: Deep Clone Sanitization, Perfect Destroy Lifecycle, ReInit Stability
+ * DANCAROUSEL 2.1 - V1.0 FINAL RELEASE + ADVANCED MODULES
+ * 100% COMPLETION: Deep Clone Sanitization, Perfect Destroy Lifecycle, ReInit Stability, Advanced Plugin Pack
  */
 
 class DanCarousel {
@@ -240,7 +240,6 @@ class DanCarousel {
     clone.removeAttribute('aria-current');
     clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
     
-    // 100% COMPLETION TASK 3: Deep Clone Sanitization
     const nodes = [clone, ...clone.querySelectorAll('*')];
     nodes.forEach(node => {
       node.removeAttribute('id');
@@ -505,7 +504,6 @@ class DanCarousel {
 
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     
-    // 100% COMPLETION TASK 1: Perfect Lifecycle Cleanup
     this.plugins = []; 
     
     this.root.classList.remove('slider-ready');
@@ -618,6 +616,10 @@ class DanCarousel {
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = [];
 
+    // ==========================================
+    // CORE MODULES
+    // ==========================================
+
     const prevBtn = this.root.querySelector('.slider-prev');
     const nextBtn = this.root.querySelector('.slider-next');
     if (prevBtn || nextBtn) {
@@ -651,7 +653,7 @@ class DanCarousel {
               const dot = document.createElement('button');
               dot.className = 'slider-dot';
               dot.setAttribute('aria-label', `Go to slide ${idx + 1}`);
-              dot.addEventListener('click', () => api.goTo(idx));
+              dot.addEventListener('click', () => api.scrollTo(idx));
               dotsContainer.appendChild(dot);
             });
             updateDots = (api, payload) => {
@@ -697,8 +699,8 @@ class DanCarousel {
         let updateProgress;
         return {
           init: (api) => {
-            updateProgress = () => {
-              const pct = api.scrollProgress() * 100;
+            updateProgress = (api, payload) => {
+              const pct = payload.progress * 100;
               progressEl.style.setProperty('--progress', `${pct}%`);
             };
             api.on('scroll', updateProgress);
@@ -752,12 +754,167 @@ class DanCarousel {
       autoplay.init(this);
       this.plugins.push(autoplay);
     }
+
+    // ==========================================
+    // ADVANCED MODULES
+    // ==========================================
+
+    // MOUSEWHEEL NAVIGATION
+    if (this.root.classList.contains('wheel')) {
+      const wheel = (() => {
+        let onWheel, wheelTimeout;
+        return {
+          init: (api) => {
+            const delay = parseInt(api.root.dataset.wheelDelay) || 400;
+            onWheel = (e) => {
+              if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+              e.preventDefault();
+              if (wheelTimeout) return;
+              const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
+              delta > 0 ? api.scrollNext() : api.scrollPrev();
+              wheelTimeout = setTimeout(() => { wheelTimeout = null; }, delay);
+            };
+            api.root.addEventListener('wheel', onWheel, { passive: false });
+          },
+          destroy: (api) => api.root.removeEventListener('wheel', onWheel)
+        };
+      })();
+      wheel.init(this);
+      this.plugins.push(wheel);
+    }
+
+    // HASH NAVIGATION
+    if (this.root.classList.contains('hash')) {
+      const hashPlugin = (() => {
+        let onHash, onSelect;
+        return {
+          init: (api) => {
+            const updateUrl = api.root.dataset.hashUpdate !== 'false';
+            onHash = () => {
+              const hash = window.location.hash.replace('#', '');
+              const targetIdx = api.slides.findIndex(s => s.dataset.hash === hash);
+              if (targetIdx > -1 && targetIdx !== api.selectedIndex()) api.scrollTo(targetIdx);
+            };
+            onSelect = (api, payload) => {
+              if (!updateUrl) return;
+              const slideHash = api.slides[payload.currentIndex]?.dataset.hash;
+              if (slideHash) history.replaceState(null, null, `#${slideHash}`);
+            };
+            window.addEventListener('hashchange', onHash);
+            api.on('select', onSelect);
+            setTimeout(onHash, 0);
+          },
+          destroy: (api) => {
+            window.removeEventListener('hashchange', onHash);
+            api.off('select', onSelect);
+          }
+        };
+      })();
+      hashPlugin.init(this);
+      this.plugins.push(hashPlugin);
+    }
+
+    // THUMBNAIL SYNCING
+    const syncTarget = this.root.dataset.sync;
+    if (syncTarget) {
+      const syncPlugin = (() => {
+        let onSelect, targetApi;
+        return {
+          init: (api) => {
+            onSelect = (api, payload) => {
+              if (!targetApi) {
+                const targetEl = document.querySelector(syncTarget);
+                if (targetEl) targetApi = targetEl.__danCarousel;
+              }
+              if (targetApi && targetApi.selectedIndex() !== payload.currentIndex) {
+                targetApi.scrollTo(payload.currentIndex);
+              }
+            };
+            api.on('select', onSelect);
+          },
+          destroy: (api) => api.off('select', onSelect)
+        };
+      })();
+      syncPlugin.init(this);
+      this.plugins.push(syncPlugin);
+    }
+
+    // CREATIVE EFFECTS
+    if (this.root.classList.contains('creative')) {
+      const creative = (() => {
+        let onScroll;
+        return {
+          init: (api) => {
+            onScroll = () => {
+              api.slides.forEach((slide, idx) => {
+                const snap = api.metrics.snapPoints[idx] || 0;
+                const distance = api.currentPos - snap;
+                const progress = distance / (api.metrics.viewportSize || 1);
+                slide.style.setProperty('--slide-progress', progress.toFixed(4));
+                slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
+              });
+            };
+            api.on('scroll', onScroll);
+            onScroll();
+          },
+          destroy: (api) => {
+            api.off('scroll', onScroll);
+            api.slides.forEach(s => {
+              s.style.removeProperty('--slide-progress');
+              s.style.removeProperty('--slide-abs-progress');
+            });
+          }
+        };
+      })();
+      creative.init(this);
+      this.plugins.push(creative);
+    }
+
+    // LAZY LOAD
+    if (this.root.classList.contains('lazy-load')) {
+      const lazyLoad = (() => {
+        let onSelect;
+        return {
+          init: (api) => {
+            onSelect = (api, payload) => {
+              const toLoad = [
+                payload.currentIndex - 1, 
+                payload.currentIndex, 
+                payload.currentIndex + 1
+              ];
+              toLoad.forEach(idx => {
+                let targetIdx = idx;
+                if (api.isLoop()) {
+                  targetIdx = (idx + api.slides.length) % api.slides.length;
+                }
+                const slide = api.slides[targetIdx];
+                if (slide && !slide.dataset.loaded) {
+                  const img = slide.querySelector('img[data-src]');
+                  if (img && img.getAttribute('loading') !== 'lazy') {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                  }
+                  slide.dataset.loaded = "true";
+                }
+              });
+            };
+            api.on('select', onSelect);
+            onSelect(api, api.getEventPayload());
+          },
+          destroy: (api) => api.off('select', onSelect)
+        };
+      })();
+      lazyLoad.init(this);
+      this.plugins.push(lazyLoad);
+    }
   }
 }
 
+// ==========================================
+// AUTO-INIT SYSTEM
+// ==========================================
 function initDanCarousels() {
   document.querySelectorAll('.slider:not(.slider-ready)').forEach(el => {
-    // Save the instance on the DOM element for external API access
     el.__danCarousel = new DanCarousel(el);
   });
 }
