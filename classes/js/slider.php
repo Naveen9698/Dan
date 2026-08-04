@@ -1,13 +1,6 @@
 /**
  * DANCAROUSEL 2.0 - Autonomous HTML-First Carousel Engine
- * 
- * Features implemented:
- * - Physics & Momentum (Lerp, Velocity, Flick detection)
- * - Pointer System (Pointer capture, click suppression)
- * - Measurement System (Align start/center/end, Contain modes)
- * - Observers (ResizeObserver, MutationObserver)
- * - Accessibility (Keyboard navigation, ARIA roles)
- * - Plugin Architecture (Controls, Dots, Counter, Progress, Autoplay)
+ * POST-REVIEW PATCH (Phase 1 & 2)
  */
 
 class DanCarousel {
@@ -16,7 +9,6 @@ class DanCarousel {
     this.track = this.root.querySelector('.slides');
     if (!this.track) return;
     
-    // 1. HTML-First Options System (Milestone 4)
     this.options = {
       loop: this.root.classList.contains('loop'),
       dragFree: this.root.classList.contains('drag-free'),
@@ -30,7 +22,6 @@ class DanCarousel {
       delay: parseInt(this.root.dataset.delay) || 4000
     };
 
-    // 2. Physics & State
     this.currentX = 0;
     this.targetX = 0;
     this.currentIndex = 0;
@@ -38,15 +29,14 @@ class DanCarousel {
     this.isDragging = false;
     this.isSettled = true;
     this.rafId = null;
+    this.mutationRaf = null;
 
-    // Pointer Tracking
     this.dragStartX = 0;
     this.dragStartCurrentX = 0;
     this.lastPointerX = 0;
     this.lastPointerTime = 0;
     this.isClickSuppressed = false;
 
-    // Measurements
     this.metrics = {
       viewportWidth: 0,
       trackWidth: 0,
@@ -54,11 +44,10 @@ class DanCarousel {
       snapPoints: []
     };
 
-    // Event & Plugin Registry
     this.listeners = {};
     this.plugins = [];
 
-    // Bind methods for safe removal (BUG #2 & #4 FIX)
+    // Bind methods for safe removal
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
@@ -85,7 +74,7 @@ class DanCarousel {
   }
 
   // ==========================================
-  // MEASUREMENT & ALIGNMENT (Milestones 8, 9, 24)
+  // MEASUREMENT & ALIGNMENT
   // ==========================================
   
   updateMeasurements() {
@@ -98,29 +87,22 @@ class DanCarousel {
     let currentOffset = 0;
     this.metrics.slideWidths = this.slides.map(slide => slide.getBoundingClientRect().width);
 
-    // Calculate snap points based on alignment
     this.metrics.snapPoints = this.metrics.slideWidths.map((width) => {
       let snap = currentOffset;
       if (this.options.alignCenter) snap -= (this.metrics.viewportWidth / 2) - (width / 2);
       if (this.options.alignEnd) snap -= this.metrics.viewportWidth - width;
       
       currentOffset += width;
-      return Math.max(0, snap); // Prevent negative snaps
+      return Math.max(0, snap); 
     });
 
-    // Calculate max scroll bounds
     this.maxScroll = Math.max(0, this.metrics.trackWidth - this.metrics.viewportWidth);
 
-    // Contain logic (Trim edge snaps)
+    // FIX #8 & #9: Clamp snaps strictly without removing duplicates (preserves 1:1 index mapping)
     if (this.options.contain || this.options.containKeep) {
       this.metrics.snapPoints = this.metrics.snapPoints.map(snap => 
         Math.max(0, Math.min(snap, this.maxScroll))
       );
-      
-      // 'contain' trims duplicate snaps at the end. 'contain-keep' preserves them.
-      if (this.options.contain) {
-        this.metrics.snapPoints = [...new Set(this.metrics.snapPoints)];
-      }
     }
 
     this.emit('resize');
@@ -129,7 +111,7 @@ class DanCarousel {
   }
 
   // ==========================================
-  // OBSERVERS (Milestones 14 & 15)
+  // OBSERVERS (FIX #6: Mutation Spam)
   // ==========================================
   
   setupObservers() {
@@ -145,12 +127,19 @@ class DanCarousel {
   }
 
   onMutation() {
-    this.updateMeasurements();
-    this.initPlugins(); // Rebind dots/counters if slides changed
+    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    this.mutationRaf = requestAnimationFrame(() => {
+      const newLength = this.track.children.length;
+      // Only rebuild if slide count changes
+      if (newLength !== this.slides.length) {
+        this.updateMeasurements();
+        this.initPlugins(); 
+      }
+    });
   }
 
   // ==========================================
-  // POINTER & FLICK SYSTEM (Milestones 5 & 6)
+  // POINTER & EVENTS
   // ==========================================
 
   bindEvents() {
@@ -172,7 +161,7 @@ class DanCarousel {
   }
 
   onPointerDown(e) {
-    if (e.button !== 0) return; // Only left click
+    if (e.button !== 0) return; 
     
     this.isDragging = true;
     this.isClickSuppressed = false;
@@ -190,7 +179,7 @@ class DanCarousel {
     window.addEventListener('pointerup', this.onPointerUp);
     
     this.emit('dragStart');
-    e.preventDefault(); // Prevent image drag
+    e.preventDefault(); 
   }
 
   onPointerMove(e) {
@@ -199,18 +188,14 @@ class DanCarousel {
     const dragDistance = this.dragStartX - e.clientX;
     if (Math.abs(dragDistance) > 5) this.isClickSuppressed = true;
 
-    // Velocity Tracking
     const now = performance.now();
     const dt = now - this.lastPointerTime;
-    if (dt > 0) {
-      this.velocity = (this.lastPointerX - e.clientX) / dt;
-    }
+    if (dt > 0) this.velocity = (this.lastPointerX - e.clientX) / dt;
     this.lastPointerX = e.clientX;
     this.lastPointerTime = now;
 
     let newTarget = this.dragStartCurrentX + dragDistance;
 
-    // BUG #1 FIX - Correct Rubber Banding Math
     if (newTarget < 0) {
       newTarget = newTarget * 0.3;
     } else if (newTarget > this.maxScroll) {
@@ -232,16 +217,13 @@ class DanCarousel {
     window.removeEventListener('pointerup', this.onPointerUp);
     this.emit('dragEnd');
 
-    // Flick Detection & Drag Free Momentum
     if (this.options.dragFree) {
-      this.targetX += this.velocity * 150; // Add momentum
+      this.targetX += this.velocity * 150; 
       this.targetX = Math.max(0, Math.min(this.targetX, this.maxScroll));
     } else {
       if (Math.abs(this.velocity) > 0.5) {
-        // High velocity flick
         this.velocity > 0 ? this.scrollNext() : this.scrollPrev();
       } else {
-        // Slow drag, snap to closest
         this.snapToClosest();
       }
     }
@@ -254,15 +236,16 @@ class DanCarousel {
     }
   }
 
+  // Phase 2: Key Additions
   onKeyDown(e) {
-    if (e.key === 'ArrowRight') this.scrollNext();
-    if (e.key === 'ArrowLeft') this.scrollPrev();
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') this.scrollNext();
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') this.scrollPrev();
     if (e.key === 'Home') this.goTo(0);
     if (e.key === 'End') this.goTo(this.metrics.snapPoints.length - 1);
   }
 
   // ==========================================
-  // PHYSICS & LIFECYCLE (Bugs #3 & Engine)
+  // PHYSICS & LIFECYCLE
   // ==========================================
 
   startPhysicsLoop() {
@@ -272,7 +255,6 @@ class DanCarousel {
   tick() {
     const diff = this.targetX - this.currentX;
     
-    // Settle Detection
     if (Math.abs(diff) < 0.1) {
       this.currentX = this.targetX;
       if (!this.isSettled) {
@@ -286,16 +268,19 @@ class DanCarousel {
 
     this.track.style.transform = `translate3d(-${this.currentX}px, 0, 0)`;
     this.emit('scroll');
-    
     this.rafId = requestAnimationFrame(this.tick);
   }
 
   destroy() {
-    cancelAnimationFrame(this.rafId); // BUG #3 FIX
+    cancelAnimationFrame(this.rafId);
+    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    
     this.unbindEvents();
     this.resizeObserver.disconnect();
     this.mutationObserver.disconnect();
-    this.plugins.forEach(p => p.destroy && p.destroy());
+    
+    // FIX #1: Pass API correctly to destroy
+    this.plugins.forEach(p => p.destroy && p.destroy(this));
     
     this.root.classList.remove('slider-ready');
     this.track.style.transform = '';
@@ -304,7 +289,7 @@ class DanCarousel {
   }
 
   // ==========================================
-  // NAVIGATION & STATE (Milestone 16)
+  // NAVIGATION & STATE
   // ==========================================
 
   goTo(index, immediate = false) {
@@ -329,7 +314,6 @@ class DanCarousel {
         closestIndex = index;
       }
     });
-
     this.goTo(closestIndex);
   }
 
@@ -337,7 +321,7 @@ class DanCarousel {
     if (this.currentIndex < this.metrics.snapPoints.length - 1) {
       this.goTo(this.currentIndex + 1);
     } else if (this.options.loop) {
-      this.goTo(0); // Wrap-around logic
+      this.goTo(0); 
     }
   }
 
@@ -349,13 +333,17 @@ class DanCarousel {
     }
   }
 
+  // FIX #7: Loop-safe Math for States
   updateSlideStates() {
     const total = this.slides.length;
+    const prevIdx = this.options.loop ? (total + this.currentIndex - 1) % total : this.currentIndex - 1;
+    const nextIdx = this.options.loop ? (this.currentIndex + 1) % total : this.currentIndex + 1;
+
     this.slides.forEach((slide, idx) => {
       slide.classList.remove('active', 'prev', 'next');
       if (idx === this.currentIndex) slide.classList.add('active');
-      else if (idx === this.currentIndex - 1) slide.classList.add('prev');
-      else if (idx === this.currentIndex + 1) slide.classList.add('next');
+      else if (idx === prevIdx) slide.classList.add('prev');
+      else if (idx === nextIdx) slide.classList.add('next');
     });
   }
 
@@ -386,125 +374,165 @@ class DanCarousel {
   }
 
   // ==========================================
-  // PLUGIN ARCHITECTURE (Milestone 25 & 17-21)
+  // REFACTORED PLUGIN ARCHITECTURE (Fix #2-5)
   // ==========================================
 
   initPlugins() {
-    this.plugins.forEach(p => p.destroy && p.destroy());
+    // FIX #1: Clean up old plugins with instance context
+    this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = [];
 
-    // Controls Plugin
     const prevBtn = this.root.querySelector('.slider-prev');
     const nextBtn = this.root.querySelector('.slider-next');
+    
+    // CONTROLS PLUGIN
     if (prevBtn || nextBtn) {
-      const controls = {
-        init: (api) => {
-          this.hPrev = () => api.scrollPrev();
-          this.hNext = () => api.scrollNext();
-          if (prevBtn) prevBtn.addEventListener('click', this.hPrev);
-          if (nextBtn) nextBtn.addEventListener('click', this.hNext);
-        },
-        destroy: () => {
-          if (prevBtn) prevBtn.removeEventListener('click', this.hPrev);
-          if (nextBtn) nextBtn.removeEventListener('click', this.hNext);
-        }
-      };
+      const controls = (() => {
+        let hPrev, hNext;
+        return {
+          init: (api) => {
+            hPrev = () => api.scrollPrev();
+            hNext = () => api.scrollNext();
+            if (prevBtn) prevBtn.addEventListener('click', hPrev);
+            if (nextBtn) nextBtn.addEventListener('click', hNext);
+          },
+          destroy: () => {
+            if (prevBtn) prevBtn.removeEventListener('click', hPrev);
+            if (nextBtn) nextBtn.removeEventListener('click', hNext);
+          }
+        };
+      })();
       controls.init(this);
       this.plugins.push(controls);
     }
 
-    // Dots Plugin
+    // DOTS PLUGIN (Fix #2 & Phase 2 Aria)
     const dotsContainer = this.root.querySelector('.slider-dots');
     if (dotsContainer) {
-      const dots = {
-        init: (api) => {
-          dotsContainer.innerHTML = '';
-          api.metrics.snapPoints.forEach((_, idx) => {
-            const dot = document.createElement('button');
-            dot.className = 'slider-dot';
-            dot.setAttribute('aria-label', `Go to slide ${idx + 1}`);
-            dot.addEventListener('click', () => api.goTo(idx));
-            dotsContainer.appendChild(dot);
-          });
-          this.updateDots = () => {
-            Array.from(dotsContainer.children).forEach((dot, idx) => {
-              dot.classList.toggle('active', idx === api.currentIndex);
+      const dots = (() => {
+        let updateDots;
+        return {
+          init: (api) => {
+            dotsContainer.innerHTML = '';
+            api.metrics.snapPoints.forEach((_, idx) => {
+              const dot = document.createElement('button');
+              dot.className = 'slider-dot';
+              dot.setAttribute('aria-label', `Go to slide ${idx + 1}`);
+              dot.addEventListener('click', () => api.goTo(idx));
+              dotsContainer.appendChild(dot);
             });
-          };
-          api.on('select', this.updateDots);
-          this.updateDots();
-        },
-        destroy: (api) => api.off('select', this.updateDots)
-      };
+            updateDots = () => {
+              Array.from(dotsContainer.children).forEach((dot, idx) => {
+                const isActive = idx === api.currentIndex;
+                dot.classList.toggle('active', isActive);
+                if (isActive) dot.setAttribute('aria-current', 'true');
+                else dot.removeAttribute('aria-current');
+              });
+            };
+            api.on('select', updateDots);
+            updateDots();
+          },
+          destroy: (api) => api.off('select', updateDots)
+        };
+      })();
       dots.init(this);
       this.plugins.push(dots);
     }
 
-    // Counter Plugin
+    // COUNTER PLUGIN (Fix #3)
     const counterEl = this.root.querySelector('.slider-counter');
     if (counterEl) {
-      const counter = {
-        init: (api) => {
-          this.updateCounter = () => {
-            counterEl.textContent = `${api.currentIndex + 1} / ${api.metrics.snapPoints.length}`;
-          };
-          api.on('select', this.updateCounter);
-          this.updateCounter();
-        },
-        destroy: (api) => api.off('select', this.updateCounter)
-      };
+      const counter = (() => {
+        let updateCounter;
+        return {
+          init: (api) => {
+            updateCounter = () => {
+              counterEl.textContent = `${api.currentIndex + 1} / ${api.metrics.snapPoints.length}`;
+            };
+            api.on('select', updateCounter);
+            updateCounter();
+          },
+          destroy: (api) => api.off('select', updateCounter)
+        };
+      })();
       counter.init(this);
       this.plugins.push(counter);
     }
 
-    // Progress Plugin
+    // PROGRESS PLUGIN (Fix #4)
     const progressEl = this.root.querySelector('.slider-progress');
     if (progressEl) {
-      const progress = {
-        init: (api) => {
-          this.updateProgress = () => {
-            const pct = Math.min(100, Math.max(0, (api.currentX / (api.maxScroll || 1)) * 100));
-            progressEl.style.setProperty('--progress', `${pct}%`);
-          };
-          api.on('scroll', this.updateProgress);
-        },
-        destroy: (api) => api.off('scroll', this.updateProgress)
-      };
+      const progress = (() => {
+        let updateProgress;
+        return {
+          init: (api) => {
+            updateProgress = () => {
+              const pct = Math.min(100, Math.max(0, (api.currentX / (api.maxScroll || 1)) * 100));
+              progressEl.style.setProperty('--progress', `${pct}%`);
+            };
+            api.on('scroll', updateProgress);
+          },
+          destroy: (api) => api.off('scroll', updateProgress)
+        };
+      })();
       progress.init(this);
       this.plugins.push(progress);
     }
 
-    // Autoplay Plugin (Milestone 21)
+    // AUTOPLAY PLUGIN (Fix #5 & Phase 2 Features)
     if (this.options.autoplay) {
-      const autoplay = {
-        init: (api) => {
-          this.playTimer = null;
-          this.play = () => {
-            clearTimeout(this.playTimer);
-            this.playTimer = setTimeout(() => {
-              api.scrollNext();
-              this.play();
-            }, api.options.delay);
-          };
-          this.stop = () => clearTimeout(this.playTimer);
-          
-          api.on('dragStart', this.stop);
-          api.on('dragEnd', this.play);
-          
-          if (api.root.classList.contains('pause-hover')) {
-            api.root.addEventListener('mouseenter', this.stop);
-            api.root.addEventListener('mouseleave', this.play);
+      const autoplay = (() => {
+        let playTimer, play, stop;
+        let onVisChange, onFocusIn, onFocusOut;
+
+        return {
+          init: (api) => {
+            const isStopLast = api.root.classList.contains('stop-last');
+            
+            play = () => {
+              clearTimeout(playTimer);
+              if (isStopLast && api.currentIndex === api.metrics.snapPoints.length - 1) return;
+              
+              playTimer = setTimeout(() => {
+                api.scrollNext();
+                play();
+              }, api.options.delay);
+            };
+            
+            stop = () => clearTimeout(playTimer);
+
+            // Phase 2 A11y & UX Additions
+            onVisChange = () => document.hidden ? stop() : play();
+            onFocusIn = () => stop();
+            onFocusOut = () => play();
+
+            api.on('dragStart', stop);
+            api.on('dragEnd', play);
+            
+            if (api.root.classList.contains('pause-hover')) {
+              api.root.addEventListener('mouseenter', stop);
+              api.root.addEventListener('mouseleave', play);
+            }
+
+            document.addEventListener('visibilitychange', onVisChange);
+            api.root.addEventListener('focusin', onFocusIn);
+            api.root.addEventListener('focusout', onFocusOut);
+
+            play();
+          },
+          destroy: (api) => {
+            stop();
+            api.off('dragStart', stop);
+            api.off('dragEnd', play);
+            api.root.removeEventListener('mouseenter', stop);
+            api.root.removeEventListener('mouseleave', play);
+            
+            document.removeEventListener('visibilitychange', onVisChange);
+            api.root.removeEventListener('focusin', onFocusIn);
+            api.root.removeEventListener('focusout', onFocusOut);
           }
-          this.play();
-        },
-        destroy: (api) => {
-          this.stop();
-          api.off('dragStart', this.stop);
-          api.off('dragEnd', this.play);
-          api.root.removeEventListener('mouseenter', this.stop);
-          api.root.removeEventListener('mouseleave', this.play);
-        }
-      };
+        };
+      })();
       autoplay.init(this);
       this.plugins.push(autoplay);
     }
