@@ -1,6 +1,6 @@
 /**
- * DANCAROUSEL 2.0 - V1.0 RELEASE CANDIDATE
- * INCLUDES: True Infinite Loop, RTL, Vertical Mode, API Enhancements
+ * DANCAROUSEL 2.0 - V1.0 FINAL RELEASE
+ * INCLUDES: Hardening, API Extensions, Event Payloads, DOM Purity, & Accessibility Polish
  */
 
 class DanCarousel {
@@ -19,14 +19,14 @@ class DanCarousel {
       alignEnd: this.root.classList.contains('align-end'),
       keyboard: this.root.classList.contains('keyboard'),
       autoplay: this.root.classList.contains('autoplay'),
-      rtl: this.root.classList.contains('rtl'),           // PHASE 6
-      vertical: this.root.classList.contains('vertical'), // PHASE 7
+      rtl: this.root.classList.contains('rtl'),
+      vertical: this.root.classList.contains('vertical'),
       duration: parseFloat(this.root.dataset.duration) || 0.1,
       friction: parseFloat(this.root.dataset.friction) || 0.92,
       delay: parseInt(this.root.dataset.delay) || 4000
     };
 
-    // PHYSICS STATE
+    // PHYSICS & STATE
     this.currentPos = 0;
     this.targetPos = 0;
     this.currentIndex = 0;
@@ -34,8 +34,9 @@ class DanCarousel {
     this.velocity = 0;
     this.inertia = 0;
     
-    this.isDragging = false;
+    this.isDraggingActive = false; // Renamed internally to avoid collision with method
     this.isSettled = true;
+    this.destroyed = false;        // POLISH #4: Destroyed state tracking
     this.rafId = null;
     this.mutationRaf = null;
 
@@ -60,7 +61,7 @@ class DanCarousel {
     this.listeners = {};
     this.plugins = [];
 
-    // Bound methods
+    // Bound methods for safe addition/removal
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
@@ -74,6 +75,7 @@ class DanCarousel {
   }
 
   init() {
+    if (this.destroyed) this.destroyed = false;
     this.setupAccessibility();
     this.setupObservers();
     this.updateMeasurements();
@@ -82,17 +84,22 @@ class DanCarousel {
     this.startPhysicsLoop();
     
     this.root.classList.add('slider-ready');
-    this.emit('init', this.getEventPayload());
+    this.emit('init');
   }
 
   // ==========================================
-  // PUBLIC API & PHASE 8 ENHANCEMENTS
+  // PUBLIC API & POLISH
   // ==========================================
 
   getEventPayload() {
+    // POLISH #8: Extended Event Payload
     return {
       currentIndex: this.currentIndex,
-      previousIndex: this.prevIndex
+      previousIndex: this.prevIndex,
+      slideCount: this.slides.length,
+      progress: this.scrollProgress(),
+      isDragging: this.isDraggingActive,
+      isSettled: this.isSettled
     };
   }
 
@@ -118,6 +125,20 @@ class DanCarousel {
   previousIndex() { return this.prevIndex; }
   activeSlide() { return this.slides[this.currentIndex]; }
   slideNodes() { return this.slides; }
+  isDragging() { return this.isDraggingActive; } // POLISH #6
+  isLoop() { return this.options.loop; }         // POLISH #7
+
+  refresh() {
+    // POLISH #9: Public Refresh API
+    if (this.destroyed) return;
+    this.updateMeasurements();
+  }
+
+  reInit() {
+    // POLISH #5: Complete Re-initialization
+    this.destroy();
+    this.init();
+  }
 
   canScrollNext() {
     if (this.root.classList.contains('stop-last') && this.currentIndex >= this.metrics.snapPoints.length - 1) return false;
@@ -138,17 +159,17 @@ class DanCarousel {
   }
 
   slidesInView() {
-    return this.slides.reduce((acc, slide, index) => {
-      if (slide.classList.contains('in-view')) acc.push(index);
-      return acc;
-    }, []);
+    // ISSUE #4 & POLISH #10: Resolves loop intersection anomalies by querying data-attributes
+    const visibleIndexes = new Set();
+    this.track.querySelectorAll('.in-view').forEach(el => {
+      visibleIndexes.add(parseInt(el.getAttribute('data-slide-index'), 10));
+    });
+    return Array.from(visibleIndexes).sort((a, b) => a - b);
   }
 
   slidesNotInView() {
-    return this.slides.reduce((acc, slide, index) => {
-      if (slide.classList.contains('out-view')) acc.push(index);
-      return acc;
-    }, []);
+    const visible = this.slidesInView();
+    return this.slides.map((_, idx) => idx).filter(idx => !visible.includes(idx));
   }
 
   // ==========================================
@@ -162,6 +183,11 @@ class DanCarousel {
     this.slides = Array.from(this.track.children);
     if (!this.slides.length) return;
 
+    // POLISH #10: Store indexes for accurate intersection tracking across clones
+    this.slides.forEach((slide, idx) => {
+      slide.setAttribute('data-slide-index', idx);
+    });
+
     const rect = this.root.getBoundingClientRect();
     this.metrics.viewportSize = this.options.vertical ? rect.height : rect.width;
     
@@ -173,7 +199,6 @@ class DanCarousel {
     this.metrics.realTrackSize = this.metrics.slideSizes.reduce((a, b) => a + b, 0);
     this.metrics.prependOffset = 0;
 
-    // PHASE 5: TRUE INFINITE LOOP CLONING
     if (this.options.loop && this.slides.length > 1) {
       this.metrics.prependOffset = this.metrics.realTrackSize;
       const clonesBefore = this.slides.map(s => this.createClone(s));
@@ -201,7 +226,8 @@ class DanCarousel {
 
     if (this.visibilityObserver) {
       this.visibilityObserver.disconnect();
-      this.slides.forEach(slide => this.visibilityObserver.observe(slide));
+      // Observe both real slides and clones for accurate infinite tracking
+      Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
     }
 
     if (this.mutationObserver) {
@@ -214,8 +240,12 @@ class DanCarousel {
   }
 
   createClone(slide) {
+    // ISSUE #3: DOM Purity - Strip duplicates of IDs and ARIA relations
     const clone = slide.cloneNode(true);
     clone.classList.add('slide-clone');
+    clone.removeAttribute('id');
+    clone.removeAttribute('aria-labelledby');
+    clone.removeAttribute('aria-controls');
     clone.setAttribute('aria-hidden', 'true');
     clone.removeAttribute('aria-current');
     clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
@@ -233,15 +263,15 @@ class DanCarousel {
 
     this.visibilityObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        const slide = entry.target;
+        const node = entry.target;
         if (entry.isIntersecting) {
-          slide.classList.add('in-view');
-          slide.classList.remove('out-view');
-          slide.removeAttribute('aria-hidden');
+          node.classList.add('in-view');
+          node.classList.remove('out-view');
+          if (!node.classList.contains('slide-clone')) node.removeAttribute('aria-hidden');
         } else {
-          slide.classList.add('out-view');
-          slide.classList.remove('in-view');
-          slide.setAttribute('aria-hidden', 'true');
+          node.classList.add('out-view');
+          node.classList.remove('in-view');
+          if (!node.classList.contains('slide-clone')) node.setAttribute('aria-hidden', 'true');
         }
       });
     }, { root: this.root, threshold: 0.01 });
@@ -252,11 +282,16 @@ class DanCarousel {
   onMutation(mutations) {
     if (mutations.some(m => m.target.classList && m.target.classList.contains('slide-clone'))) return;
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    
     this.mutationRaf = requestAnimationFrame(() => {
+      // ISSUE #1: Safe state extraction before mutation
       const oldLength = this.slides.length;
       const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('slide-clone'));
+      const newLength = realNodes.length;
+
       this.updateMeasurements();
-      if (realNodes.length !== oldLength) this.initPlugins(); 
+      
+      if (newLength !== oldLength) this.initPlugins(); 
     });
   }
 
@@ -288,7 +323,7 @@ class DanCarousel {
   onPointerDown(e) {
     if (e.button !== 0) return; 
     
-    this.isDragging = true;
+    this.isDraggingActive = true;
     this.isClickSuppressed = false;
     this.dragStartPos = this.getPointerPos(e);
     this.dragStartCurrentPos = this.targetPos;
@@ -309,10 +344,9 @@ class DanCarousel {
   }
 
   onPointerMove(e) {
-    if (!this.isDragging) return;
+    if (!this.isDraggingActive) return;
     const currentPointer = this.getPointerPos(e);
     
-    // PHASE 6 & 7: RTL / Vertical Math Reverse
     let dragDistance = this.dragStartPos - currentPointer;
     if (this.options.rtl && !this.options.vertical) dragDistance *= -1;
 
@@ -340,8 +374,8 @@ class DanCarousel {
   }
 
   onPointerUp(e) {
-    if (!this.isDragging) return;
-    this.isDragging = false;
+    if (!this.isDraggingActive) return;
+    this.isDraggingActive = false;
     this.track.releasePointerCapture(e.pointerId);
     this.track.style.cursor = '';
 
@@ -398,6 +432,8 @@ class DanCarousel {
   }
 
   tick() {
+    if (this.destroyed) return;
+
     if (this.options.loop) {
       const firstSnap = this.metrics.snapPoints[0];
       const lastSnap = this.metrics.snapPoints[this.slides.length - 1];
@@ -411,7 +447,7 @@ class DanCarousel {
       }
     }
 
-    if (this.options.dragFree && Math.abs(this.inertia) > 0.1 && !this.isDragging) {
+    if (this.options.dragFree && Math.abs(this.inertia) > 0.1 && !this.isDraggingActive) {
       this.inertia *= this.options.friction;
       this.targetPos += this.inertia;
       
@@ -424,7 +460,7 @@ class DanCarousel {
           this.inertia *= 0.5;
         }
       }
-    } else if (this.options.dragFree && !this.options.loop && !this.isDragging) {
+    } else if (this.options.dragFree && !this.options.loop && !this.isDraggingActive) {
       if (this.targetPos < 0) this.targetPos = 0;
       if (this.targetPos > this.maxScroll) this.targetPos = this.maxScroll;
     }
@@ -442,9 +478,8 @@ class DanCarousel {
       this.currentPos += diff * this.options.duration;
     }
 
-    // PHASE 6 & 7: Apply Transform based on Orientation and Direction
     let transformVal = -this.currentPos;
-    if (this.options.rtl && !this.options.vertical) transformVal = Math.abs(this.currentPos); // CSS handles the layout, we translate positive
+    if (this.options.rtl && !this.options.vertical) transformVal = Math.abs(this.currentPos);
     
     if (this.options.vertical) {
       this.track.style.transform = `translate3d(0, ${transformVal}px, 0)`;
@@ -457,18 +492,25 @@ class DanCarousel {
   }
 
   destroy() {
+    this.destroyed = true; // POLISH #4
     cancelAnimationFrame(this.rafId);
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    
     this.unbindEvents();
-    this.resizeObserver.disconnect();
-    this.mutationObserver.disconnect();
-    this.visibilityObserver.disconnect();
+    if (this.resizeObserver) this.resizeObserver.disconnect();
+    if (this.mutationObserver) this.mutationObserver.disconnect();
+    if (this.visibilityObserver) this.visibilityObserver.disconnect();
+    
+    // ISSUE #2: Explicitly remove announcer event
+    if (this.announceHandler) this.off('select', this.announceHandler);
+
     this.plugins.forEach(p => p.destroy && p.destroy(this));
+    
     this.root.classList.remove('slider-ready');
     this.track.style.transform = '';
     this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
+    
     this.emit('destroy');
-    this.listeners = {};
   }
 
   // ==========================================
@@ -549,7 +591,6 @@ class DanCarousel {
     this.root.setAttribute('aria-roledescription', 'carousel');
     this.track.setAttribute('aria-live', 'polite');
     
-    // PHASE 8: Dedicated Live Announcer Region
     let announcer = this.root.querySelector('.slider-announcer');
     if (!announcer) {
       announcer = document.createElement('div');
@@ -559,9 +600,12 @@ class DanCarousel {
       announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
       this.root.appendChild(announcer);
     }
-    this.on('select', (api, payload) => {
+    
+    // ISSUE #2: Explicit cleanup of announcer mapping
+    this.announceHandler = (api, payload) => {
       announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slides.length}`;
-    });
+    };
+    this.on('select', this.announceHandler);
   }
 
   // ==========================================
@@ -653,7 +697,6 @@ class DanCarousel {
           init: (api) => {
             updateProgress = () => {
               const pct = api.scrollProgress() * 100;
-              // Handle RTL CSS custom property adjustments implicitly 
               progressEl.style.setProperty('--progress', `${pct}%`);
             };
             api.on('scroll', updateProgress);
