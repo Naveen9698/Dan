@@ -1,6 +1,6 @@
 /**
  * DANCAROUSEL 2.0 - Autonomous HTML-First Carousel Engine
- * PHASE 4 PATCH: Observers Refined, New APIs, Active Slide A11y
+ * PHASE 5 PATCH: True Infinite Loop, DOM Cloning, & Silent Repositioning
  */
 
 class DanCarousel {
@@ -26,7 +26,7 @@ class DanCarousel {
     this.currentX = 0;
     this.targetX = 0;
     this.currentIndex = 0;
-    this.prevIndex = 0; // Phase 4 API tracking
+    this.prevIndex = 0; 
     
     this.velocity = 0;
     this.inertia = 0;
@@ -42,11 +42,13 @@ class DanCarousel {
     this.lastPointerTime = 0;
     this.isClickSuppressed = false;
 
-    this.slides = []; // Initialize empty so oldLength check doesn't fail on first run
+    this.slides = []; 
 
     this.metrics = {
       viewportWidth: 0,
       trackWidth: 0,
+      realTrackWidth: 0, // PHASE 5: Tracks width of original slides only
+      prependOffset: 0,  // PHASE 5: Offset caused by prepended clones
       slideWidths: [],
       snapPoints: []
     };
@@ -97,7 +99,6 @@ class DanCarousel {
   }
 
   canScrollNext() {
-    // RULE DEFINED: stop-last overrides looping behavior.
     if (this.root.classList.contains('stop-last') && this.currentIndex >= this.metrics.snapPoints.length - 1) {
       return false;
     }
@@ -109,6 +110,11 @@ class DanCarousel {
   }
 
   scrollProgress() {
+    if (this.options.loop) {
+      // In loop mode, progress is relative to the real slide cluster
+      const relativeX = this.currentX - this.metrics.prependOffset;
+      return Math.max(0, Math.min(1, relativeX / (this.metrics.realTrackWidth || 1)));
+    }
     if (!this.maxScroll) return 0;
     return Math.max(0, Math.min(1, this.currentX / this.maxScroll));
   }
@@ -128,19 +134,41 @@ class DanCarousel {
   }
 
   // ==========================================
-  // MEASUREMENT & ALIGNMENT
+  // MEASUREMENT, ALIGNMENT, & CLONING (PHASE 5)
   // ==========================================
   
   updateMeasurements() {
+    // 1. Pause observers to prevent infinite recursion during DOM cloning
+    if (this.mutationObserver) this.mutationObserver.disconnect();
+    
+    // 2. Strip old clones
+    this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
+    
+    // 3. Register real slides
     this.slides = Array.from(this.track.children);
     if (!this.slides.length) return;
 
     this.metrics.viewportWidth = this.root.getBoundingClientRect().width;
+    this.metrics.slideWidths = this.slides.map(slide => slide.getBoundingClientRect().width);
+    this.metrics.realTrackWidth = this.metrics.slideWidths.reduce((a, b) => a + b, 0);
+    
+    this.metrics.prependOffset = 0;
+
+    // 4. Generate Clones if Loop Mode
+    if (this.options.loop && this.slides.length > 1) {
+      this.metrics.prependOffset = this.metrics.realTrackWidth;
+      
+      const clonesBefore = this.slides.map(s => this.createClone(s));
+      const clonesAfter = this.slides.map(s => this.createClone(s));
+      
+      clonesBefore.forEach(c => this.track.insertBefore(c, this.track.firstChild));
+      clonesAfter.forEach(c => this.track.appendChild(c));
+    }
+
     this.metrics.trackWidth = this.track.scrollWidth;
     
-    let currentOffset = 0;
-    this.metrics.slideWidths = this.slides.map(slide => slide.getBoundingClientRect().width);
-
+    // 5. Calculate Snap Points
+    let currentOffset = this.metrics.prependOffset;
     this.metrics.snapPoints = this.metrics.slideWidths.map((width) => {
       let snap = currentOffset;
       if (this.options.alignCenter) snap -= (this.metrics.viewportWidth / 2) - (width / 2);
@@ -152,16 +180,22 @@ class DanCarousel {
 
     this.maxScroll = Math.max(0, this.metrics.trackWidth - this.metrics.viewportWidth);
 
-    if (this.options.contain || this.options.containKeep) {
+    // Contain logic (Disabled in loop mode as it conflicts with infinite bounds)
+    if (!this.options.loop && (this.options.contain || this.options.containKeep)) {
       this.metrics.snapPoints = this.metrics.snapPoints.map(snap => 
         Math.max(0, Math.min(snap, this.maxScroll))
       );
     }
 
-    // UPDATE #2: Safely reset visibility observations
+    // 6. Refresh Intersection Observers (Only track REAL slides for in-view logic)
     if (this.visibilityObserver) {
       this.visibilityObserver.disconnect();
       this.slides.forEach(slide => this.visibilityObserver.observe(slide));
+    }
+
+    // 7. Resume Observers
+    if (this.mutationObserver) {
+      this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'class'] });
     }
 
     this.emit('resize');
@@ -169,8 +203,17 @@ class DanCarousel {
     this.updateSlideStates();
   }
 
+  createClone(slide) {
+    const clone = slide.cloneNode(true);
+    clone.classList.add('slide-clone');
+    clone.setAttribute('aria-hidden', 'true');
+    clone.removeAttribute('aria-current');
+    clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
+    return clone;
+  }
+
   // ==========================================
-  // OBSERVERS (In-View, Resize, Mutation)
+  // OBSERVERS
   // ==========================================
   
   setupObservers() {
@@ -178,7 +221,6 @@ class DanCarousel {
     this.resizeObserver.observe(this.root);
 
     this.mutationObserver = new MutationObserver(this.onMutation);
-    this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'class'] });
 
     this.visibilityObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -200,16 +242,19 @@ class DanCarousel {
     this.updateMeasurements();
   }
 
-  onMutation() {
+  onMutation(mutations) {
+    // Ignore mutations on clones
+    if (mutations.some(m => m.target.classList && m.target.classList.contains('slide-clone'))) return;
+
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     this.mutationRaf = requestAnimationFrame(() => {
-      // UPDATE #1: Safe Mutation Comparison
       const oldLength = this.slides.length;
-      const newLength = this.track.children.length;
+      // Filter out clones to count real nodes
+      const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('slide-clone'));
       
       this.updateMeasurements();
       
-      if (newLength !== oldLength) {
+      if (realNodes.length !== oldLength) {
         this.initPlugins(); 
       }
     });
@@ -274,11 +319,14 @@ class DanCarousel {
 
     let newTarget = this.dragStartCurrentX + dragDistance;
 
-    if (newTarget < 0) {
-      newTarget = newTarget * 0.3;
-    } else if (newTarget > this.maxScroll) {
-      const overflow = newTarget - this.maxScroll;
-      newTarget = this.maxScroll + (overflow * 0.3);
+    // Rubber banding is disabled in loop mode because it scrolls infinitely
+    if (!this.options.loop) {
+      if (newTarget < 0) {
+        newTarget = newTarget * 0.3;
+      } else if (newTarget > this.maxScroll) {
+        const overflow = newTarget - this.maxScroll;
+        newTarget = this.maxScroll + (overflow * 0.3);
+      }
     }
 
     this.targetX = newTarget;
@@ -321,7 +369,7 @@ class DanCarousel {
   }
 
   // ==========================================
-  // PHYSICS & LIFECYCLE
+  // PHYSICS, LOOPING, & LIFECYCLE (PHASE 5)
   // ==========================================
 
   startPhysicsLoop() {
@@ -329,22 +377,41 @@ class DanCarousel {
   }
 
   tick() {
+    // 1. Silent Repositioning for True Infinite Loop
+    if (this.options.loop) {
+      const firstSnap = this.metrics.snapPoints[0];
+      const lastSnap = this.metrics.snapPoints[this.slides.length - 1];
+      
+      // If we scroll too far left/right, seamlessly jump target and current coordinates
+      if (this.currentX < firstSnap - (this.metrics.realTrackWidth / 2)) {
+        this.currentX += this.metrics.realTrackWidth;
+        this.targetX += this.metrics.realTrackWidth;
+      } else if (this.currentX > lastSnap + (this.metrics.realTrackWidth / 2)) {
+        this.currentX -= this.metrics.realTrackWidth;
+        this.targetX -= this.metrics.realTrackWidth;
+      }
+    }
+
+    // 2. Drag-Free Inertia
     if (this.options.dragFree && Math.abs(this.inertia) > 0.1 && !this.isDragging) {
       this.inertia *= this.options.friction;
       this.targetX += this.inertia;
       
-      if (this.targetX < 0) {
-        this.targetX *= 0.8;
-        this.inertia *= 0.5;
-      } else if (this.targetX > this.maxScroll) {
-        this.targetX = this.maxScroll + ((this.targetX - this.maxScroll) * 0.8);
-        this.inertia *= 0.5;
+      if (!this.options.loop) {
+        if (this.targetX < 0) {
+          this.targetX *= 0.8;
+          this.inertia *= 0.5;
+        } else if (this.targetX > this.maxScroll) {
+          this.targetX = this.maxScroll + ((this.targetX - this.maxScroll) * 0.8);
+          this.inertia *= 0.5;
+        }
       }
-    } else if (this.options.dragFree && !this.isDragging) {
+    } else if (this.options.dragFree && !this.options.loop && !this.isDragging) {
       if (this.targetX < 0) this.targetX = 0;
       if (this.targetX > this.maxScroll) this.targetX = this.maxScroll;
     }
 
+    // 3. Lerp Math
     const diff = this.targetX - this.currentX;
     
     if (Math.abs(diff) < 0.1 && Math.abs(this.inertia) < 0.1) {
@@ -376,12 +443,16 @@ class DanCarousel {
     
     this.root.classList.remove('slider-ready');
     this.track.style.transform = '';
+    
+    // Cleanup clones
+    this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
+    
     this.emit('destroy');
     this.listeners = {};
   }
 
   // ==========================================
-  // NAVIGATION & STATE
+  // NAVIGATION & STATE (PHASE 5 MATH)
   // ==========================================
 
   goTo(index, immediate = false) {
@@ -393,9 +464,22 @@ class DanCarousel {
     }
     this.currentIndex = targetIndex;
     
-    this.targetX = this.metrics.snapPoints[this.currentIndex];
+    let nextTarget = this.metrics.snapPoints[this.currentIndex];
     this.inertia = 0; 
 
+    // PHASE 5: Shortest Path Math for Looping
+    if (this.options.loop && !immediate) {
+      const distNormal = nextTarget - this.targetX;
+      const distForward = (nextTarget + this.metrics.realTrackWidth) - this.targetX;
+      const distBackward = (nextTarget - this.metrics.realTrackWidth) - this.targetX;
+      
+      const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
+      
+      if (minDist === Math.abs(distForward)) nextTarget += this.metrics.realTrackWidth;
+      else if (minDist === Math.abs(distBackward)) nextTarget -= this.metrics.realTrackWidth;
+    }
+
+    this.targetX = nextTarget;
     if (immediate) this.currentX = this.targetX;
     
     this.updateSlideStates();
@@ -407,7 +491,12 @@ class DanCarousel {
     let minDistance = Infinity;
 
     this.metrics.snapPoints.forEach((point, index) => {
-      const distance = Math.abs(point - this.targetX);
+      // Check normal distance, wrapped forward distance, and wrapped backward distance
+      const d1 = Math.abs(point - this.targetX);
+      const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackWidth) - this.targetX) : Infinity;
+      const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackWidth) - this.targetX) : Infinity;
+      
+      const distance = Math.min(d1, d2, d3);
       if (distance < minDistance) {
         minDistance = distance;
         closestIndex = index;
@@ -439,7 +528,7 @@ class DanCarousel {
 
     this.slides.forEach((slide, idx) => {
       slide.classList.remove('active', 'prev', 'next');
-      slide.removeAttribute('aria-current'); // UPDATE #3
+      slide.removeAttribute('aria-current');
       
       if (idx === this.currentIndex) {
         slide.classList.add('active');
@@ -567,7 +656,6 @@ class DanCarousel {
         return {
           init: (api) => {
             updateProgress = () => {
-              // UPDATE #4: Uses unified scrollProgress() API for all math
               const pct = api.scrollProgress() * 100;
               progressEl.style.setProperty('--progress', `${pct}%`);
             };
