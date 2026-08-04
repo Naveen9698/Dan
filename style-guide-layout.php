@@ -11,6 +11,7 @@
 
   <div class="pa-xs flex-y">
     <a class="fz-16 mb-xxs px-xs py-xxs ra-xxs fw-500 clr-g4 active" href="#base">Base</a>
+    <a class="fz-16 mb-xxs px-xs py-xxs ra-xxs fw-500 clr-g4" href="#slider">Slider</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs" href="#aspect-ratio-system">Aspect Ratio</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs" href="#border-system">Border</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs" href="#color-system">Color</a>

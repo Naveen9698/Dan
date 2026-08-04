@@ -1,8 +1,8 @@
-.carousel {
+.slider {
   overflow: hidden; /* The window */
   width: 100%;
 }
-.carousel-track {
+.slides {
   display: flex; /* The track that moves */
   touch-action: pan-y; /* Allows native vertical scroll, blocks horizontal */
   will-change: transform; /* Hardware acceleration */

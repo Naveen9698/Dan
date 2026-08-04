@@ -1,11 +1,17 @@
-<h2 class="fz-28 fw-700 clr-g9 bg-g2 txt-center pa-xs" id="z-index-system">Z-Index System</h2>
+<h2 class="fz-28 fw-700 clr-g9 bg-g2 txt-center pa-xs" id="slider">Slider System</h2>
 
 <section class="px-md stack-y-sm">
 
-  <h3>z-index Utility Classes</h3>
+  <h3>Slider Utility Classes</h3>
 
   <div class="flex-x gap-md f-wrap">
-    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/z-index.php'; ?></code></pre>
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/slider.php'; ?></code></pre>
+  </div>
+
+  <h3>Slider Script</h3>
+
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'js/slider.php'; ?></code></pre>
   </div>
 
   <p class="fz-14 clr-g5 lh-16 ml-md">
@@ -19,6 +25,6 @@
 
   <h3>Live Demo</h3>
 
-  <?php include 'demo/z-index-system.php'; ?>
+  <?php include 'demo/slider.php'; ?>
 
 </section>
