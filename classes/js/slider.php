@@ -1,11 +1,12 @@
 /**
- * DANCAROUSEL 2.2 - V1.0 FINAL RELEASE
- * 100% COMPLETION: Complete Runtime Diagnostics, Memory Safety, and Performance Optimization
+ * DANCAROUSEL 2.2 - V1.0 FINAL PRODUCTION RELEASE
+ * 100% COMPLETION: Immutable Diagnostics, Runtime Capabilities, Memory Safety, and Performance Optimization
  */
 
 class DanCarousel {
   static VERSION = '2.2.0';
-  static DEBUG = false; // OBSERVATION #6: Global Debug Flag
+  static ENGINE = 'DanCarousel';
+  static DEBUG = false; 
   static _autoInitObserver = null;
 
   static EVENTS = [
@@ -21,7 +22,6 @@ class DanCarousel {
     'debugOpen', 'debugClose'
   ];
 
-  // OBSERVATION #5: Controllable Auto-Init Lifecycle
   static startAutoInit() {
     if (typeof document === 'undefined') return;
     const initAll = () => {
@@ -161,14 +161,13 @@ class DanCarousel {
 
   get stateData() { return this.state(); }
   
-  // OBSERVATION #4: Simplification
   snapshot() { return this.state(); }
 
   pluginsList() { return this.plugins.map(p => p.name || 'anonymous'); }
 
   buildInfo() {
     return Object.freeze({
-      engine: 'DanCarousel', // OBSERVATION #3
+      engine: DanCarousel.ENGINE,
       version: this.version(),
       build: 'stable',
       released: '2026-08'
@@ -176,7 +175,6 @@ class DanCarousel {
   }
 
   capabilities() {
-    // OPTIONAL ADDITION: Enhanced Capabilities Output
     return Object.freeze({
       loop: true,
       dragFree: true,
@@ -199,24 +197,41 @@ class DanCarousel {
     });
   }
 
+  runtimeCapabilities() {
+    return Object.freeze({
+      loop: this.options.loop,
+      dragFree: this.options.dragFree,
+      rtl: this.options.rtl,
+      vertical: this.options.vertical,
+      autoplay: this.options.autoplay,
+      keyboard: this.options.keyboard,
+      contain: this.options.contain,
+      containKeep: this.options.containKeep,
+      alignCenter: this.options.alignCenter,
+      alignEnd: this.options.alignEnd
+    });
+  }
+
   info() {
     return Object.freeze({
       version: this.version(),
       build: this.buildInfo(),
-      plugins: Object.freeze(this.pluginsList()), // OBSERVATION #7: Deep Freeze
-      events: Object.freeze(this.events()),       // OBSERVATION #7: Deep Freeze
+      plugins: Object.freeze(this.pluginsList()),
+      events: Object.freeze(this.events()),
       capabilities: this.capabilities(),
-      state: this.state()                         // OBSERVATION #2: Included State
+      runtimeCapabilities: this.runtimeCapabilities(),
+      state: this.state()
     });
   }
 
-  // OPTIONAL ADDITION: Full Runtime Inspection API
   inspect() {
     return Object.freeze({
       info: this.info(),
       state: this.state(),
-      slidesInView: this.slidesInView(),
-      slidesNotInView: this.slidesNotInView(),
+      capabilities: this.capabilities(),
+      runtimeCapabilities: this.runtimeCapabilities(),
+      slidesInView: Object.freeze(this.slidesInView()),
+      slidesNotInView: Object.freeze(this.slidesNotInView()),
       activeSlide: this.selectedIndex()
     });
   }
@@ -268,8 +283,10 @@ class DanCarousel {
   }
 
   reInit() {
+    const root = this.root;
     this.destroy();
-    this.init();
+    root.__danCarousel = new DanCarousel(root);
+    return root.__danCarousel;
   }
 
   canScrollNext() {
@@ -302,7 +319,6 @@ class DanCarousel {
   }
 
   slidesNotInView() {
-    // OBSERVATION #1: Optimized O(N) filtering using Set.has()
     return this.slides.map((_, idx) => idx).filter(idx => !this.visibleSlides.has(idx));
   }
 
