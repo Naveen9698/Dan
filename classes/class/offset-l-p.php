@@ -1,3 +1,4 @@
+.l-0p { --l-offset: 0%; }
 .l-1p { --l-offset: 1%; }
 .l-2p { --l-offset: 2%; }
 .l-3p { --l-offset: 3%; }

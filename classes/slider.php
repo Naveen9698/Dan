@@ -8,12 +8,12 @@
     <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/slider.php'; ?></code></pre>
   </div>
 
-  <h3>Slider Script</h3>
-
+  <h3 id="getting-started">Getting Started</h3>
+  <!--
   <div class="flex-x gap-md f-wrap">
-    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'js/slider.php'; ?></code></pre>
+     <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'js/slider.php'; ?></code></pre>
   </div>
-
+ -->
   <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 <b>z-*</b> utilities control <b>stacking order</b> (which element appears on top).<br>
     🟢 Higher values appear above lower values.<br>
@@ -23,8 +23,22 @@
     🔴 Avoid large arbitrary values — keep stacking levels limited and predictable.
   </p>
 
-  <h3>Live Demo</h3>
+  <h3 id="default">Default Carousel</h3>
+  <p class="fz-14 clr-g5 lh-16 ml-md ">
+    🟢 Horizontal layout <br>
+    🟢 Snap-based scrolling <br>
+    🟢 Drag interaction (mouse + touch) <br>
+  </p>
+  <?php include 'slider/default.php'; ?>
+  <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\default.php')) ?></code></pre>
 
-  <?php include 'demo/slider.php'; ?>
+  <h3 id="previous-next-buttons">Previous / Next Buttons</h3>
+  <p class="fz-14 clr-g5 lh-16 ml-md ">
+    🟢 Navigate slides using external controls <br>
+    🟢 Uses yd-prev and yd-next API methods <br>
+    🟢 Demonstrates manual user-triggered navigation <br>
+  </p>
+  <?php include 'slider/previous-next-buttons.php'; ?>
+  <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\previous-next-buttons.php')) ?></code></pre>
 
 </section>

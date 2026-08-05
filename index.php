@@ -15,8 +15,8 @@
   <?php include 'style-guide-layout.php'; ?>
   <main class="w-80p w-add-5p stack-y-md ma-auto">
 
-    <?php include 'classes/base.php'; ?>
     <?php include 'classes/slider.php'; ?>
+    <?php include 'classes/base.php'; ?>
     <?php include 'classes/aspect-ratio-system.php'; ?>
     <?php include 'classes/border-system.php'; ?>
     <?php include 'classes/color-system.php'; ?>

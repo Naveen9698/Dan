@@ -1,3 +1,4 @@
+.t-0p { --t-offset: 0%; }
 .t-1p { --t-offset: 1%; }
 .t-2p { --t-offset: 2%; }
 .t-3p { --t-offset: 3%; }

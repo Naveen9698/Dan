@@ -1,3 +1,4 @@
+.b-0p { --b-offset: 0%; }
 .b-1p { --b-offset: 1%; }
 .b-2p { --b-offset: 2%; }
 .b-3p { --b-offset: 3%; }

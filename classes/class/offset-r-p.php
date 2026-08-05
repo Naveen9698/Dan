@@ -1,3 +1,4 @@
+.r-0p { --r-offset: 0%; }
 .r-1p { --r-offset: 1%; }
 .r-2p { --r-offset: 2%; }
 .r-3p { --r-offset: 3%; }

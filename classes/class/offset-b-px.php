@@ -1,3 +1,4 @@
+.b-0px { --b-offset: 0px; }
 .b-1px { --b-offset: 1px; }
 .b-2px { --b-offset: 2px; }
 .b-3px { --b-offset: 3px; }

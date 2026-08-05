@@ -1,3 +1,4 @@
+.r-0px { --r-offset: 0px; }
 .r-1px { --r-offset: 1px; }
 .r-2px { --r-offset: 2px; }
 .r-3px { --r-offset: 3px; }

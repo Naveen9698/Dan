@@ -1,11 +1,11 @@
 /**
- * DANCAROUSEL 2.2 - V1.0 FINAL PRODUCTION RELEASE
+ * ydCarousel 2.2 - V1.0 FINAL PRODUCTION RELEASE
  * 100% COMPLETION: Immutable Diagnostics, Runtime Capabilities, Memory Safety, and Performance Optimization
  */
 
-class DanCarousel {
+class ydCarousel {
   static VERSION = '2.2.0';
-  static ENGINE = 'DanCarousel';
+  static ENGINE = 'ydCarousel';
   static DEBUG = false; 
   static _autoInitObserver = null;
 
@@ -25,8 +25,8 @@ class DanCarousel {
   static startAutoInit() {
     if (typeof document === 'undefined') return;
     const initAll = () => {
-      document.querySelectorAll('.slider:not(.slider-ready)').forEach(el => {
-        if (!el.__danCarousel) el.__danCarousel = new DanCarousel(el);
+      document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
+        if (!el.__ydCarousel) el.__ydCarousel = new ydCarousel(el);
       });
     };
     initAll();
@@ -45,7 +45,7 @@ class DanCarousel {
 
   constructor(element) {
     this.root = element;
-    this.track = this.root.querySelector('.slides');
+    this.track = this.root.querySelector('.yd_container');
     if (!this.track) return;
     
     // CONFIGURATION
@@ -123,7 +123,7 @@ class DanCarousel {
     this.initPlugins();
     this.startPhysicsLoop();
     
-    this.root.classList.add('slider-ready');
+    this.root.classList.add('yd_carousel-ready');
     this.emit('init');
   }
 
@@ -131,10 +131,10 @@ class DanCarousel {
   // PUBLIC API & DX EXTENSIONS
   // ==========================================
 
-  version() { return DanCarousel.VERSION; }
-  isReady() { return this.root.classList.contains('slider-ready'); }
+  version() { return ydCarousel.VERSION; }
+  isReady() { return this.root.classList.contains('yd_carousel-ready'); }
   isDestroyed() { return this.destroyed; }
-  events() { return [...DanCarousel.EVENTS]; }
+  events() { return [...ydCarousel.EVENTS]; }
   
   hashGroup() { return this.root.dataset.hashGroup; }
   syncGroup() { return this.root.dataset.syncGroup; }
@@ -167,7 +167,7 @@ class DanCarousel {
 
   buildInfo() {
     return Object.freeze({
-      engine: DanCarousel.ENGINE,
+      engine: ydCarousel.ENGINE,
       version: this.version(),
       build: 'stable',
       released: '2026-08'
@@ -256,8 +256,8 @@ class DanCarousel {
   }
 
   on(event, callback) {
-    if (DanCarousel.DEBUG && !DanCarousel.EVENTS.includes(event)) {
-      console.warn(`[DanCarousel] Unknown event: ${event}`);
+    if (ydCarousel.DEBUG && !ydCarousel.EVENTS.includes(event)) {
+      console.warn(`[ydCarousel] Unknown event: ${event}`);
     }
     if (!this.listeners[event]) this.listeners[event] = [];
     this.listeners[event].push(callback);
@@ -285,8 +285,8 @@ class DanCarousel {
   reInit() {
     const root = this.root;
     this.destroy();
-    root.__danCarousel = new DanCarousel(root);
-    return root.__danCarousel;
+    root.__ydCarousel = new ydCarousel(root);
+    return root.__ydCarousel;
   }
 
   canScrollNext() {
@@ -330,7 +330,7 @@ class DanCarousel {
     this.visibleSlides.clear();
 
     if (this.mutationObserver) this.mutationObserver.disconnect();
-    this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
+    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
     
     this.slides = Array.from(this.track.children);
     if (!this.slides.length) return;
@@ -391,7 +391,7 @@ class DanCarousel {
 
   createClone(slide) {
     const clone = slide.cloneNode(true);
-    clone.classList.add('slide-clone');
+    clone.classList.add('yd_slide-clone');
     clone.setAttribute('aria-hidden', 'true');
     clone.removeAttribute('aria-current');
     clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
@@ -421,7 +421,7 @@ class DanCarousel {
       entries.forEach(entry => {
         const node = entry.target;
         const idx = parseInt(node.getAttribute('data-slide-index'), 10);
-        const isClone = node.classList.contains('slide-clone');
+        const isClone = node.classList.contains('yd_slide-clone');
         
         if (entry.isIntersecting) {
           node.classList.add('in-view');
@@ -453,12 +453,12 @@ class DanCarousel {
   onResize() { this.updateMeasurements(); }
 
   onMutation(mutations) {
-    if (mutations.some(m => m.target.classList && m.target.classList.contains('slide-clone'))) return;
+    if (mutations.some(m => m.target.classList && m.target.classList.contains('yd_slide-clone'))) return;
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.mutationRaf = requestAnimationFrame(() => {
       const oldLength = this.slides.length;
-      const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('slide-clone'));
+      const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
       const newLength = realNodes.length;
 
       this.updateMeasurements();
@@ -685,13 +685,13 @@ class DanCarousel {
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = []; 
     
-    this.root.classList.remove('slider-ready');
+    this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
-    this.track.querySelectorAll('.slide-clone').forEach(clone => clone.remove());
+    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
     this.visibleSlides.clear();
 
-    if (this.root.__danCarousel === this) {
-      delete this.root.__danCarousel;
+    if (this.root.__ydCarousel === this) {
+      delete this.root.__ydCarousel;
     }
 
     this.emit('destroy');
@@ -787,10 +787,10 @@ class DanCarousel {
     this.root.setAttribute('aria-roledescription', 'carousel');
     this.track.setAttribute('aria-live', 'polite');
     
-    let announcer = this.root.querySelector('.slider-announcer');
+    let announcer = this.root.querySelector('.yd_carousel-announcer');
     if (!announcer) {
       announcer = document.createElement('div');
-      announcer.className = 'slider-announcer';
+      announcer.className = 'yd_carousel-announcer';
       announcer.setAttribute('aria-live', 'polite');
       announcer.setAttribute('aria-atomic', 'true');
       announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
@@ -815,8 +815,8 @@ class DanCarousel {
     // CORE MODULES
     // ==========================================
 
-    const prevBtn = this.root.querySelector('.slider-prev');
-    const nextBtn = this.root.querySelector('.slider-next');
+    const prevBtn = this.root.querySelector('.yd_prev');
+    const nextBtn = this.root.querySelector('.yd_next');
     if (prevBtn || nextBtn) {
       const controls = (() => {
         let hPrev, hNext;
@@ -838,7 +838,7 @@ class DanCarousel {
       this.plugins.push(controls);
     }
 
-    const dotsContainer = this.root.querySelector('.slider-dots');
+    const dotsContainer = this.root.querySelector('.yd_dots');
     if (dotsContainer) {
       const dots = (() => {
         let updateDots;
@@ -848,7 +848,7 @@ class DanCarousel {
             dotsContainer.innerHTML = '';
             api.metrics.snapPoints.forEach((_, idx) => {
               const dot = document.createElement('button');
-              dot.className = 'slider-dot';
+              dot.className = 'yd_dot';
               dot.setAttribute('aria-label', `Go to slide ${idx + 1}`);
               dot.addEventListener('click', () => api.scrollTo(idx));
               dotsContainer.appendChild(dot);
@@ -871,7 +871,7 @@ class DanCarousel {
       this.plugins.push(dots);
     }
 
-    const counterEl = this.root.querySelector('.slider-counter');
+    const counterEl = this.root.querySelector('.yd_counter');
     if (counterEl) {
       const counter = (() => {
         let updateCounter;
@@ -891,7 +891,7 @@ class DanCarousel {
       this.plugins.push(counter);
     }
 
-    const progressEl = this.root.querySelector('.slider-progress');
+    const progressEl = this.root.querySelector('.yd_progress');
     if (progressEl) {
       const progress = (() => {
         let updateProgress;
@@ -1071,11 +1071,11 @@ class DanCarousel {
               let targets = [];
               if (syncTarget) {
                  const el = document.querySelector(syncTarget);
-                 if (el && el.__danCarousel) targets.push(el.__danCarousel);
+                 if (el && el.__ydCarousel) targets.push(el.__ydCarousel);
               }
               if (syncGroup) { 
-                 document.querySelectorAll(`.slider[data-sync-group="${syncGroup}"]`).forEach(el => {
-                    if (el !== api.root && el.__danCarousel) targets.push(el.__danCarousel);
+                 document.querySelectorAll(`.yd_carousel[data-sync-group="${syncGroup}"]`).forEach(el => {
+                    if (el !== api.root && el.__ydCarousel) targets.push(el.__ydCarousel);
                  });
               }
               
@@ -1185,7 +1185,7 @@ class DanCarousel {
                const delay = parseInt(api.root.dataset.debugDelay) || 150; 
                api.emit('debugOpen'); 
                debugEl = document.createElement('div');
-               debugEl.className = 'slider-debug-panel';
+               debugEl.className = 'yd_carousel-debug-panel';
                debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
                api.root.appendChild(debugEl);
                
@@ -1196,7 +1196,7 @@ class DanCarousel {
                   
                   const state = api.state();
                   debugEl.textContent = `
-[DanCarousel v${state.version}]
+[ydCarousel v${state.version}]
 Idx:  ${state.index}
 Prog: ${state.progress.toFixed(2)}
 Drag: ${state.dragging}
@@ -1228,5 +1228,5 @@ InVw: ${api.slidesInView().join(',')}
 // AUTO-INIT SYSTEM
 // ==========================================
 if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => DanCarousel.startAutoInit());
+  document.addEventListener('DOMContentLoaded', () => ydCarousel.startAutoInit());
 }
