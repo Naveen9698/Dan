@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * FINAL PRODUCTION RELEASE: Baseline Templates, Deterministic Lifecycles, Flawless Isolation & Code Polish
+ * S+ TIER COMPLETION: Hot Reloading Registry, DAG Strict Dependency Rejection, Culling & Protected Transactions
  */
 
 class ydCarousel {
@@ -22,18 +22,20 @@ class ydCarousel {
   static EVENTS = [
     'beforeInit', 'init', 'afterInit',
     'beforeResize', 'resize', 'afterResize',
-    'destroy',
+    'beforeRefresh', 'afterRefresh',
+    'beforePluginInit', 'afterPluginInit',
+    'beforeDestroy', 'destroy', 'afterDestroy',
     'dragStart', 'dragMove', 'dragEnd',
     'scroll', 'scrollHeavy', 'settle',
     'beforeSelect', 'select', 'afterSelect',
-    // 'activeSlideChange' represents a "Scroll group / page change" in the grouped scrolling model
     'activeSlideChange',
     'slideEnter', 'slideExit',
     'loopEnter', 'loopExit', 'loopReposition',
     'visibilityPause', 'visibilityResume',
     'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop', 'autoplayToggleRequest',
     'syncStart', 'syncUpdate', 'syncStop',
-    'debugOpen', 'debugClose'
+    'debugOpen', 'debugClose',
+    'error'
   ];
 
   static startAutoInit() {
@@ -58,7 +60,6 @@ class ydCarousel {
     }
   }
 
-  // Enterprise Plugin Factory Registration
   static use(pluginFactory) {
     if (!this.globalPlugins.includes(pluginFactory)) {
       this.globalPlugins.push(pluginFactory);
@@ -73,7 +74,7 @@ class ydCarousel {
       return;
     }
     
-    // Constructor API backwards compatibility & options object mapping
+    // Constructor Options Mapping
     if (options instanceof Set) options = { disabledPlugins: [...options] };
     this.instanceOptions = options;
     this.disabledPlugins = new Set(options.disabledPlugins || []);
@@ -81,7 +82,14 @@ class ydCarousel {
     // Internal State
     this._mounted = false;
     this._isVisible = true;
-    this._syncLock = false; // Sync Feedback Loop Protection
+    this._syncLock = false;
+    this._eventsPaused = false;
+    this._eventQueue = [];
+    this._refreshPaused = false;
+    this._refreshPending = false;
+    this._forceRefresh = false;
+    this._lastDiffHash = '';
+    
     this.currentPos = 0;
     this.targetPos = 0;
     this.currentIndex = 0;
@@ -103,14 +111,11 @@ class ydCarousel {
     this._frames = 0;
     this._lastFpsTime = typeof performance !== 'undefined' ? performance.now() : 0;
 
-    // POINTER TRACKING
     this.dragStartPos = 0;
     this.dragStartCurrentPos = 0;
     this.lastPointerPos = 0;
     this.lastPointerTime = 0;
     this.isClickSuppressed = false;
-
-    // PASSIVE EVENT CONFIG
     this.passiveOpts = { passive: true };
 
     this.slides = []; 
@@ -133,7 +138,6 @@ class ydCarousel {
     this.pluginsMap = new Map();
     this.failedPlugins = [];
 
-    // Bound methods for safe addition/removal
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
@@ -183,6 +187,8 @@ class ydCarousel {
     const parsedScroll = parseInt(scrollAttr, 10);
 
     this.options = {
+      ...ydCarousel.defaults,
+      ...this.instanceOptions,
       loop: has('loop'),
       dragFree: has('drag-free'),
       contain: has('contain'),
@@ -193,6 +199,7 @@ class ydCarousel {
       autoplay: has('autoplay'),
       rtl: has('rtl'),
       vertical: has('vertical'),
+      culling: has('culling') || has('virtual'), // S-TIER CULLING
       scroll: scrollAttr === 'auto' 
         ? 'auto' 
         : Number.isInteger(parsedScroll) && parsedScroll > 0 ? parsedScroll : 1,
@@ -201,14 +208,13 @@ class ydCarousel {
       delay: parseInt(this.root.dataset.delay, 10) || ydCarousel.defaults.delay
     };
 
-    // Accessibility Override
     if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       this.options.duration = 1;
     }
   }
 
   // ==========================================
-  // PUBLIC API, DIAGNOSTICS & ALIASES
+  // S-TIER ENTERPRISE API & DIAGNOSTICS
   // ==========================================
 
   version() { return ydCarousel.VERSION; }
@@ -222,58 +228,114 @@ class ydCarousel {
   currentPosition() { return this.currentPos; }
   targetPosition() { return this.targetPos; }
 
-  // Runtime Controls
   visible() { return this._isVisible; }
   mounted() { return this._mounted; }
   currentSlide() { return this.activeSlide(); }
   activeSlideIndex() { return this.currentIndex; }
-  slideCount() { return this.slides.length; }
-  groupCount() { return this.metrics.scrollSnaps.length; }
+  slideCount() { return this.slides?.length ?? 0; }
+  groupCount() { return this.metrics?.scrollSnaps?.length ?? 0; }
 
-  // Autoplay Controls
+  getMetrics() {
+    if (!this.metrics) return null;
+    return Object.freeze({
+      viewportSize: this.metrics.viewportSize,
+      trackSize: this.metrics.trackSize,
+      realTrackSize: this.metrics.realTrackSize,
+      prependOffset: this.metrics.prependOffset,
+      slideSizes: [...this.metrics.slideSizes],
+      slideSnaps: [...this.metrics.slideSnaps],
+      scrollSnaps: [...this.metrics.scrollSnaps]
+    });
+  }
+
   isAutoplayRunning() { return this.autoplayController?.isPlaying() || false; }
   play() { this.autoplayController?.play(); }
   pause() { this.autoplayController?.pause(); }
   toggleAutoplay() { this.autoplayController?.toggle(); }
 
-  // Navigation Aliases
   goToNext() { this.scrollNext(); }
   goToPrev() { this.scrollPrev(); }
   currentPage() { return this.currentIndex + 1; }
-  pageCount() { return this.metrics.scrollSnaps.length; }
+  pageCount() { return this.groupCount(); }
 
-  // Dynamic Slide API
+  // TRANSACTION EVENT BUS
+  pauseEvents() { this._eventsPaused = true; }
+  resumeEvents() {
+    this._eventsPaused = false;
+    this._eventQueue.forEach(args => this.emit(args.event, args.customData, args.skipPayload, args.prebuiltPayload));
+    this._eventQueue = [];
+  }
+
+  transaction(callback) {
+    if (this.destroyed) return;
+    this.pauseEvents();
+    this._refreshPaused = true;
+    try {
+      callback();
+    } catch(err) {
+      if (ydCarousel.DEBUG) console.error('[ydCarousel] Transaction Error:', err);
+      this.emit('error', { context: 'transaction', error: err }, true);
+    } finally {
+      this._refreshPaused = false;
+      if (this._refreshPending) {
+        this._refreshPending = false;
+        this.scheduleRefresh(true);
+      }
+      this.resumeEvents();
+    }
+  }
+
   addSlide(node) {
     this.track.appendChild(node);
-    this.scheduleRefresh();
+    this.scheduleRefresh(true);
   }
   removeSlide(index) {
     if (this.slides[index]) {
       this.slides[index].remove();
-      this.scheduleRefresh();
+      this.scheduleRefresh(true);
     }
   }
   replaceSlide(index, node) {
     if (this.slides[index]) {
       this.track.replaceChild(node, this.slides[index]);
-      this.scheduleRefresh();
+      this.scheduleRefresh(true);
     }
   }
 
-  // Plugin Enable/Disable API (Preserves State)
+  // S-TIER: TRUE HOT RELOADING API
   disablePlugin(name) {
     if (this.destroyed) return;
     this.disabledPlugins.add(name);
     this.instanceOptions.disabledPlugins = [...this.disabledPlugins];
-    this.reInit();
+    const meta = this.pluginsMap.get(name);
+    if (meta) {
+      if (meta.instance && meta.instance.destroy) {
+        try { meta.instance.destroy(this); } 
+        catch (err) { 
+          if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${name}" disable error:`, err);
+          this.emit('error', { plugin: name, action: 'disable', error: err }, true); 
+        }
+      }
+      this.plugins = this.plugins.filter(p => p.name !== name);
+      this.pluginsMap.delete(name);
+    }
   }
+
   enablePlugin(name) {
-    if (this.destroyed) return;
+    if (this.destroyed || this.pluginsMap.has(name)) return;
     this.disabledPlugins.delete(name);
     this.instanceOptions.disabledPlugins = [...this.disabledPlugins];
-    this.reInit();
+    
+    const defFactory = this._getAvailablePluginDefs().find(f => {
+      const temp = typeof f === 'function' ? f() : { ...f };
+      return temp.name === name;
+    });
+    
+    if (defFactory) {
+      this._initSinglePlugin(typeof defFactory === 'function' ? defFactory() : { ...defFactory });
+    }
   }
-  
+
   state() {
     return Object.freeze({
       version: this.version(),
@@ -304,6 +366,7 @@ class ydCarousel {
     };
   }
 
+  // Diagnostics Extensions
   performance() {
     return Object.freeze({
       fps: this._currentFps,
@@ -321,6 +384,24 @@ class ydCarousel {
     });
   }
 
+  observerStatus() {
+    return Object.freeze({
+      resize: !!this.resizeObserver,
+      mutation: !!this.mutationObserver,
+      visibility: !!this.visibilityObserver,
+      visibilityPauser: !!this.visibilityPauser
+    });
+  }
+
+  memoryInfo() {
+    return Object.freeze({
+      slides: this.slides?.length || 0,
+      listeners: Object.keys(this.listeners).reduce((acc, key) => acc + this.listeners[key].length, 0),
+      plugins: this.plugins.length,
+      observers: 4
+    });
+  }
+
   registeredPlugins() { return this.plugins.map(p => p.name); }
   pluginInfo() {
     return Array.from(this.pluginsMap.values()).map(p => ({
@@ -332,7 +413,7 @@ class ydCarousel {
     return Object.freeze({
       engine: ydCarousel.ENGINE,
       version: this.version(),
-      build: 'stable',
+      build: 'enterprise',
       released: '2026-08'
     });
   }
@@ -342,7 +423,8 @@ class ydCarousel {
       loop: true, dragFree: true, rtl: true, vertical: true, autoplay: true, keyboard: true,
       wheel: true, hash: true, sync: true, creative: true, lazyLoad: true, accessibility: true,
       debug: true, plugins: true, events: true, diagnostics: true, snapshots: true,
-      observers: true, scrollbar: true, autoplayProgress: true, dynamicApi: true, responsiveUtilities: true
+      observers: true, scrollbar: true, autoplayProgress: true, dynamicApi: true, responsiveUtilities: true,
+      culling: true, transaction: true, hotReload: true
     });
   }
 
@@ -353,7 +435,7 @@ class ydCarousel {
       autoplay: this.options?.autoplay ?? false, keyboard: this.options?.keyboard ?? false,
       contain: this.options?.contain ?? false, containKeep: this.options?.containKeep ?? false,
       alignCenter: this.options?.alignCenter ?? false, alignEnd: this.options?.alignEnd ?? false,
-      scroll: this.options?.scroll ?? 1
+      culling: this.options?.culling ?? false, scroll: this.options?.scroll ?? 1
     });
   }
 
@@ -397,13 +479,24 @@ class ydCarousel {
     };
   }
 
-  emit(event, customData = {}, skipPayload = false) {
-    const payload = skipPayload ? { ...customData } : { ...this.getEventPayload(), ...customData };
+  // ISSUE #3 FIX: Preserving exact state payload during queued transactions
+  emit(event, customData = {}, skipPayload = false, prebuiltPayload = null) {
+    if (this._eventsPaused && event !== 'error') {
+      const queuedPayload = prebuiltPayload || (skipPayload ? { ...customData } : { ...this.getEventPayload(), ...customData });
+      this._eventQueue.push({ event, customData, skipPayload: true, prebuiltPayload: queuedPayload });
+      return;
+    }
+    
+    const payload = prebuiltPayload || (skipPayload ? { ...customData } : { ...this.getEventPayload(), ...customData });
     
     if (this.listeners[event]) {
       this.listeners[event].forEach(cb => {
         try { cb(this, payload); } 
-        catch(err) { console.error(`[ydCarousel] Event Error (${event}):`, err); }
+        catch(err) { 
+          if (ydCarousel.DEBUG) console.error(`[ydCarousel] Event Error (${event}):`, err); 
+          // Do not emit 'error' from within an 'error' event to avoid infinite loops
+          if (event !== 'error') this.emit('error', { context: 'event', event, error: err }, true);
+        }
       });
     }
     
@@ -458,11 +551,19 @@ class ydCarousel {
   isDragging() { return this.isDraggingActive; } 
   isLoop() { return this.options?.loop ?? false; }         
 
-  scheduleRefresh() {
-    if (this.refreshRaf || this.destroyed) return;
+  scheduleRefresh(force = false) {
+    if (this.destroyed) return;
+    if (force) this._forceRefresh = true;
+    if (this._refreshPaused) {
+      this._refreshPending = true;
+      return;
+    }
+    if (this.refreshRaf) return;
     this.refreshRaf = requestAnimationFrame(() => {
       this.refreshRaf = null;
+      this.emit('beforeRefresh');
       this.updateMeasurements();
+      this.emit('afterRefresh');
     });
   }
 
@@ -475,11 +576,10 @@ class ydCarousel {
   }
 
   refresh() {
-    this.scheduleRefresh();
+    this.scheduleRefresh(true);
   }
 
   reInit() {
-    // Exclude stale layout coordinates; we rely on goTo() to calculate new pixel offsets safely.
     const savedState = {
       currentIndex: this.currentIndex,
       velocity: this._velocity,
@@ -495,10 +595,9 @@ class ydCarousel {
     root.__ydCarousel = new ydCarousel(root, instanceOpts);
     const newApi = root.__ydCarousel;
 
-    // Defensively clamp in case slides were removed right before reInit
+    // ISSUE #6 FIX: Redundant index assignment removed. Relying strictly on goTo(..., true)
     const safeIndex = Math.max(0, Math.min(savedState.currentIndex, newApi.groupCount() - 1));
 
-    newApi.currentIndex = safeIndex;
     newApi._velocity = savedState.velocity;
     newApi.isDraggingActive = savedState.dragging;
     
@@ -547,13 +646,44 @@ class ydCarousel {
   }
 
   // ==========================================
-  // MEASUREMENT, GROUPING, & CLONING
+  // MEASUREMENT, GROUPING, & DIFFING
   // ==========================================
   
   updateMeasurements() {
     if (this.destroyed) return;
     this.emit('beforeResize');
     this.updateOptions(); 
+
+    const newRect = this.root.getBoundingClientRect();
+    const newViewportSize = this.options.vertical ? newRect.height : newRect.width;
+    const rawSlides = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
+    const newSlideCount = rawSlides.length;
+
+    // ISSUE #4 FIX: Robust Geometric & Config Hashing
+    const newSlideSizes = rawSlides.map(slide => this.options.vertical ? slide.getBoundingClientRect().height : slide.getBoundingClientRect().width);
+    const sizesHash = newSlideSizes.join('|');
+
+    const diffHash = [
+      newViewportSize,
+      newSlideCount,
+      sizesHash,
+      this.options.loop,
+      this.options.scroll,
+      this.options.alignCenter,
+      this.options.alignEnd,
+      this.options.contain,
+      this.options.containKeep,
+      this.options.rtl,
+      this.options.vertical
+    ].join('|');
+
+    if (!this._forceRefresh && this._lastDiffHash === diffHash && this._mounted) {
+      this.refreshPlugins();
+      this.emit('afterResize');
+      return;
+    }
+    this._lastDiffHash = diffHash;
+    this._forceRefresh = false;
 
     this.visibleSlides.clear();
 
@@ -572,18 +702,13 @@ class ydCarousel {
         }
         if (!img.dataset.ydLoaded) {
            img.dataset.ydLoaded = 'true';
-           img.addEventListener('load', () => this.scheduleRefresh(), { once: true });
+           img.addEventListener('load', () => this.scheduleRefresh(true), { once: true });
         }
       });
     });
 
-    const rect = this.root.getBoundingClientRect();
-    this.metrics.viewportSize = this.options.vertical ? rect.height : rect.width;
-    
-    this.metrics.slideSizes = this.slides.map(slide => {
-      const sRect = slide.getBoundingClientRect();
-      return this.options.vertical ? sRect.height : sRect.width;
-    });
+    this.metrics.viewportSize = newViewportSize;
+    this.metrics.slideSizes = newSlideSizes;
     
     this.metrics.realTrackSize = this.metrics.slideSizes.reduce((a, b) => a + b, 0);
     this.metrics.prependOffset = 0;
@@ -669,6 +794,7 @@ class ydCarousel {
     clone.setAttribute('aria-hidden', 'true');
     clone.removeAttribute('aria-current');
     clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
+    clone.style.contentVisibility = ''; 
     
     const nodes = [clone, ...clone.querySelectorAll('*')];
     nodes.forEach(node => {
@@ -717,7 +843,6 @@ class ydCarousel {
         if (entry.isIntersecting) {
           node.classList.add('in-view');
           node.classList.remove('out-view');
-          
           if (!isClone) {
             node.removeAttribute('aria-hidden');
             if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
@@ -728,7 +853,6 @@ class ydCarousel {
         } else {
           node.classList.add('out-view');
           node.classList.remove('in-view');
-          
           if (!isClone) {
             node.setAttribute('aria-hidden', 'true');
             if (!isNaN(idx) && this.visibleSlides.has(idx)) {
@@ -746,12 +870,7 @@ class ydCarousel {
   onMutation(mutations) {
     if (this.destroyed) return;
     if (mutations.some(m => m.target.classList && m.target.classList.contains('yd_slide-clone'))) return;
-    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
-    
-    this.mutationRaf = requestAnimationFrame(() => {
-      this.mutationRaf = null;
-      this.scheduleRefresh();
-    });
+    this.scheduleRefresh(true);
   }
 
   // ==========================================
@@ -842,11 +961,25 @@ class ydCarousel {
     window.removeEventListener('pointerup', this.onPointerUp, this.passiveOpts);
     this.emit('dragEnd');
 
+    // S-TIER: MOMENTUM SNAP ENGINE
     if (this.options.dragFree) {
       this.inertia = -this._velocity * 40; 
     } else {
       if (Math.abs(this._velocity) > 0.5) {
-        this._velocity > 0 ? this.scrollNext() : this.scrollPrev();
+        let momentumTarget = this.targetPos - (this._velocity * 200); 
+        let closestIndex = 0;
+        let minDistance = Infinity;
+        this.metrics.scrollSnaps.forEach((point, index) => {
+            const d1 = Math.abs(point - momentumTarget);
+            const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - momentumTarget) : Infinity;
+            const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - momentumTarget) : Infinity;
+            const distance = Math.min(d1, d2, d3);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = index;
+            }
+        });
+        this.goTo(closestIndex);
       } else {
         this.snapToClosest();
       }
@@ -980,53 +1113,6 @@ class ydCarousel {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  destroy(removeRef = true) {
-    if (this.destroyed) return;
-    
-    const snapshot = this.state();
-    const finalPayload = this.getEventPayload();
-
-    this.destroyed = true; 
-    this._mounted = false;
-    
-    this.emit('destroy', { ...finalPayload, state: snapshot }, true);
-
-    cancelAnimationFrame(this.rafId);
-    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
-    if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
-    if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
-    
-    this.unbindEvents();
-    if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
-    if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
-    if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
-    if (this.visibilityPauser) { this.visibilityPauser.disconnect(); this.visibilityPauser = null; }
-    
-    if (this.announceHandler) this.off('select', this.announceHandler);
-
-    this.plugins.forEach(p => {
-      try {
-        if (p.instance && p.instance.destroy) p.instance.destroy(this);
-      } catch (err) {
-        console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
-      }
-    });
-    
-    this.plugins = []; 
-    this.pluginsMap.clear();
-    
-    this.root.classList.remove('yd_carousel-ready');
-    this.track.style.transform = '';
-    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
-    this.visibleSlides.clear();
-
-    if (removeRef && this.root.__ydCarousel === this) {
-      delete this.root.__ydCarousel;
-    }
-
-    this.listeners = {}; 
-  }
-
   // ==========================================
   // NAVIGATION & STATE
   // ==========================================
@@ -1124,6 +1210,16 @@ class ydCarousel {
         slide.setAttribute('aria-current', 'true');
       } else if (idx === prevIdx) slide.classList.add('prev');
       else if (idx === nextIdx) slide.classList.add('next');
+      
+      // S-TIER: CULLING (VIRTUALIZATION) ENGINE
+      if (this.options.culling && !slide.classList.contains('yd_slide-clone')) {
+        const distToActive = Math.abs(this.slideProgress(idx));
+        if (distToActive > 3) {
+          slide.classList.add('yd_cull-hidden');
+        } else {
+          slide.classList.remove('yd_cull-hidden');
+        }
+      }
     });
   }
 
@@ -1157,38 +1253,11 @@ class ydCarousel {
   // ENTERPRISE PLUGIN ARCHITECTURE
   // ==========================================
 
-  refreshPlugins() {
-    if (this.destroyed || !this._mounted) return;
-    this.plugins.forEach(p => {
-      if (p.instance && typeof p.instance.refresh === 'function') {
-        try { p.instance.refresh(this); } 
-        catch (err) { console.error(`[ydCarousel] Plugin "${p.name}" refresh error:`, err); }
-      }
-    });
-  }
-
-  initPlugins() {
-    this.plugins.forEach(p => {
-      try {
-        if (p.instance && p.instance.destroy) p.instance.destroy(this);
-      } catch (err) {
-        console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
-      }
-    });
-    
-    this.plugins = [];
-    this.pluginsMap.clear();
-    this.failedPlugins = [];
-
-    const initializedPluginNames = new Set();
-    let allPluginDefs = [...ydCarousel.globalPlugins.map(f => typeof f === 'function' ? f() : { ...f })];
-
-    // ==========================================
-    // CORE MODULE FACTORIES
-    // ==========================================
+  _getAvailablePluginDefs() {
+    const defs = [];
     
     if (this.root.querySelector('.yd_prev') || this.root.querySelector('.yd_next')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let prevBtn, nextBtn, hPrev, hNext;
         return {
           name: 'controls', version: '1.0.0', author: 'yd', priority: 10,
@@ -1207,11 +1276,11 @@ class ydCarousel {
             if (nextBtn) nextBtn.removeEventListener('click', hNext);
           }
         };
-      })());
+      });
     }
 
     if (this.root.querySelector('.yd_dots')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let dotsContainer, baseTemplate, onDotsClick, updateDots;
         const plugin = {
           name: 'dots', version: '1.0.0', author: 'yd', priority: 20,
@@ -1253,7 +1322,6 @@ class ydCarousel {
           },
           refresh: (api) => {
             if (!dotsContainer || !baseTemplate) return;
-
             dotsContainer.innerHTML = '';
             api.metrics.scrollSnaps.forEach((_, idx) => {
               const dot = baseTemplate.cloneNode(true);
@@ -1270,11 +1338,11 @@ class ydCarousel {
           }
         };
         return plugin;
-      })());
+      });
     }
 
     if (this.root.querySelector('.yd_counter')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let counterEl, currentEl, totalEl, updateCounter;
         const plugin = {
           name: 'counter', version: '1.0.0', author: 'yd', priority: 30,
@@ -1301,11 +1369,11 @@ class ydCarousel {
           }
         };
         return plugin;
-      })());
+      });
     }
 
     if (this.root.querySelector('.yd_progress')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let progressEl, updateProgress;
         return {
           name: 'progress', version: '1.0.0', author: 'yd', priority: 40,
@@ -1324,11 +1392,11 @@ class ydCarousel {
             if (updateProgress) api.off('scrollHeavy', updateProgress);
           }
         };
-      })());
+      });
     }
 
     if (this.options.autoplay) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let playTimer, isPaused = false, hasStarted = false;
         let onVisPause, onVisResume, onToggleRequest, onHoverStop, onHoverPlay;
         return {
@@ -1394,11 +1462,11 @@ class ydCarousel {
             api.root.removeEventListener('focusout', onHoverPlay);
           }
         };
-      })());
+      });
     }
 
     if (this.root.querySelector('.yd_autoplay-toggle')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let autoplayToggle, onClick, onPause, onResume, onStart;
         return {
           name: 'autoplay-toggle', version: '1.0.0', author: 'yd', priority: 110,
@@ -1424,11 +1492,11 @@ class ydCarousel {
             if (onStart) api.off('autoplayStart', onStart);
           }
         };
-      })());
+      });
     }
 
     if (this.root.querySelector('.yd_autoplay-progress')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let autoplayProgressEl, rafId, startTime, elapsed = 0, isPlaying = false;
         let delayMs, onSlideChange, onStartEvt, onResumeEvt, onPauseEvt, onStopEvt, onDragStartEvt;
         return {
@@ -1480,11 +1548,11 @@ class ydCarousel {
             if (onDragStartEvt) api.off('dragStart', onDragStartEvt); 
           }
         };
-      })());
+      });
     }
 
     if (this.root.querySelector('.yd_scrollbar')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let scrollbarEl, thumb, track, isDragging = false, startPos, startProgress;
         let updateThumb, onTrackClick, onPointerDown, onPointerMove, onPointerUp;
         return {
@@ -1558,11 +1626,11 @@ class ydCarousel {
             }
           }
         };
-      })());
+      });
     }
 
     if (this.root.classList.contains('wheel')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let onWheel, resetTimer, accumulator = 0;
         return {
           name: 'wheel', version: '1.0.0', author: 'yd', priority: 60,
@@ -1589,11 +1657,11 @@ class ydCarousel {
             if (onWheel) api.root.removeEventListener('wheel', onWheel);
           }
         };
-      })());
+      });
     }
 
     if (this.root.classList.contains('hash')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let onHash, onSelect;
         return {
           name: 'hash', version: '1.0.0', author: 'yd', priority: 70,
@@ -1637,11 +1705,11 @@ class ydCarousel {
             if (onSelect) api.off('select', onSelect);
           }
         };
-      })());
+      });
     }
 
     if (this.root.dataset.sync || this.syncGroup()) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let onSelect, hasSynced = false;
         return {
           name: 'sync', version: '1.0.0', author: 'yd', priority: 80,
@@ -1689,11 +1757,11 @@ class ydCarousel {
             if (onSelect) api.off('select', onSelect);
           }
         };
-      })());
+      });
     }
 
     if (this.root.classList.contains('creative')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let onScroll;
         return {
           name: 'creative', version: '1.0.0', author: 'yd', priority: 90,
@@ -1718,11 +1786,11 @@ class ydCarousel {
             });
           }
         };
-      })());
+      });
     }
 
     if (this.root.classList.contains('lazy-load')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let onSelect;
         const plugin = {
           name: 'lazy-load', version: '1.0.0', author: 'yd', priority: 150,
@@ -1759,11 +1827,11 @@ class ydCarousel {
           }
         };
         return plugin;
-      })());
+      });
     }
 
     if (this.root.classList.contains('debug')) {
-      allPluginDefs.push((() => {
+      defs.push(() => {
         let debugEl, onUpdate, lastUpdate = 0;
         return {
           name: 'debug', version: '1.0.0', author: 'yd', priority: 999,
@@ -1807,44 +1875,152 @@ FPS:  ${pInfo.fps}
             api.emit('debugClose'); 
           }
         };
-      })());
+      });
     }
 
-    // MULTI-PASS INITIALIZATION & DEPENDENCY RESOLUTION
-    allPluginDefs = allPluginDefs.filter(def => !this.disabledPlugins.has(def.name));
-    allPluginDefs.sort((a, b) => (a.priority || 1000) - (b.priority || 1000));
+    return [...defs, ...ydCarousel.globalPlugins];
+  }
+
+  _initSinglePlugin(def) {
+    if (this.disabledPlugins.has(def.name) || this.pluginsMap.has(def.name)) return;
     
-    allPluginDefs.forEach(def => {
-      if (this.pluginsMap.has(def.name)) return;
-      if (def.depends) {
-        const missing = def.depends.filter(dep => !initializedPluginNames.has(dep));
-        if (missing.length > 0) {
-          console.warn(`[ydCarousel] Plugin "${def.name}" disabled due to missing dependencies: ${missing.join(', ')}`);
-          this.failedPlugins.push({ name: def.name, reason: 'missing_deps', timestamp: Date.now() });
-          return;
+    this.emit('beforePluginInit', { pluginName: def.name });
+    try {
+      const instance = typeof def === 'function' ? def() : { ...def };
+      if (instance && typeof instance.init === 'function') {
+        const context = { api: this, root: this.root, options: this.options, plugins: this.pluginsMap, events: this.listeners };
+        const active = instance.init(this, context);
+        if (active !== false) {
+          const meta = {
+            name: def.name,
+            version: def.version || '1.0.0',
+            author: def.author || 'unknown',
+            instance: instance
+          };
+          this.plugins.push(meta);
+          this.pluginsMap.set(def.name, meta);
+          this.plugins.sort((a, b) => ((a.instance.priority || 1000) - (b.instance.priority || 1000)));
         }
       }
+    } catch (err) {
+      if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${def.name}" failed to initialize:`, err);
+      this.failedPlugins.push({ name: def.name, reason: 'init_error', error: err, timestamp: Date.now() });
+      this.emit('error', { plugin: def.name, error: err }, true);
+    }
+    this.emit('afterPluginInit', { pluginName: def.name });
+  }
+
+  // S-TIER: TOPOLOGICAL PLUGIN DEPENDENCY RESOLUTION
+  initPlugins() {
+    this.plugins.forEach(p => {
       try {
-        const instance = typeof def === 'function' ? def() : { ...def };
-        if (instance && typeof instance.init === 'function') {
-          const active = instance.init(this);
-          if (active !== false) {
-            const meta = {
-              name: def.name,
-              version: def.version || '1.0.0',
-              author: def.author || 'unknown',
-              instance: instance
-            };
-            this.plugins.push(meta);
-            this.pluginsMap.set(def.name, meta);
-            initializedPluginNames.add(def.name);
-          }
-        }
+        if (p.instance && p.instance.destroy) p.instance.destroy(this);
       } catch (err) {
-        console.error(`[ydCarousel] Plugin "${def.name}" failed to initialize:`, err);
-        this.failedPlugins.push({ name: def.name, reason: 'init_error', error: err, timestamp: Date.now() });
+        if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
+        this.emit('error', { plugin: p.name, action: 'destroy', error: err }, true);
       }
     });
+    
+    this.plugins = [];
+    this.pluginsMap.clear();
+    this.failedPlugins = [];
+
+    const initializedPluginNames = new Set();
+    let allPluginDefs = [...this._getAvailablePluginDefs().map(f => typeof f === 'function' ? f() : { ...f })];
+    allPluginDefs = allPluginDefs.filter(def => !this.disabledPlugins.has(def.name));
+    
+    const sortedDefs = [];
+    const visited = new Set();
+    const visiting = new Set();
+    
+    const resolveGraph = (def) => {
+      if (def._failed) return;
+      if (visited.has(def.name)) return;
+      if (visiting.has(def.name)) {
+        if (ydCarousel.DEBUG) console.error(`[ydCarousel] Circular dependency: ${def.name}`);
+        this.emit('error', { plugin: def.name, error: new Error('Circular dependency') }, true);
+        this.failedPlugins.push({ name: def.name, reason: 'circular_deps', timestamp: Date.now() });
+        def._failed = true;
+        return;
+      }
+      
+      visiting.add(def.name);
+      if (def.depends) {
+        def.depends.forEach(depName => {
+          const depDef = allPluginDefs.find(d => d.name === depName);
+          if (!depDef) {
+            if (ydCarousel.DEBUG) console.warn(`[ydCarousel] Missing dependency: ${depName} for ${def.name}`);
+            this.failedPlugins.push({ name: def.name, reason: 'missing_dependency', dependency: depName, timestamp: Date.now() });
+            this.emit('error', { plugin: def.name, action: 'resolve', error: new Error(`Missing dependency: ${depName}`) }, true);
+            def._failed = true;
+          } else {
+            resolveGraph(depDef);
+          }
+        });
+      }
+      
+      visiting.delete(def.name);
+      if (!def._failed) {
+        visited.add(def.name);
+        sortedDefs.push(def);
+      }
+    };
+
+    allPluginDefs.sort((a, b) => (a.priority || 1000) - (b.priority || 1000));
+    allPluginDefs.forEach(def => resolveGraph(def));
+
+    sortedDefs.forEach(def => this._initSinglePlugin(def));
+  }
+
+  // S-TIER DESTROY LIFECYCLE: Fire Event *BEFORE* Detaching
+  destroy(removeRef = true) {
+    if (this.destroyed) return;
+    this.emit('beforeDestroy');
+    
+    const snapshot = this.state();
+    const finalPayload = this.getEventPayload();
+
+    this.destroyed = true; 
+    this._mounted = false;
+    
+    this.emit('destroy', { ...finalPayload, state: snapshot }, true);
+
+    cancelAnimationFrame(this.rafId);
+    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
+    if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
+    
+    this.unbindEvents();
+    if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
+    if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
+    if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
+    if (this.visibilityPauser) { this.visibilityPauser.disconnect(); this.visibilityPauser = null; }
+    
+    if (this.announceHandler) this.off('select', this.announceHandler);
+
+    this.plugins.forEach(p => {
+      try {
+        if (p.instance && p.instance.destroy) p.instance.destroy(this);
+      } catch (err) {
+        if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
+        this.emit('error', { plugin: p.name, action: 'destroy', error: err }, true);
+      }
+    });
+    
+    this.plugins = []; 
+    this.pluginsMap.clear();
+    
+    this.root.classList.remove('yd_carousel-ready');
+    this.track.style.transform = '';
+    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
+    this.visibleSlides.clear();
+
+    if (removeRef && this.root.__ydCarousel === this) {
+      delete this.root.__ydCarousel;
+    }
+
+    this.emit('afterDestroy', {}, true);
+    this.listeners = {}; 
   }
 }
 
