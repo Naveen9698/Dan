@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * FINAL PRODUCTION RELEASE: Zero Truncation, Safe ReInit, Complete Core Methods & S+ Architecture
+ * FINAL PRODUCTION RELEASE: S+ Architecture, Safe Observers, Strict Init Ordering & Mutation Recovery
  */
 
 class ydCarousel {
@@ -43,13 +43,20 @@ class ydCarousel {
     const initAll = () => {
       document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready):not(.yd_carousel-initializing)').forEach(el => {
         el.classList.add('yd_carousel-initializing');
-        if (!el.__ydCarousel) el.__ydCarousel = new ydCarousel(el);
+        try {
+          if (!el.__ydCarousel) el.__ydCarousel = new ydCarousel(el);
+        } catch (err) {
+          el.classList.remove('yd_carousel-initializing');
+          console.error(err);
+        }
       });
     };
     initAll();
     if (!this._autoInitObserver) {
-      this._autoInitObserver = new MutationObserver(initAll);
-      this._autoInitObserver.observe(document.body, { childList: true, subtree: true });
+      if (typeof MutationObserver === 'function') {
+        this._autoInitObserver = new MutationObserver(initAll);
+        this._autoInitObserver.observe(document.body, { childList: true, subtree: true });
+      }
     }
   }
 
@@ -159,9 +166,9 @@ class ydCarousel {
 
     this.setupAccessibility();
     this.setupObservers();
-    this.updateMeasurements();
     this.bindEvents();
     this.initPlugins();
+    this.updateMeasurements();
     this.startPhysicsLoop();
     
     this.root.classList.remove('yd_carousel-initializing');
@@ -465,8 +472,8 @@ class ydCarousel {
       version: this.version(),
       currentIndex: this.currentIndex ?? 0,
       previousIndex: this.prevIndex ?? 0,
-      slideCount: this.slideCount(),
-      groupCount: this.groupCount(),
+      slideCount: this.slides?.length ?? 0,
+      groupCount: this.metrics?.scrollSnaps?.length ?? 0,
       progress: this.scrollProgress() ?? 0,
       isDragging: this.isDraggingActive ?? false,
       isSettled: this.isSettled ?? true,
@@ -519,6 +526,8 @@ class ydCarousel {
 
   goTo(index, immediate = false) {
     if (this.destroyed) return;
+    if (!this.metrics || !this.metrics.scrollSnaps || !this.metrics.scrollSnaps.length) return;
+    
     const maxIndex = this.metrics.scrollSnaps.length - 1;
     const targetIndex = Math.max(0, Math.min(index, maxIndex));
     
@@ -589,16 +598,19 @@ class ydCarousel {
   isLoop() { return this.options?.loop ?? false; }         
 
   scrollNext() {
+    if (!this.metrics || !this.metrics.scrollSnaps) return;
     if (this.currentIndex < this.metrics.scrollSnaps.length - 1) this.goTo(this.currentIndex + 1);
     else if (this.options.loop && this.canScrollNext()) this.goTo(0); 
   }
 
   scrollPrev() {
+    if (!this.metrics || !this.metrics.scrollSnaps) return;
     if (this.currentIndex > 0) this.goTo(this.currentIndex - 1);
     else if (this.options.loop && this.canScrollPrev()) this.goTo(this.metrics.scrollSnaps.length - 1);
   }
 
   snapToClosest() {
+    if (!this.metrics || !this.metrics.scrollSnaps) return;
     let closestIndex = 0;
     let minDistance = Infinity;
     this.metrics.scrollSnaps.forEach((point, index) => {
@@ -646,6 +658,17 @@ class ydCarousel {
     this.scheduleRefresh(true);
   }
 
+  refreshPlugins() {
+    if (this.destroyed || !this._mounted) return;
+    this.plugins.forEach(p => {
+      const instance = p.instance || p;
+      if (instance && typeof instance.refresh === 'function') {
+        try { instance.refresh(this); } 
+        catch (err) { this.emit('error', { plugin: p.name, action: 'refresh', error: err }, true); }
+      }
+    });
+  }
+
   reInit() {
     const savedState = {
       currentIndex: this.currentIndex,
@@ -662,7 +685,6 @@ class ydCarousel {
     root.__ydCarousel = new ydCarousel(root, instanceOpts);
     const newApi = root.__ydCarousel;
 
-    // Issue #6 Fix: Redundant index assignment completely removed. SafeIndex used via goTo().
     const safeIndex = Math.max(0, Math.min(savedState.currentIndex, newApi.groupCount() - 1));
 
     newApi._velocity = savedState.velocity;
@@ -678,6 +700,7 @@ class ydCarousel {
   }
 
   canScrollNext() {
+    if (!this.metrics || !this.metrics.scrollSnaps) return false;
     if (this.root.classList.contains('stop-last') && this.currentIndex >= this.metrics.scrollSnaps.length - 1) return false;
     return this.options.loop || this.currentIndex < this.metrics.scrollSnaps.length - 1;
   }
@@ -713,7 +736,9 @@ class ydCarousel {
   }
 
   updateSlideStates() {
-    let closestSlideIdx = 0;
+    if (!this.metrics || !this.metrics.slideSnaps) return;
+    
+    let calculatedGeometryIndex = 0;
     let minDistance = Infinity;
     this.metrics.slideSnaps.forEach((snap, idx) => {
       let dist = Math.abs(snap - this.targetPos);
@@ -724,10 +749,11 @@ class ydCarousel {
       }
       if (dist < minDistance) {
         minDistance = dist;
-        closestSlideIdx = idx;
+        calculatedGeometryIndex = idx;
       }
     });
 
+    const closestSlideIdx = this.options.loop ? calculatedGeometryIndex : this.currentIndex;
     const total = this.slides.length;
     const prevIdx = this.options.loop ? (total + closestSlideIdx - 1) % total : closestSlideIdx - 1;
     const nextIdx = this.options.loop ? (closestSlideIdx + 1) % total : closestSlideIdx + 1;
@@ -738,8 +764,11 @@ class ydCarousel {
       if (idx === closestSlideIdx) {
         slide.classList.add('active');
         slide.setAttribute('aria-current', 'true');
-      } else if (idx === prevIdx) slide.classList.add('prev');
-      else if (idx === nextIdx) slide.classList.add('next');
+      } else if (idx === prevIdx) {
+        slide.classList.add('prev');
+      } else if (idx === nextIdx) {
+        slide.classList.add('next');
+      }
       
       if (this.options.culling && !slide.classList.contains('yd_slide-clone')) {
         const distToActive = Math.abs(this.slideProgress(idx));
@@ -919,56 +948,63 @@ class ydCarousel {
   // ==========================================
   
   setupObservers() {
-    this.resizeObserver = new ResizeObserver(this.onResize);
-    this.resizeObserver.observe(this.root);
-    this.mutationObserver = new MutationObserver(this.onMutation);
+    if (typeof ResizeObserver === 'function') {
+      this.resizeObserver = new ResizeObserver(this.onResize);
+      this.resizeObserver.observe(this.root);
+    }
+    
+    if (typeof MutationObserver === 'function') {
+      this.mutationObserver = new MutationObserver(this.onMutation);
+    }
 
-    this.visibilityPauser = new IntersectionObserver((entries) => {
-      const isIntersecting = entries[0].isIntersecting;
-      if (isIntersecting !== this._isVisible) {
-        this._isVisible = isIntersecting;
-        if (this._isVisible) {
-          this.emit('visibilityResume');
-          if (!this.isSettled && !this.rafId && this._mounted) {
-            this.lastPointerTime = performance.now();
-            this.startPhysicsLoop();
-          }
-        } else {
-          this.emit('visibilityPause');
-        }
-      }
-    });
-    this.visibilityPauser.observe(this.root);
-
-    this.visibilityObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const node = entry.target;
-        const idx = parseInt(node.getAttribute('data-slide-index'), 10);
-        const isClone = node.classList.contains('yd_slide-clone');
-        
-        if (entry.isIntersecting) {
-          node.classList.add('in-view');
-          node.classList.remove('out-view');
-          if (!isClone) {
-            node.removeAttribute('aria-hidden');
-            if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
-              this.visibleSlides.add(idx);
-              this.emit('slideEnter', { index: idx });
+    if (typeof IntersectionObserver === 'function') {
+      this.visibilityPauser = new IntersectionObserver((entries) => {
+        const isIntersecting = entries[0].isIntersecting;
+        if (isIntersecting !== this._isVisible) {
+          this._isVisible = isIntersecting;
+          if (this._isVisible) {
+            this.emit('visibilityResume');
+            if (!this.isSettled && !this.rafId && this._mounted) {
+              this.lastPointerTime = performance.now();
+              this.startPhysicsLoop();
             }
-          }
-        } else {
-          node.classList.add('out-view');
-          node.classList.remove('in-view');
-          if (!isClone) {
-            node.setAttribute('aria-hidden', 'true');
-            if (!isNaN(idx) && this.visibleSlides.has(idx)) {
-              this.visibleSlides.delete(idx);
-              this.emit('slideExit', { index: idx });
-            }
+          } else {
+            this.emit('visibilityPause');
           }
         }
       });
-    }, { root: this.root, threshold: 0.01 });
+      this.visibilityPauser.observe(this.root);
+
+      this.visibilityObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const node = entry.target;
+          const idx = parseInt(node.getAttribute('data-slide-index'), 10);
+          const isClone = node.classList.contains('yd_slide-clone');
+          
+          if (entry.isIntersecting) {
+            node.classList.add('in-view');
+            node.classList.remove('out-view');
+            if (!isClone) {
+              node.removeAttribute('aria-hidden');
+              if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
+                this.visibleSlides.add(idx);
+                this.emit('slideEnter', { index: idx });
+              }
+            }
+          } else {
+            node.classList.add('out-view');
+            node.classList.remove('in-view');
+            if (!isClone) {
+              node.setAttribute('aria-hidden', 'true');
+              if (!isNaN(idx) && this.visibleSlides.has(idx)) {
+                this.visibleSlides.delete(idx);
+                this.emit('slideExit', { index: idx });
+              }
+            }
+          }
+        });
+      }, { root: this.root, threshold: 0.01 });
+    }
   }
 
   setupAccessibility() {
@@ -1002,7 +1038,19 @@ class ydCarousel {
   onMutation(mutations) {
     if (this.destroyed) return;
     if (mutations.some(m => m.target.classList && m.target.classList.contains('yd_slide-clone'))) return;
-    this.scheduleRefresh(true);
+    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    
+    this.mutationRaf = requestAnimationFrame(() => {
+      this.mutationRaf = null;
+      const oldLength = this.slides.length;
+      const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
+      const newLength = realNodes.length;
+
+      this.scheduleRefresh(true);
+      if (newLength !== oldLength) {
+        this.initPlugins();
+      }
+    });
   }
 
   // ==========================================
@@ -1100,16 +1148,18 @@ class ydCarousel {
         let momentumTarget = this.targetPos - (this._velocity * 200); 
         let closestIndex = 0;
         let minDistance = Infinity;
-        this.metrics.scrollSnaps.forEach((point, index) => {
-            const d1 = Math.abs(point - momentumTarget);
-            const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - momentumTarget) : Infinity;
-            const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - momentumTarget) : Infinity;
-            const distance = Math.min(d1, d2, d3);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestIndex = index;
-            }
-        });
+        if (this.metrics && this.metrics.scrollSnaps) {
+          this.metrics.scrollSnaps.forEach((point, index) => {
+              const d1 = Math.abs(point - momentumTarget);
+              const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - momentumTarget) : Infinity;
+              const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - momentumTarget) : Infinity;
+              const distance = Math.min(d1, d2, d3);
+              if (distance < minDistance) {
+                  minDistance = distance;
+                  closestIndex = index;
+              }
+          });
+        }
         this.goTo(closestIndex);
       } else {
         this.snapToClosest();
@@ -1130,7 +1180,7 @@ class ydCarousel {
     const isVert = this.options.vertical;
     
     if (e.key === 'Home') this.goTo(0);
-    if (e.key === 'End') this.goTo(this.metrics.scrollSnaps.length - 1);
+    if (e.key === 'End' && this.metrics && this.metrics.scrollSnaps) this.goTo(this.metrics.scrollSnaps.length - 1);
     
     if (e.key === 'PageDown') this.scrollNext();
     if (e.key === 'PageUp') this.scrollPrev();
@@ -1173,7 +1223,7 @@ class ydCarousel {
        this._lastFpsTime = now;
     }
 
-    if (this.options.loop) {
+    if (this.options.loop && this.slides.length && this.metrics.slideSnaps.length) {
       const firstSnap = this.metrics.slideSnaps[0];
       const lastSnap = this.metrics.slideSnaps[this.slides.length - 1];
       
@@ -1244,57 +1294,6 @@ class ydCarousel {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  destroy(removeRef = true) {
-    if (this.destroyed) return;
-    this.emit('beforeDestroy');
-    
-    // Captured before listeners unbind and properties nullify
-    const snapshot = this.state();
-    const finalPayload = this.getEventPayload();
-
-    this.destroyed = true; 
-    this._mounted = false;
-    
-    this.emit('destroy', { ...finalPayload, state: snapshot }, true);
-
-    cancelAnimationFrame(this.rafId);
-    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
-    if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
-    if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
-    
-    this.unbindEvents();
-    if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
-    if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
-    if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
-    if (this.visibilityPauser) { this.visibilityPauser.disconnect(); this.visibilityPauser = null; }
-    
-    if (this.announceHandler) this.off('select', this.announceHandler);
-
-    this.plugins.forEach(p => {
-      try {
-        if (p.instance && p.instance.destroy) p.instance.destroy(this);
-      } catch (err) {
-        if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
-        this.emit('error', { plugin: p.name, action: 'destroy', error: err }, true);
-      }
-    });
-    
-    this.plugins = []; 
-    this.pluginsMap.clear();
-    
-    this.root.classList.remove('yd_carousel-ready');
-    this.track.style.transform = '';
-    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
-    this.visibleSlides.clear();
-
-    if (removeRef && this.root.__ydCarousel === this) {
-      delete this.root.__ydCarousel;
-    }
-
-    this.emit('afterDestroy', {}, true);
-    this.listeners = {}; 
-  }
-
   // ==========================================
   // ENTERPRISE PLUGIN ARCHITECTURE
   // ==========================================
@@ -1363,19 +1362,20 @@ class ydCarousel {
               });
             };
             api.on('select', updateDots);
-            plugin.refresh(api);
             return true;
           },
           refresh: (api) => {
             if (!dotsContainer || !baseTemplate) return;
             dotsContainer.innerHTML = '';
-            api.metrics.scrollSnaps.forEach((_, idx) => {
-              const dot = baseTemplate.cloneNode(true);
-              if (dot.tagName !== 'BUTTON') { dot.setAttribute('role', 'button'); dot.setAttribute('tabindex', '0'); }
-              dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
-              dot.setAttribute('data-index', idx);
-              dotsContainer.appendChild(dot);
-            });
+            if (api.metrics && api.metrics.scrollSnaps) {
+              api.metrics.scrollSnaps.forEach((_, idx) => {
+                const dot = baseTemplate.cloneNode(true);
+                if (dot.tagName !== 'BUTTON') { dot.setAttribute('role', 'button'); dot.setAttribute('tabindex', '0'); }
+                dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
+                dot.setAttribute('data-index', idx);
+                dotsContainer.appendChild(dot);
+              });
+            }
             if (updateDots) updateDots(api, api.getEventPayload());
           },
           destroy: (api) => {
@@ -1404,7 +1404,6 @@ class ydCarousel {
               else counterEl.textContent = `${currentText} / ${totalText}`;
             };
             api.on('select', updateCounter);
-            plugin.refresh(api);
             return true;
           },
           refresh: (api) => {
@@ -1724,12 +1723,14 @@ class ydCarousel {
               }
               const targetSlideIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
               if (targetSlideIdx > -1) {
-                 const snapTarget = api.metrics.slideSnaps[targetSlideIdx];
-                 let closestIndex = 0, minDistance = Infinity;
-                 api.metrics.scrollSnaps.forEach((p, i) => {
-                   if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
-                 });
-                 if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
+                 const snapTarget = api.metrics.scrollSnaps[targetSlideIdx];
+                 if (snapTarget !== undefined) {
+                   let closestIndex = 0, minDistance = Infinity;
+                   api.metrics.scrollSnaps.forEach((p, i) => {
+                     if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
+                   });
+                   if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
+                 }
               }
             };
             onSelect = (api, payload) => {
@@ -1849,7 +1850,7 @@ class ydCarousel {
               const toLoad = [activeSlideIndex - 1, activeSlideIndex, activeSlideIndex + 1];
               toLoad.forEach(idx => {
                 let targetIdx = idx;
-                if (api.isLoop()) targetIdx = (idx + api.slides.length) % api.slides.length;
+                if (api.isLoop()) targetIdx = (idx + (api.slides.length || 1)) % (api.slides.length || 1);
                 const slide = api.slides[targetIdx];
                 if (slide && !slide.dataset.loaded) {
                   const img = slide.querySelector('img[data-src]');
