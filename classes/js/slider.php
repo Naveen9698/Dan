@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * FINAL PRODUCTION RELEASE: O(1) Graph Resolution, Early Refresh Execution & Sorted Initialization
+ * FINAL PRODUCTION RELEASE: O(1) Graph Resolution, Early Refresh Execution & Complete Edge Case Hardening
  */
 
 class ydCarousel {
@@ -266,7 +266,6 @@ class ydCarousel {
   currentPage() { return this.currentIndex + 1; }
   pageCount() { return this.groupCount(); }
 
-  // TRANSACTION EVENT BUS
   pauseEvents() { this._eventsPaused = true; }
   resumeEvents() {
     this._eventsPaused = false;
@@ -310,7 +309,6 @@ class ydCarousel {
     }
   }
 
-  // S-TIER HOT RELOADING
   disablePlugin(name) {
     if (this.destroyed) return;
     this.disabledPlugins.add(name);
@@ -337,6 +335,7 @@ class ydCarousel {
     const defFactory = this.pluginRegistry.get(name);
     if (defFactory) {
       this._initSinglePlugin(typeof defFactory === 'function' ? defFactory() : { ...defFactory });
+      this.refreshPlugins();
     }
   }
 
@@ -526,7 +525,9 @@ class ydCarousel {
 
   goTo(index, immediate = false) {
     if (this.destroyed) return;
-    if (!this.metrics || !this.metrics.scrollSnaps || !this.metrics.scrollSnaps.length) return;
+    if (!this.metrics || !this.metrics.scrollSnaps || !this.metrics.scrollSnaps.length) {
+      return;
+    }
     
     const maxIndex = this.metrics.scrollSnaps.length - 1;
     const targetIndex = Math.max(0, Math.min(index, maxIndex));
@@ -658,7 +659,6 @@ class ydCarousel {
     this.scheduleRefresh(true);
   }
 
-  // FIX #1: Plugin Refresh ignores `!this._mounted` so it runs cleanly on startup
   refreshPlugins() {
     if (this.destroyed) return;
     this.plugins.forEach(p => {
@@ -1938,7 +1938,8 @@ FPS:  ${pInfo.fps}
     try {
       const instance = typeof def === 'function' ? def() : { ...def };
       if (instance && typeof instance.init === 'function') {
-        const active = instance.init(this);
+        const context = { api: this, root: this.root, options: this.options, plugins: this.pluginsMap, events: this.listeners };
+        const active = instance.init(this, context);
         if (active !== false) {
           const meta = {
             name: def.name,
@@ -1982,6 +1983,11 @@ FPS:  ${pInfo.fps}
 
     allPluginDefs = allPluginDefs.filter(def => !this.disabledPlugins.has(def.name));
     
+    const pluginLookup = new Map();
+    allPluginDefs.forEach(def => {
+      pluginLookup.set(def.name, def);
+    });
+    
     const sortedDefs = [];
     const visited = new Set();
     const visiting = new Set();
@@ -2002,7 +2008,7 @@ FPS:  ${pInfo.fps}
       let dependenciesHealthy = true;
       if (def.depends) {
         def.depends.forEach(depName => {
-          const depDef = allPluginDefs.find(d => d.name === depName);
+          const depDef = pluginLookup.get(depName);
           if (!depDef) {
             dependenciesHealthy = false;
             if (ydCarousel.DEBUG) console.warn(`[ydCarousel] Missing dependency: ${depName} for ${def.name}`);
@@ -2042,7 +2048,6 @@ FPS:  ${pInfo.fps}
     allPluginDefs.forEach(def => resolveGraph(def));
 
     sortedDefs.forEach(def => this._initSinglePlugin(def));
-    
     this.refreshPlugins();
   }
 }
