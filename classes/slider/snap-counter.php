@@ -18,7 +18,9 @@
   </div>
 
   <div class="yd_controles">
-    <div class="yd_counter"></div>
+    <div class="yd_counter">
+      <span class="yd_current">1</span> . <span class="yd_total">4</span>
+    </div>
   </div>
 
 </div>
