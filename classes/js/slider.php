@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * 100% COMPLETION: Responsive Breakpoints, Factory Plugins, Image Storm Prevention, CPU Halting & Runtime API
+ * 100% COMPLETION: Factory Closures, Microtask Sync Locks, Precise Plugin Registration & Correct Lifecycle Ordering
  */
 
 class ydCarousel {
@@ -11,6 +11,13 @@ class ydCarousel {
   
   // Enterprise Plugin Factory Storage
   static globalPlugins = [];
+
+  // Global Defaults
+  static defaults = {
+    duration: 0.1,
+    friction: 0.92,
+    delay: 4000
+  };
 
   static EVENTS = [
     'beforeInit', 'init', 'afterInit',
@@ -32,7 +39,8 @@ class ydCarousel {
   static startAutoInit() {
     if (typeof document === 'undefined') return;
     const initAll = () => {
-      document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
+      document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready):not(.yd_carousel-initializing)').forEach(el => {
+        el.classList.add('yd_carousel-initializing');
         if (!el.__ydCarousel) el.__ydCarousel = new ydCarousel(el);
       });
     };
@@ -57,14 +65,23 @@ class ydCarousel {
     }
   }
 
-  constructor(element) {
+  constructor(element, options = {}) {
     this.root = element;
     this.track = this.root.querySelector('.yd_container');
-    if (!this.track) return;
+    if (!this.track) {
+      this.root.classList.remove('yd_carousel-initializing');
+      return;
+    }
     
+    // Constructor API backwards compatibility & options object mapping
+    if (options instanceof Set) options = { disabledPlugins: [...options] };
+    this.instanceOptions = options;
+    this.disabledPlugins = new Set(options.disabledPlugins || []);
+
     // Internal State
     this._mounted = false;
     this._isVisible = true;
+    this._syncLock = false; // Sync Feedback Loop Protection
     this.currentPos = 0;
     this.targetPos = 0;
     this.currentIndex = 0;
@@ -78,7 +95,8 @@ class ydCarousel {
     
     this.rafId = null;
     this.mutationRaf = null;
-    this.refreshRaf = null; // Image Storm Prevention
+    this.refreshRaf = null; 
+    this.resizeRaf = null; 
     
     this.lastHeavyScrollTime = 0;
     this._currentFps = 60;
@@ -91,6 +109,9 @@ class ydCarousel {
     this.lastPointerPos = 0;
     this.lastPointerTime = 0;
     this.isClickSuppressed = false;
+
+    // PASSIVE EVENT CONFIG
+    this.passiveOpts = { passive: true };
 
     this.slides = []; 
     this.visibleSlides = new Set(); 
@@ -106,7 +127,11 @@ class ydCarousel {
     };
 
     this.listeners = {};
+    
+    // Enterprise Plugin Registry Maps
     this.plugins = [];
+    this.pluginsMap = new Map();
+    this.failedPlugins = [];
 
     // Bound methods for safe addition/removal
     this.onPointerDown = this.onPointerDown.bind(this);
@@ -122,10 +147,11 @@ class ydCarousel {
   }
 
   init() {
-    if (this.destroyed) this.destroyed = false;
+    if (this.destroyed) return;
+    
+    this.updateOptions();
     this.emit('beforeInit');
 
-    this.updateOptions();
     this.setupAccessibility();
     this.setupObservers();
     this.updateMeasurements();
@@ -133,6 +159,7 @@ class ydCarousel {
     this.initPlugins();
     this.startPhysicsLoop();
     
+    this.root.classList.remove('yd_carousel-initializing');
     this.root.classList.add('yd_carousel-ready');
     this.emit('init');
     this._mounted = true;
@@ -144,9 +171,9 @@ class ydCarousel {
   // ==========================================
 
   updateOptions() {
+    if (this.destroyed) return;
     const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
     const has = (cls) => {
-      // Mobile < 768px, Tablet < 1024px, Desktop Default
       if (w <= 768 && this.root.classList.contains(`mb:${cls}`)) return true;
       if (w <= 1024 && this.root.classList.contains(`th:${cls}`)) return true;
       return this.root.classList.contains(cls);
@@ -169,9 +196,9 @@ class ydCarousel {
       scroll: scrollAttr === 'auto' 
         ? 'auto' 
         : Number.isInteger(parsedScroll) && parsedScroll > 0 ? parsedScroll : 1,
-      duration: parseFloat(this.root.dataset.duration) || 0.1,
-      friction: parseFloat(this.root.dataset.friction) || 0.92,
-      delay: parseInt(this.root.dataset.delay) || 4000
+      duration: parseFloat(this.root.dataset.duration) || ydCarousel.defaults.duration,
+      friction: parseFloat(this.root.dataset.friction) || ydCarousel.defaults.friction,
+      delay: parseInt(this.root.dataset.delay, 10) || ydCarousel.defaults.delay
     };
 
     // Accessibility Override
@@ -204,6 +231,7 @@ class ydCarousel {
   groupCount() { return this.metrics.scrollSnaps.length; }
 
   // Autoplay Controls
+  isAutoplayRunning() { return this.autoplayController?.isPlaying() || false; }
   play() { this.autoplayController?.play(); }
   pause() { this.autoplayController?.pause(); }
   toggleAutoplay() { this.autoplayController?.toggle(); }
@@ -231,6 +259,20 @@ class ydCarousel {
       this.scheduleRefresh();
     }
   }
+
+  // Plugin Enable/Disable API (Preserves State)
+  disablePlugin(name) {
+    if (this.destroyed) return;
+    this.disabledPlugins.add(name);
+    this.instanceOptions.disabledPlugins = [...this.disabledPlugins];
+    this.reInit();
+  }
+  enablePlugin(name) {
+    if (this.destroyed) return;
+    this.disabledPlugins.delete(name);
+    this.instanceOptions.disabledPlugins = [...this.disabledPlugins];
+    this.reInit();
+  }
   
   state() {
     return Object.freeze({
@@ -243,9 +285,9 @@ class ydCarousel {
       progress: this.scrollProgress(),
       dragging: this.isDraggingActive,
       settled: this.isSettled,
-      looping: this.options.loop,
-      rtl: this.options.rtl,
-      vertical: this.options.vertical
+      looping: this.options?.loop ?? false,
+      rtl: this.options?.rtl ?? false,
+      vertical: this.options?.vertical ?? false
     });
   }
 
@@ -270,11 +312,21 @@ class ydCarousel {
       running: !!this.rafId,
       slideCount: this.slideCount(),
       groupCount: this.groupCount(),
-      pluginCount: this.plugins.length
+      visibleSlides: this.slidesInView(),
+      plugins: {
+        total: this.plugins.length + this.failedPlugins.length,
+        healthy: this.plugins.length,
+        failed: this.failedPlugins.length
+      }
     });
   }
 
-  pluginsList() { return this.plugins.map(p => p.name || 'anonymous'); }
+  registeredPlugins() { return this.plugins.map(p => p.name); }
+  pluginInfo() {
+    return Array.from(this.pluginsMap.values()).map(p => ({
+      name: p.name, version: p.version, author: p.author
+    }));
+  }
 
   buildInfo() {
     return Object.freeze({
@@ -296,10 +348,12 @@ class ydCarousel {
 
   runtimeCapabilities() {
     return Object.freeze({
-      loop: this.options.loop, dragFree: this.options.dragFree, rtl: this.options.rtl,
-      vertical: this.options.vertical, autoplay: this.options.autoplay, keyboard: this.options.keyboard,
-      contain: this.options.contain, containKeep: this.options.containKeep,
-      alignCenter: this.options.alignCenter, alignEnd: this.options.alignEnd, scroll: this.options.scroll
+      loop: this.options?.loop ?? false, dragFree: this.options?.dragFree ?? false,
+      rtl: this.options?.rtl ?? false, vertical: this.options?.vertical ?? false,
+      autoplay: this.options?.autoplay ?? false, keyboard: this.options?.keyboard ?? false,
+      contain: this.options?.contain ?? false, containKeep: this.options?.containKeep ?? false,
+      alignCenter: this.options?.alignCenter ?? false, alignEnd: this.options?.alignEnd ?? false,
+      scroll: this.options?.scroll ?? 1
     });
   }
 
@@ -307,7 +361,7 @@ class ydCarousel {
     return Object.freeze({
       version: this.version(),
       build: this.buildInfo(),
-      plugins: Object.freeze(this.pluginsList()),
+      plugins: Object.freeze(this.pluginInfo()),
       events: Object.freeze(this.events()),
       capabilities: this.capabilities(),
       runtimeCapabilities: this.runtimeCapabilities(),
@@ -330,25 +384,32 @@ class ydCarousel {
 
   getEventPayload() {
     return {
-      currentIndex: this.currentIndex,
-      previousIndex: this.prevIndex,
-      slideCount: this.slideCount(),
-      groupCount: this.groupCount(),
-      progress: this.scrollProgress(),
-      isDragging: this.isDraggingActive,
-      isSettled: this.isSettled,
-      looping: this.options.loop,
-      direction: this._velocity > 0 ? 1 : (this._velocity < 0 ? -1 : 0)
+      version: this.version(),
+      currentIndex: this.currentIndex ?? 0,
+      previousIndex: this.prevIndex ?? 0,
+      slideCount: this.slides?.length ?? 0,
+      groupCount: this.metrics?.scrollSnaps?.length ?? 0,
+      progress: this.scrollProgress() ?? 0,
+      isDragging: this.isDraggingActive ?? false,
+      isSettled: this.isSettled ?? true,
+      looping: this.options?.loop ?? false,
+      direction: (this._velocity || 0) > 0 ? 1 : ((this._velocity || 0) < 0 ? -1 : 0)
     };
   }
 
   emit(event, customData = {}) {
-    if (!this.listeners[event]) return;
     const payload = { ...this.getEventPayload(), ...customData };
-    this.listeners[event].forEach(cb => cb(this, payload));
     
+    if (this.listeners[event]) {
+      this.listeners[event].forEach(cb => {
+        try { cb(this, payload); } 
+        catch(err) { console.error(`[ydCarousel] Event Error (${event}):`, err); }
+      });
+    }
+    
+    // NATIVE DOM EVENT DISPATCHER (Fires independently of internal listeners)
     if (typeof CustomEvent !== 'undefined') {
-      this.root.dispatchEvent(new CustomEvent(`yd-${event}`, { detail: payload, bubbles: true }));
+      this.root.dispatchEvent(new CustomEvent(`yd:${event}`, { detail: payload, bubbles: true }));
     }
   }
 
@@ -371,7 +432,7 @@ class ydCarousel {
   previousIndex() { return this.prevIndex; }
   
   activeSlide() { 
-    if (!this.slides.length || !this.metrics.scrollSnaps.length) return null;
+    if (!this.slides?.length || !this.metrics?.scrollSnaps?.length) return null;
     if (this.currentIndex < 0 || this.currentIndex >= this.metrics.scrollSnaps.length) return null;
     
     const targetSnap = this.metrics.scrollSnaps[this.currentIndex];
@@ -396,14 +457,21 @@ class ydCarousel {
 
   slideNodes() { return this.slides; }
   isDragging() { return this.isDraggingActive; } 
-  isLoop() { return this.options.loop; }         
+  isLoop() { return this.options?.loop ?? false; }         
 
-  // IMAGE REFRESH STORM PREVENTION
   scheduleRefresh() {
     if (this.refreshRaf || this.destroyed) return;
     this.refreshRaf = requestAnimationFrame(() => {
-      this.updateMeasurements();
       this.refreshRaf = null;
+      this.updateMeasurements();
+    });
+  }
+
+  scheduleResize() {
+    if (this.resizeRaf || this.destroyed) return;
+    this.resizeRaf = requestAnimationFrame(() => {
+      this.resizeRaf = null;
+      this.scheduleRefresh();
     });
   }
 
@@ -412,10 +480,36 @@ class ydCarousel {
   }
 
   reInit() {
+    const savedState = {
+      currentIndex: this.currentIndex,
+      targetPos: this.targetPos,
+      currentPos: this.currentPos,
+      velocity: this._velocity,
+      dragging: this.isDraggingActive,
+      autoplayActive: this.isAutoplayRunning()
+    };
+
     const root = this.root;
-    this.destroy();
-    root.__ydCarousel = new ydCarousel(root);
-    return root.__ydCarousel;
+    const instanceOpts = this.instanceOptions;
+    
+    this.destroy(false);
+    
+    root.__ydCarousel = new ydCarousel(root, instanceOpts);
+    const newApi = root.__ydCarousel;
+
+    newApi.currentIndex = savedState.currentIndex;
+    newApi.targetPos = savedState.targetPos;
+    newApi.currentPos = savedState.currentPos;
+    newApi._velocity = savedState.velocity;
+    newApi.isDraggingActive = savedState.dragging;
+    
+    newApi.goTo(savedState.currentIndex, true);
+    
+    if (savedState.autoplayActive && newApi.play) {
+      newApi.play();
+    }
+
+    return newApi;
   }
 
   canScrollNext() {
@@ -428,8 +522,9 @@ class ydCarousel {
   }
 
   scrollProgress() {
+    if (!this.options || !this.metrics || typeof this.maxScroll === 'undefined') return 0;
     if (this.options.loop) {
-      const relativePos = this.currentPos - this.metrics.prependOffset;
+      const relativePos = this.currentPos - (this.metrics.prependOffset || 0);
       return Math.max(0, Math.min(1, relativePos / (this.metrics.realTrackSize || 1)));
     }
     if (!this.maxScroll) return 0;
@@ -437,6 +532,7 @@ class ydCarousel {
   }
 
   slideProgress(index) {
+    if (!this.metrics || !this.metrics.slideSnaps) return 0;
     const snap = this.metrics.slideSnaps[index] || 0;
     const distance = this.currentPos - snap;
     const progress = distance / (this.metrics.viewportSize || 1);
@@ -458,7 +554,7 @@ class ydCarousel {
   updateMeasurements() {
     if (this.destroyed) return;
     this.emit('beforeResize');
-    this.updateOptions(); // Parse Breakpoint Utilities
+    this.updateOptions(); 
 
     this.visibleSlides.clear();
 
@@ -470,7 +566,6 @@ class ydCarousel {
 
     this.slides.forEach((slide, idx) => {
       slide.setAttribute('data-slide-index', idx);
-      
       const imgs = slide.querySelectorAll('img');
       imgs.forEach(img => {
         if (ydCarousel.DEBUG && !img.getAttribute('width') && !img.getAttribute('height') && !img.style.aspectRatio) {
@@ -565,6 +660,7 @@ class ydCarousel {
     this.emit('resize');
     this.goTo(this.currentIndex, true);
     this.updateSlideStates();
+    this.refreshPlugins();
     this.emit('afterResize');
   }
 
@@ -588,7 +684,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // OBSERVERS
+  // OBSERVERS (VISIBILITY PAUSE & CPU HALT)
   // ==========================================
   
   setupObservers() {
@@ -646,19 +742,16 @@ class ydCarousel {
     }, { root: this.root, threshold: 0.01 });
   }
 
-  onResize() { this.scheduleRefresh(); }
+  onResize() { this.scheduleResize(); }
 
   onMutation(mutations) {
+    if (this.destroyed) return;
     if (mutations.some(m => m.target.classList && m.target.classList.contains('yd_slide-clone'))) return;
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.mutationRaf = requestAnimationFrame(() => {
-      const oldLength = this.slides.length;
-      const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
-      const newLength = realNodes.length;
-
+      this.mutationRaf = null;
       this.scheduleRefresh();
-      if (newLength !== oldLength) this.initPlugins(); 
     });
   }
 
@@ -682,13 +775,13 @@ class ydCarousel {
   unbindEvents() {
     this.track.removeEventListener('pointerdown', this.onPointerDown);
     this.track.removeEventListener('click', this.onClick, { capture: true });
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointermove', this.onPointerMove, this.passiveOpts);
+    window.removeEventListener('pointerup', this.onPointerUp, this.passiveOpts);
     this.root.removeEventListener('keydown', this.onKeyDown);
   }
 
   onPointerDown(e) {
-    if (e.button !== 0) return; 
+    if (this.destroyed || e.button !== 0) return; 
     
     this.isDraggingActive = true;
     this.isClickSuppressed = false;
@@ -703,15 +796,15 @@ class ydCarousel {
     this.track.setPointerCapture(e.pointerId);
     this.track.style.cursor = 'grabbing';
     
-    window.addEventListener('pointermove', this.onPointerMove, { passive: true });
-    window.addEventListener('pointerup', this.onPointerUp, { passive: true });
+    window.addEventListener('pointermove', this.onPointerMove, this.passiveOpts);
+    window.addEventListener('pointerup', this.onPointerUp, this.passiveOpts);
     
     this.emit('dragStart');
     e.preventDefault(); 
   }
 
   onPointerMove(e) {
-    if (!this.isDraggingActive) return;
+    if (this.destroyed || !this.isDraggingActive) return;
     const currentPointer = this.getPointerPos(e);
     
     let dragDistance = this.dragStartPos - currentPointer;
@@ -741,13 +834,13 @@ class ydCarousel {
   }
 
   onPointerUp(e) {
-    if (!this.isDraggingActive) return;
+    if (this.destroyed || !this.isDraggingActive) return;
     this.isDraggingActive = false;
     this.track.releasePointerCapture(e.pointerId);
     this.track.style.cursor = '';
 
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointermove', this.onPointerMove, this.passiveOpts);
+    window.removeEventListener('pointerup', this.onPointerUp, this.passiveOpts);
     this.emit('dragEnd');
 
     if (this.options.dragFree) {
@@ -769,6 +862,7 @@ class ydCarousel {
   }
 
   onKeyDown(e) {
+    if (this.destroyed) return;
     const isRtl = this.options.rtl;
     const isVert = this.options.vertical;
     
@@ -795,14 +889,14 @@ class ydCarousel {
   // ==========================================
 
   startPhysicsLoop() {
-    if (this.rafId) return;
+    if (this.rafId || this.destroyed) return;
     this.lastHeavyScrollTime = performance.now();
     this.rafId = requestAnimationFrame(this.tick);
   }
 
   tick() {
     if (this.destroyed) return;
-
+    
     if (!this._isVisible) {
       this.rafId = null;
       return;
@@ -878,7 +972,7 @@ class ydCarousel {
     }
 
     this.emit('scroll');
-
+    
     if (now - this.lastHeavyScrollTime > 50) {
       this.emit('scrollHeavy');
       this.lastHeavyScrollTime = now;
@@ -887,14 +981,19 @@ class ydCarousel {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  destroy() {
+  // ISSUE #2 FIX: Emit 'destroy' event FIRST before clearing plugins and listeners
+  destroy(removeRef = true) {
     if (this.destroyed) return;
+    
+    this.emit('destroy', { state: this.state() });
+
     this.destroyed = true; 
     this._mounted = false;
     
     cancelAnimationFrame(this.rafId);
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
+    if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
     
     this.unbindEvents();
     if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
@@ -904,19 +1003,26 @@ class ydCarousel {
     
     if (this.announceHandler) this.off('select', this.announceHandler);
 
-    this.plugins.forEach(p => p.destroy && p.destroy(this));
+    this.plugins.forEach(p => {
+      try {
+        if (p.instance && p.instance.destroy) p.instance.destroy(this);
+      } catch (err) {
+        console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
+      }
+    });
+    
     this.plugins = []; 
+    this.pluginsMap.clear();
     
     this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
     this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
     this.visibleSlides.clear();
 
-    if (this.root.__ydCarousel === this) {
+    if (removeRef && this.root.__ydCarousel === this) {
       delete this.root.__ydCarousel;
     }
 
-    this.emit('destroy', { state: this.state() });
     this.listeners = {}; 
   }
 
@@ -925,6 +1031,7 @@ class ydCarousel {
   // ==========================================
 
   goTo(index, immediate = false) {
+    if (this.destroyed) return;
     const maxIndex = this.metrics.scrollSnaps.length - 1;
     const targetIndex = Math.max(0, Math.min(index, maxIndex));
     
@@ -1046,71 +1153,85 @@ class ydCarousel {
   }
 
   // ==========================================
-  // PLUGIN ARCHITECTURE
+  // ENTERPRISE PLUGIN ARCHITECTURE
   // ==========================================
 
+  refreshPlugins() {
+    if (this.destroyed || !this._mounted) return;
+    this.plugins.forEach(p => {
+      if (p.instance && typeof p.instance.refresh === 'function') {
+        try { p.instance.refresh(this); } 
+        catch (err) { console.error(`[ydCarousel] Plugin "${p.name}" refresh error:`, err); }
+      }
+    });
+  }
+
   initPlugins() {
-    this.plugins.forEach(p => p.destroy && p.destroy(this));
+    this.plugins.forEach(p => {
+      try {
+        if (p.instance && p.instance.destroy) p.instance.destroy(this);
+      } catch (err) {
+        console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
+      }
+    });
+    
     this.plugins = [];
+    this.pluginsMap.clear();
+    this.failedPlugins = [];
 
-    const allPluginDefs = [
-      ...ydCarousel.globalPlugins.map(f => f())
-    ];
+    const initializedPluginNames = new Set();
+    let allPluginDefs = [...ydCarousel.globalPlugins.map(f => typeof f === 'function' ? f() : { ...f })];
 
-    const prevBtn = this.root.querySelector('.yd_prev');
-    const nextBtn = this.root.querySelector('.yd_next');
-    if (prevBtn || nextBtn) {
-      allPluginDefs.push({
-        name: 'controls',
-        priority: 10,
+    // ==========================================
+    // CORE MODULE FACTORIES
+    // ==========================================
+    
+    const createControlsPlugin = () => {
+      let prevBtn, nextBtn, hPrev, hNext;
+      return {
+        name: 'controls', version: '1.0.0', author: 'yd', priority: 10,
         init: (api) => {
-          this._hPrev = () => api.scrollPrev();
-          this._hNext = () => api.scrollNext();
-          if (prevBtn) prevBtn.addEventListener('click', this._hPrev);
-          if (nextBtn) nextBtn.addEventListener('click', this._hNext);
+          prevBtn = api.root.querySelector('.yd_prev');
+          nextBtn = api.root.querySelector('.yd_next');
+          if (!prevBtn && !nextBtn) return false;
+          hPrev = () => api.scrollPrev();
+          hNext = () => api.scrollNext();
+          if (prevBtn) prevBtn.addEventListener('click', hPrev);
+          if (nextBtn) nextBtn.addEventListener('click', hNext);
+          return true;
         },
         destroy: () => {
-          if (prevBtn) prevBtn.removeEventListener('click', this._hPrev);
-          if (nextBtn) nextBtn.removeEventListener('click', this._hNext);
+          if (prevBtn) prevBtn.removeEventListener('click', hPrev);
+          if (nextBtn) nextBtn.removeEventListener('click', hNext);
         }
-      });
+      };
+    };
+    if (this.root.querySelector('.yd_prev') || this.root.querySelector('.yd_next')) {
+      allPluginDefs.push(createControlsPlugin());
     }
 
-    const dotsContainer = this.root.querySelector('.yd_dots');
-    if (dotsContainer) {
-      allPluginDefs.push({
-        name: 'dots',
-        priority: 20,
+    const createDotsPlugin = () => {
+      let dotsContainer, template, onDotsClick, updateDots;
+      const plugin = {
+        name: 'dots', version: '1.0.0', author: 'yd', priority: 20,
         init: (api) => {
-          let template = dotsContainer.querySelector('.yd_dot');
-          if (template) {
-            template = template.cloneNode(true);
-          } else {
-            template = document.createElement('button');
-            template.className = 'yd_dot';
-          }
-          dotsContainer.innerHTML = '';
+          dotsContainer = api.root.querySelector('.yd_dots');
+          if (!dotsContainer) return false;
           
-          this._onDotsClick = (e) => {
+          template = dotsContainer.querySelector('.yd_dot');
+          if (template) template = template.cloneNode(true);
+          else { template = document.createElement('button'); template.className = 'yd_dot'; }
+          
+          onDotsClick = (e) => {
             const dot = e.target.closest('.yd_dot');
             if (dot) {
               const idx = parseInt(dot.getAttribute('data-index'), 10);
               if (!isNaN(idx)) api.scrollTo(idx);
             }
           };
-          dotsContainer.addEventListener('click', this._onDotsClick);
+          dotsContainer.addEventListener('click', onDotsClick);
 
-          api.metrics.scrollSnaps.forEach((_, idx) => {
-            const dot = template.cloneNode(true);
-            if (dot.tagName !== 'BUTTON') {
-              dot.setAttribute('role', 'button');
-              dot.setAttribute('tabindex', '0');
-            }
-            dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
-            dot.setAttribute('data-index', idx);
-            dotsContainer.appendChild(dot);
-          });
-          this._updateDots = (api, payload) => {
+          updateDots = (api, payload) => {
             Array.from(dotsContainer.children).forEach((dot, idx) => {
               const isActive = idx === payload.currentIndex;
               dot.classList.toggle('active', isActive);
@@ -1118,90 +1239,113 @@ class ydCarousel {
               else dot.removeAttribute('aria-current');
             });
           };
-          api.on('select', this._updateDots);
-          this._updateDots(api, api.getEventPayload());
+          api.on('select', updateDots);
+          
+          // ISSUE #1 FIX: Calling plugin.refresh(api) explicitly
+          plugin.refresh(api);
+          return true;
+        },
+        refresh: (api) => {
+          if (!dotsContainer) return;
+          dotsContainer.innerHTML = '';
+          api.metrics.scrollSnaps.forEach((_, idx) => {
+            const dot = template.cloneNode(true);
+            if (dot.tagName !== 'BUTTON') { dot.setAttribute('role', 'button'); dot.setAttribute('tabindex', '0'); }
+            dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
+            dot.setAttribute('data-index', idx);
+            dotsContainer.appendChild(dot);
+          });
+          if (updateDots) updateDots(api, api.getEventPayload());
         },
         destroy: (api) => {
-          dotsContainer.removeEventListener('click', this._onDotsClick);
-          api.off('select', this._updateDots);
+          if (dotsContainer) dotsContainer.removeEventListener('click', onDotsClick);
+          if (updateDots) api.off('select', updateDots);
         }
-      });
+      };
+      return plugin;
+    };
+    if (this.root.querySelector('.yd_dots')) {
+      allPluginDefs.push(createDotsPlugin());
     }
 
-    const counterEl = this.root.querySelector('.yd_counter');
-    if (counterEl) {
-      allPluginDefs.push({
-        name: 'counter',
-        priority: 30,
+    const createCounterPlugin = () => {
+      let counterEl, currentEl, totalEl, updateCounter;
+      const plugin = {
+        name: 'counter', version: '1.0.0', author: 'yd', priority: 30,
         init: (api) => {
-          const currentEl = counterEl.querySelector('.yd_current');
-          const totalEl = counterEl.querySelector('.yd_total');
-          
-          this._updateCounter = (api, payload) => {
+          counterEl = api.root.querySelector('.yd_counter');
+          if (!counterEl) return false;
+          currentEl = counterEl.querySelector('.yd_current');
+          totalEl = counterEl.querySelector('.yd_total');
+          updateCounter = (api, payload) => {
             const currentText = payload.currentIndex + 1;
             const totalText = payload.groupCount;
-            
-            if (currentEl && totalEl) {
-              currentEl.textContent = currentText;
-              totalEl.textContent = totalText;
-            } else {
-              counterEl.textContent = `${currentText} / ${totalText}`;
-            }
+            if (currentEl && totalEl) { currentEl.textContent = currentText; totalEl.textContent = totalText; }
+            else counterEl.textContent = `${currentText} / ${totalText}`;
           };
-          api.on('select', this._updateCounter);
-          this._updateCounter(api, api.getEventPayload());
+          api.on('select', updateCounter);
+          
+          // ISSUE #1 FIX: Calling plugin.refresh(api) explicitly
+          plugin.refresh(api);
+          return true;
         },
-        destroy: (api) => api.off('select', this._updateCounter)
-      });
+        refresh: (api) => {
+          if (counterEl && updateCounter) updateCounter(api, api.getEventPayload());
+        },
+        destroy: (api) => {
+          if (updateCounter) api.off('select', updateCounter);
+        }
+      };
+      return plugin;
+    };
+    if (this.root.querySelector('.yd_counter')) {
+      allPluginDefs.push(createCounterPlugin());
     }
 
-    const progressEl = this.root.querySelector('.yd_progress');
-    if (progressEl) {
-      allPluginDefs.push({
-        name: 'progress',
-        priority: 40,
+    const createProgressPlugin = () => {
+      let progressEl, updateProgress;
+      return {
+        name: 'progress', version: '1.0.0', author: 'yd', priority: 40,
         init: (api) => {
-          this._updateProgress = (api, payload) => {
+          progressEl = api.root.querySelector('.yd_progress');
+          if (!progressEl) return false;
+          updateProgress = (api, payload) => {
             const pct = payload.progress * 100;
             progressEl.style.setProperty('--progress', `${pct}%`);
           };
-          api.on('scrollHeavy', this._updateProgress);
-          this._updateProgress(api, api.getEventPayload());
+          api.on('scrollHeavy', updateProgress);
+          updateProgress(api, api.getEventPayload());
+          return true;
         },
-        destroy: (api) => api.off('scrollHeavy', this._updateProgress)
-      });
+        destroy: (api) => {
+          if (updateProgress) api.off('scrollHeavy', updateProgress);
+        }
+      };
+    };
+    if (this.root.querySelector('.yd_progress')) {
+      allPluginDefs.push(createProgressPlugin());
     }
 
-    if (this.options.autoplay) {
-      allPluginDefs.push({
-        name: 'autoplay',
-        priority: 100,
+    const createAutoplayPlugin = () => {
+      let playTimer, isPaused = false, hasStarted = false;
+      let onVisPause, onVisResume, onToggleRequest, onHoverStop, onHoverPlay;
+      return {
+        name: 'autoplay', version: '1.0.0', author: 'yd', priority: 100,
         init: (api) => {
-          let playTimer;
-          let isPaused = false;
-          let hasStarted = false;
+          if (!api.options.autoplay) return false;
           
           const start = () => {
             clearTimeout(playTimer);
-            if (!hasStarted) {
-              hasStarted = true;
-              api.emit('autoplayStart');
-            } else if (isPaused) {
-              isPaused = false;
-              api.emit('autoplayResume'); 
-            }
+            if (!hasStarted) { hasStarted = true; api.emit('autoplayStart'); } 
+            else if (isPaused) { isPaused = false; api.emit('autoplayResume'); }
             if (!api.canScrollNext()) return;
             playTimer = setTimeout(() => { api.scrollNext(); start(); }, api.options.delay);
           };
           const stop = () => {
             clearTimeout(playTimer);
-            if (hasStarted && !isPaused) {
-              isPaused = true;
-              api.emit('autoplayPause');
-            }
+            if (hasStarted && !isPaused) { isPaused = true; api.emit('autoplayPause'); }
           };
 
-          // Assign Public Interface
           api.autoplayController = {
             play: () => start(),
             pause: () => stop(),
@@ -1209,150 +1353,161 @@ class ydCarousel {
             isPlaying: () => hasStarted && !isPaused
           };
 
-          this._onVisPause = () => stop();
-          this._onVisResume = () => start();
-          this._onToggleRequest = () => api.autoplayController.toggle();
+          onVisPause = () => stop();
+          onVisResume = () => start();
+          onToggleRequest = () => api.autoplayController.toggle();
+          onHoverStop = () => stop();
+          onHoverPlay = () => start();
 
-          api.on('visibilityPause', this._onVisPause);
-          api.on('visibilityResume', this._onVisResume);
-          api.on('autoplayToggleRequest', this._onToggleRequest);
-          api.on('dragStart', stop);
-          api.on('dragEnd', start);
+          api.on('visibilityPause', onVisPause);
+          api.on('visibilityResume', onVisResume);
+          api.on('autoplayToggleRequest', onToggleRequest);
+          api.on('dragStart', onHoverStop);
+          api.on('dragEnd', onHoverPlay);
           
-          this._onHoverStop = () => stop();
-          this._onHoverPlay = () => start();
           if (api.root.classList.contains('pause-hover')) {
-            api.root.addEventListener('mouseenter', this._onHoverStop);
-            api.root.addEventListener('mouseleave', this._onHoverPlay);
+            api.root.addEventListener('mouseenter', onHoverStop);
+            api.root.addEventListener('mouseleave', onHoverPlay);
           }
-          api.root.addEventListener('focusin', this._onHoverStop);
-          api.root.addEventListener('focusout', this._onHoverPlay);
+          api.root.addEventListener('focusin', onHoverStop);
+          api.root.addEventListener('focusout', onHoverPlay);
           
           start();
+          return true;
         },
         destroy: (api) => {
-          api.autoplayController.pause();
-          delete api.autoplayController;
+          if(api.autoplayController) {
+             api.autoplayController.pause();
+             delete api.autoplayController;
+          }
           api.emit('autoplayStop');
-          api.off('visibilityPause', this._onVisPause);
-          api.off('visibilityResume', this._onVisResume);
-          api.off('autoplayToggleRequest', this._onToggleRequest);
-          api.off('dragStart', this._onHoverStop);
-          api.off('dragEnd', this._onHoverPlay);
-          api.root.removeEventListener('mouseenter', this._onHoverStop);
-          api.root.removeEventListener('mouseleave', this._onHoverPlay);
-          api.root.removeEventListener('focusin', this._onHoverStop);
-          api.root.removeEventListener('focusout', this._onHoverPlay);
+          api.off('visibilityPause', onVisPause);
+          api.off('visibilityResume', onVisResume);
+          api.off('autoplayToggleRequest', onToggleRequest);
+          api.off('dragStart', onHoverStop);
+          api.off('dragEnd', onHoverPlay);
+          api.root.removeEventListener('mouseenter', onHoverStop);
+          api.root.removeEventListener('mouseleave', onHoverPlay);
+          api.root.removeEventListener('focusin', onHoverStop);
+          api.root.removeEventListener('focusout', onHoverPlay);
         }
-      });
-
-      const autoplayToggle = this.root.querySelector('.yd_autoplay-toggle');
-      if (autoplayToggle) {
-        allPluginDefs.push({
-          name: 'autoplay-toggle',
-          priority: 110,
-          init: (api) => {
-            this._onClickToggle = () => api.emit('autoplayToggleRequest');
-            autoplayToggle.addEventListener('click', this._onClickToggle);
-            
-            this._onPauseEvt = () => autoplayToggle.classList.add('paused');
-            this._onResumeEvt = () => autoplayToggle.classList.remove('paused');
-            this._onStartEvt = () => autoplayToggle.classList.remove('paused');
-            
-            api.on('autoplayPause', this._onPauseEvt);
-            api.on('autoplayResume', this._onResumeEvt);
-            api.on('autoplayStart', this._onStartEvt);
-          },
-          destroy: (api) => {
-            autoplayToggle.removeEventListener('click', this._onClickToggle);
-            api.off('autoplayPause', this._onPauseEvt);
-            api.off('autoplayResume', this._onResumeEvt);
-            api.off('autoplayStart', this._onStartEvt);
-          }
-        });
-      }
-
-      const autoplayProgressEl = this.root.querySelector('.yd_autoplay-progress');
-      if (autoplayProgressEl) {
-        allPluginDefs.push({
-          name: 'autoplay-progress',
-          priority: 120,
-          init: (api) => {
-            let rafId, startTime, elapsed = 0, isPlaying = false;
-            let delayMs = api.options.delay;
-            
-            const tick = () => {
-              if (!isPlaying) return;
-              const now = performance.now();
-              const currentElapsed = elapsed + (now - startTime);
-              let pct = Math.min(100, (currentElapsed / delayMs) * 100);
-              autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
-              if (pct < 100) rafId = requestAnimationFrame(tick);
-            };
-
-            const start = () => {
-              isPlaying = true;
-              startTime = performance.now();
-              cancelAnimationFrame(rafId);
-              rafId = requestAnimationFrame(tick);
-            };
-
-            const pause = () => {
-              isPlaying = false;
-              elapsed += (performance.now() - startTime);
-              cancelAnimationFrame(rafId);
-            };
-
-            const reset = () => {
-              elapsed = 0;
-              autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`);
-            };
-            
-            this._onSlideChange = () => { reset(); if (api.autoplayController && api.autoplayController.isPlaying()) start(); };
-            this._onStartProg = () => { reset(); start(); };
-            this._onResumeProg = start;
-            this._onPauseProg = pause;
-            this._onStopProg = () => { pause(); reset(); };
-            this._onDragStartProg = pause;
-            
-            api.on('activeSlideChange', this._onSlideChange);
-            api.on('autoplayStart', this._onStartProg);
-            api.on('autoplayResume', this._onResumeProg);
-            api.on('autoplayPause', this._onPauseProg);
-            api.on('autoplayStop', this._onStopProg);
-            api.on('dragStart', this._onDragStartProg);
-          },
-          destroy: (api) => {
-            api.off('activeSlideChange', this._onSlideChange);
-            api.off('autoplayStart', this._onStartProg);
-            api.off('autoplayResume', this._onResumeProg);
-            api.off('autoplayPause', this._onPauseProg);
-            api.off('autoplayStop', this._onStopProg);
-            api.off('dragStart', this._onDragStartProg);
-          }
-        });
-      }
+      };
+    };
+    if (this.options.autoplay) {
+      allPluginDefs.push(createAutoplayPlugin());
     }
 
-    const scrollbarEl = this.root.querySelector('.yd_scrollbar');
-    if (scrollbarEl) {
-      allPluginDefs.push({
-        name: 'scrollbar',
-        priority: 50,
+    const createAutoplayTogglePlugin = () => {
+      let autoplayToggle, onClick, onPause, onResume, onStart;
+      return {
+        name: 'autoplay-toggle', version: '1.0.0', author: 'yd', priority: 110,
         init: (api) => {
-          const thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
-          const track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
-          let isDragging = false, startPos, startProgress;
+          autoplayToggle = api.root.querySelector('.yd_autoplay-toggle');
+          if (!autoplayToggle) return false;
           
-          this._updateThumb = (api) => {
+          onClick = () => api.emit('autoplayToggleRequest');
+          autoplayToggle.addEventListener('click', onClick);
+          onPause = () => autoplayToggle.classList.add('paused');
+          onResume = () => autoplayToggle.classList.remove('paused');
+          onStart = () => autoplayToggle.classList.remove('paused');
+          
+          api.on('autoplayPause', onPause);
+          api.on('autoplayResume', onResume);
+          api.on('autoplayStart', onStart);
+          return true;
+        },
+        destroy: (api) => {
+          if (autoplayToggle) autoplayToggle.removeEventListener('click', onClick);
+          if (onPause) api.off('autoplayPause', onPause);
+          if (onResume) api.off('autoplayResume', onResume);
+          if (onStart) api.off('autoplayStart', onStart);
+        }
+      };
+    };
+    if (this.root.querySelector('.yd_autoplay-toggle')) {
+      allPluginDefs.push(createAutoplayTogglePlugin());
+    }
+
+    const createAutoplayProgressPlugin = () => {
+      let autoplayProgressEl, rafId, startTime, elapsed = 0, isPlaying = false;
+      let delayMs, onSlideChange, onStartEvt, onResumeEvt, onPauseEvt, onStopEvt, onDragStartEvt;
+      return {
+        name: 'autoplay-progress', version: '1.0.0', author: 'yd', priority: 120,
+        init: (api) => {
+          autoplayProgressEl = api.root.querySelector('.yd_autoplay-progress');
+          if (!autoplayProgressEl) return false;
+
+          delayMs = api.options.delay;
+          const tick = () => {
+            if (!isPlaying) return;
+            const now = performance.now();
+            const currentElapsed = elapsed + (now - startTime);
+            let pct = Math.min(100, (currentElapsed / delayMs) * 100);
+            autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
+            if (pct < 100) rafId = requestAnimationFrame(tick);
+          };
+          const start = () => { isPlaying = true; startTime = performance.now(); cancelAnimationFrame(rafId); rafId = requestAnimationFrame(tick); };
+          
+          // ISSUE #3 FIX: Autoplay Progress NaN Check
+          const pause = () => { 
+            if (!isPlaying || !startTime) return; 
+            isPlaying = false; 
+            elapsed += (performance.now() - startTime); 
+            cancelAnimationFrame(rafId); 
+          };
+          const reset = () => { elapsed = 0; autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`); };
+          
+          onSlideChange = () => { reset(); if (api.isAutoplayRunning()) start(); };
+          onStartEvt = () => { reset(); start(); };
+          onResumeEvt = start;
+          onPauseEvt = pause;
+          onStopEvt = () => { pause(); reset(); };
+          onDragStartEvt = pause;
+          
+          api.on('activeSlideChange', onSlideChange);
+          api.on('autoplayStart', onStartEvt);
+          api.on('autoplayResume', onResumeEvt);
+          api.on('autoplayPause', onPauseEvt);
+          api.on('autoplayStop', onStopEvt);
+          api.on('dragStart', onDragStartEvt);
+          return true;
+        },
+        destroy: (api) => {
+          cancelAnimationFrame(rafId);
+          if (onSlideChange) api.off('activeSlideChange', onSlideChange);
+          if (onStartEvt) api.off('autoplayStart', onStartEvt);
+          if (onResumeEvt) api.off('autoplayResume', onResumeEvt);
+          if (onPauseEvt) api.off('autoplayPause', onPauseEvt);
+          if (onStopEvt) api.off('autoplayStop', onStopEvt);
+          if (onDragStartEvt) api.off('dragStart', onDragStartEvt); 
+        }
+      };
+    };
+    if (this.root.querySelector('.yd_autoplay-progress')) {
+      allPluginDefs.push(createAutoplayProgressPlugin());
+    }
+
+    const createScrollbarPlugin = () => {
+      let scrollbarEl, thumb, track, isDragging = false, startPos, startProgress;
+      let updateThumb, onTrackClick, onPointerDown, onPointerMove, onPointerUp;
+      return {
+        name: 'scrollbar', version: '1.0.0', author: 'yd', priority: 50,
+        init: (api) => {
+          scrollbarEl = api.root.querySelector('.yd_scrollbar');
+          if (!scrollbarEl) return false;
+          
+          thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
+          track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
+          
+          updateThumb = () => {
             if (isDragging) return;
             const pct = api.scrollProgress() * 100;
             if (thumb) thumb.style.setProperty('--scroll-progress', `${pct}%`);
           };
-          api.on('scroll', this._updateThumb);
-          this._updateThumb(api);
+          api.on('scroll', updateThumb);
+          updateThumb(api);
           
-          this._onTrackClick = (e) => {
+          onTrackClick = (e) => {
             if (e.target === thumb || isDragging) return;
             const rect = track.getBoundingClientRect();
             const clickPct = api.options.vertical ? (e.clientY - rect.top) / rect.height : (e.clientX - rect.left) / rect.width;
@@ -1363,17 +1518,17 @@ class ydCarousel {
             });
             api.scrollTo(closestIdx);
           };
-          track.addEventListener('click', this._onTrackClick);
+          track.addEventListener('click', onTrackClick);
 
           if (thumb) {
-            this._onSbPointerDown = (e) => {
+            onPointerDown = (e) => {
               isDragging = true;
               startPos = api.options.vertical ? e.clientY : e.clientX;
               startProgress = api.scrollProgress();
               thumb.setPointerCapture(e.pointerId);
               api.isDraggingActive = true;
             };
-            this._onSbPointerMove = (e) => {
+            onPointerMove = (e) => {
               if (!isDragging) return;
               const rect = track.getBoundingClientRect();
               const delta = api.options.vertical ? e.clientY - startPos : e.clientX - startPos;
@@ -1383,40 +1538,42 @@ class ydCarousel {
               thumb.style.setProperty('--scroll-progress', `${newProgress * 100}%`);
               api.targetPos = newProgress * api.maxScroll; 
             };
-            this._onSbPointerUp = (e) => {
+            onPointerUp = (e) => {
               if (!isDragging) return;
               isDragging = false;
               thumb.releasePointerCapture(e.pointerId);
               api.isDraggingActive = false;
               api.snapToClosest();
             };
-            thumb.addEventListener('pointerdown', this._onSbPointerDown);
-            thumb.addEventListener('pointermove', this._onSbPointerMove, { passive: true });
-            thumb.addEventListener('pointerup', this._onSbPointerUp, { passive: true });
+            thumb.addEventListener('pointerdown', onPointerDown);
+            thumb.addEventListener('pointermove', onPointerMove, api.passiveOpts);
+            thumb.addEventListener('pointerup', onPointerUp, api.passiveOpts);
           }
+          return true;
         },
         destroy: (api) => {
-          api.off('scroll', this._updateThumb);
-          const track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
-          const thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
-          if (track) track.removeEventListener('click', this._onTrackClick);
+          if (updateThumb) api.off('scroll', updateThumb);
+          if (track) track.removeEventListener('click', onTrackClick);
           if (thumb) {
-            thumb.removeEventListener('pointerdown', this._onSbPointerDown);
-            thumb.removeEventListener('pointermove', this._onSbPointerMove);
-            thumb.removeEventListener('pointerup', this._onSbPointerUp); 
+            thumb.removeEventListener('pointerdown', onPointerDown);
+            thumb.removeEventListener('pointermove', onPointerMove, api.passiveOpts);
+            thumb.removeEventListener('pointerup', onPointerUp, api.passiveOpts); 
           }
         }
-      });
+      };
+    };
+    if (this.root.querySelector('.yd_scrollbar')) {
+      allPluginDefs.push(createScrollbarPlugin());
     }
 
-    if (this.root.classList.contains('wheel')) {
-      allPluginDefs.push({
-        name: 'wheel',
-        priority: 60,
+    const createWheelPlugin = () => {
+      let onWheel, resetTimer, accumulator = 0;
+      return {
+        name: 'wheel', version: '1.0.0', author: 'yd', priority: 60,
         init: (api) => {
+          if (!api.root.classList.contains('wheel')) return false;
           const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
-          let accumulator = 0;
-          this._onWheel = (e) => {
+          onWheel = (e) => {
             if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
             e.preventDefault();
             const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
@@ -1425,26 +1582,31 @@ class ydCarousel {
                accumulator > 0 ? api.scrollNext() : api.scrollPrev();
                accumulator = 0;
             }
-            clearTimeout(this._wheelResetTimer);
-            this._wheelResetTimer = setTimeout(() => { accumulator = 0; }, 100);
+            clearTimeout(resetTimer);
+            resetTimer = setTimeout(() => { accumulator = 0; }, 100);
           };
-          api.root.addEventListener('wheel', this._onWheel, { passive: false });
+          api.root.addEventListener('wheel', onWheel, { passive: false });
+          return true;
         },
         destroy: (api) => {
-          clearTimeout(this._wheelResetTimer); 
-          api.root.removeEventListener('wheel', this._onWheel);
+          clearTimeout(resetTimer); 
+          if (onWheel) api.root.removeEventListener('wheel', onWheel);
         }
-      });
+      };
+    };
+    if (this.root.classList.contains('wheel')) {
+      allPluginDefs.push(createWheelPlugin());
     }
 
-    if (this.root.classList.contains('hash')) {
-      allPluginDefs.push({
-        name: 'hash',
-        priority: 70,
+    const createHashPlugin = () => {
+      let onHash, onSelect;
+      return {
+        name: 'hash', version: '1.0.0', author: 'yd', priority: 70,
         init: (api) => {
+          if (!api.root.classList.contains('hash')) return false;
           const updateUrl = api.root.dataset.hashUpdate !== 'false';
           const hashGroup = api.hashGroup(); 
-          this._onHashChange = () => {
+          onHash = () => {
             const rawHash = window.location.hash.replace('#', '');
             let slideHash = rawHash;
             if (hashGroup) {
@@ -1461,7 +1623,7 @@ class ydCarousel {
                if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
             }
           };
-          this._onHashSelect = (api, payload) => {
+          onSelect = (api, payload) => {
             if (!updateUrl) return;
             const activeNode = api.activeSlide();
             const slideHash = activeNode ? activeNode.dataset.hash : null;
@@ -1470,26 +1632,33 @@ class ydCarousel {
               history.replaceState(null, null, newHash);
             }
           };
-          window.addEventListener('hashchange', this._onHashChange);
-          api.on('select', this._onHashSelect);
-          setTimeout(this._onHashChange, 0);
+          window.addEventListener('hashchange', onHash);
+          api.on('select', onSelect);
+          setTimeout(onHash, 0);
+          return true;
         },
         destroy: (api) => {
-          window.removeEventListener('hashchange', this._onHashChange);
-          api.off('select', this._onHashSelect);
+          window.removeEventListener('hashchange', onHash);
+          if (onSelect) api.off('select', onSelect);
         }
-      });
+      };
+    };
+    if (this.root.classList.contains('hash')) {
+      allPluginDefs.push(createHashPlugin());
     }
 
-    const syncTarget = this.root.dataset.sync;
-    const syncGroup = this.syncGroup();
-    if (syncTarget || syncGroup) {
-      allPluginDefs.push({
-        name: 'sync',
-        priority: 80,
+    const createSyncPlugin = () => {
+      let onSelect, hasSynced = false;
+      return {
+        name: 'sync', version: '1.0.0', author: 'yd', priority: 80,
         init: (api) => {
-          let hasSynced = false;
-          this._onSyncSelect = (api, payload) => {
+          const syncTarget = api.root.dataset.sync;
+          const syncGroup = api.syncGroup();
+          if (!syncTarget && !syncGroup) return false;
+
+          onSelect = (api, payload) => {
+            if (api._syncLock) return; // Stops Sync Feedback Loops
+
             let targets = [];
             if (syncTarget) {
                const el = document.querySelector(syncTarget);
@@ -1503,51 +1672,72 @@ class ydCarousel {
             if (targets.length) {
               if (!hasSynced) { hasSynced = true; api.emit('syncStart'); } 
               else { api.emit('syncUpdate'); }
+              
+              // ISSUE #3 FIX: Microtask Lock Release
               targets.forEach(targetApi => {
-                if (targetApi.selectedIndex() !== payload.currentIndex) targetApi.scrollTo(payload.currentIndex);
+                if (targetApi.selectedIndex() !== payload.currentIndex) {
+                   try {
+                     targetApi._syncLock = true;
+                     targetApi.scrollTo(payload.currentIndex);
+                   } finally {
+                     queueMicrotask(() => {
+                       targetApi._syncLock = false;
+                     });
+                   }
+                }
               });
             }
           };
-          api.on('select', this._onSyncSelect);
+          api.on('select', onSelect);
+          return true;
         },
         destroy: (api) => {
           api.emit('syncStop');
-          api.off('select', this._onSyncSelect);
+          if (onSelect) api.off('select', onSelect);
         }
-      });
+      };
+    };
+    if (this.root.dataset.sync || this.syncGroup()) {
+      allPluginDefs.push(createSyncPlugin());
     }
 
-    if (this.root.classList.contains('creative')) {
-      allPluginDefs.push({
-        name: 'creative',
-        priority: 90,
+    const createCreativePlugin = () => {
+      let onScroll;
+      return {
+        name: 'creative', version: '1.0.0', author: 'yd', priority: 90,
         init: (api) => {
-          this._onCreativeScroll = () => {
+          if (!api.root.classList.contains('creative')) return false;
+          onScroll = () => {
             api.slides.forEach((slide, idx) => {
               const progress = api.slideProgress(idx); 
               slide.style.setProperty('--slide-progress', progress.toFixed(4));
               slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
             });
           };
-          api.on('scrollHeavy', this._onCreativeScroll);
-          this._onCreativeScroll();
+          api.on('scrollHeavy', onScroll);
+          onScroll();
+          return true;
         },
         destroy: (api) => {
-          api.off('scrollHeavy', this._onCreativeScroll);
+          if (onScroll) api.off('scrollHeavy', onScroll);
           api.slides.forEach(s => {
             s.style.removeProperty('--slide-progress');
             s.style.removeProperty('--slide-abs-progress');
           });
         }
-      });
+      };
+    };
+    if (this.root.classList.contains('creative')) {
+      allPluginDefs.push(createCreativePlugin());
     }
 
-    if (this.root.classList.contains('lazy-load')) {
-      allPluginDefs.push({
-        name: 'lazy-load',
-        priority: 150,
+    const createLazyLoadPlugin = () => {
+      let onSelect;
+      const plugin = {
+        name: 'lazy-load', version: '1.0.0', author: 'yd', priority: 150,
         init: (api) => {
-          this._onLazySelect = (api, payload) => {
+          if (!api.root.classList.contains('lazy-load')) return false;
+          onSelect = (api, payload) => {
             const activeNode = api.activeSlide();
             if(!activeNode) return;
             const activeSlideIndex = parseInt(activeNode.getAttribute('data-slide-index'), 10);
@@ -1566,28 +1756,43 @@ class ydCarousel {
               }
             });
           };
-          api.on('select', this._onLazySelect);
-          this._onLazySelect(api, api.getEventPayload());
+          api.on('select', onSelect);
+          onSelect(api, api.getEventPayload());
+          return true;
         },
-        destroy: (api) => api.off('select', this._onLazySelect)
-      });
+        // ISSUE #6 FIX: Added refresh API to Lazy Load plugin
+        refresh: (api) => {
+          if (onSelect) onSelect(api, api.getEventPayload());
+        },
+        destroy: (api) => {
+          if (onSelect) api.off('select', onSelect);
+        }
+      };
+      return plugin;
+    };
+    if (this.root.classList.contains('lazy-load')) {
+      allPluginDefs.push(createLazyLoadPlugin());
     }
 
-    if (this.root.classList.contains('debug')) {
-      allPluginDefs.push({
-        name: 'debug',
-        priority: 999,
+    const createDebugPlugin = () => {
+      let debugEl, onUpdate, lastUpdate = 0;
+      return {
+        name: 'debug', version: '1.0.0', author: 'yd', priority: 999,
         init: (api) => {
+          if (!api.root.classList.contains('debug')) return false;
           api.emit('debugOpen'); 
-          this._debugEl = document.createElement('div');
-          this._debugEl.className = 'yd_carousel-debug-panel';
-          this._debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
-          api.root.appendChild(this._debugEl);
+          debugEl = document.createElement('div');
+          debugEl.className = 'yd_carousel-debug-panel';
+          debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
+          api.root.appendChild(debugEl);
           
-          this._onDebugUpdate = (api, payload) => {
+          onUpdate = (api, payload) => {
+            const now = performance.now();
+            if (now - lastUpdate < (parseInt(api.root.dataset.debugDelay) || 150)) return; 
+            lastUpdate = now;
             const state = api.state();
             const pInfo = api.performance();
-            this._debugEl.textContent = `
+            debugEl.textContent = `
 [ydCarousel v${state.version}]
 Idx:  ${state.index}
 Prog: ${state.progress.toFixed(2)}
@@ -1599,34 +1804,59 @@ InVw: ${pInfo.visibleSlides.join(',')}
 FPS:  ${pInfo.fps}
             `.trim();
           };
-          api.on('scrollHeavy', this._onDebugUpdate);
-          api.on('select', this._onDebugUpdate);
-          this._onDebugUpdate(api, api.getEventPayload());
+          api.on('scrollHeavy', onUpdate);
+          api.on('select', onUpdate);
+          onUpdate(api, api.getEventPayload());
+          return true;
         },
         destroy: (api) => {
-          if (this._debugEl) this._debugEl.remove();
-          api.off('scrollHeavy', this._onDebugUpdate);
-          api.off('select', this._onDebugUpdate);
+          if (debugEl) debugEl.remove();
+          if (onUpdate) {
+            api.off('scrollHeavy', onUpdate);
+            api.off('select', onUpdate);
+          }
           api.emit('debugClose'); 
         }
-      });
+      };
+    };
+    if (this.root.classList.contains('debug')) {
+      allPluginDefs.push(createDebugPlugin());
     }
 
-    // Sort and Check Dependencies
+    // MULTI-PASS INITIALIZATION & DEPENDENCY RESOLUTION
+    allPluginDefs = allPluginDefs.filter(def => !this.disabledPlugins.has(def.name));
     allPluginDefs.sort((a, b) => (a.priority || 1000) - (b.priority || 1000));
     
     allPluginDefs.forEach(def => {
+      if (this.pluginsMap.has(def.name)) return;
       if (def.depends) {
-        const missing = def.depends.filter(dep => !allPluginDefs.find(p => p.name === dep));
+        const missing = def.depends.filter(dep => !initializedPluginNames.has(dep));
         if (missing.length > 0) {
           console.warn(`[ydCarousel] Plugin "${def.name}" disabled due to missing dependencies: ${missing.join(', ')}`);
+          this.failedPlugins.push({ name: def.name, reason: 'missing_deps', timestamp: Date.now() });
           return;
         }
       }
-      const instance = typeof def === 'function' ? new def() : Object.create(def);
-      if (instance.init) {
-        instance.init(this);
-        this.plugins.push(instance);
+      try {
+        const instance = typeof def === 'function' ? def() : { ...def };
+        if (instance && typeof instance.init === 'function') {
+          // ISSUE #4 FIX: Accurate Activation Checking
+          const active = instance.init(this);
+          if (active !== false) {
+            const meta = {
+              name: def.name,
+              version: def.version || '1.0.0',
+              author: def.author || 'unknown',
+              instance: instance
+            };
+            this.plugins.push(meta);
+            this.pluginsMap.set(def.name, meta);
+            initializedPluginNames.add(def.name);
+          }
+        }
+      } catch (err) {
+        console.error(`[ydCarousel] Plugin "${def.name}" failed to initialize:`, err);
+        this.failedPlugins.push({ name: def.name, reason: 'init_error', error: err, timestamp: Date.now() });
       }
     });
   }
