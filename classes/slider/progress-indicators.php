@@ -14,11 +14,17 @@
       <div class="yd_slide px-sm">
         <h2 class="bg-acnt clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
       </div>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-acnt clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+      </div>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-acnt clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+      </div>
     </div>
   </div>
 
   <div class="yd_controles">
-    <div class="yd_counter"><span class="yd_current">1</span> / <span class="yd_total">4</span></div>
+    <div class="yd_progress bg-main h-10px ra-xl"> </div>
   </div>
 
 </div>

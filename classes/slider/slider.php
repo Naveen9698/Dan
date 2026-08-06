@@ -1,152 +1,84 @@
-<!-- <style>
-  /* =========================================
-   yd_carousel
-========================================= */
-
-.yd_carousel {
-  position: relative;
-  max-width: 900px;
-  margin: 0 auto;
+<style>
+  .yd_progress{
+    height:8px;
+    background:#ddd;
+    border-radius:999px;
+    overflow:hidden;
 }
 
-.yd_viewport {
-  overflow: hidden;
-  border-radius: 16px;
+.yd_progress-fill{
+    height:100%;
+    width:var(--progress,0%);
+    background:#0066ff;
+    transition:width .15s linear;
 }
 
-.yd_container {
-  display: flex;
-  will-change: transform;
+.yd_autoplay-progress{
+    height:8px;
+    background:#ddd;
+    border-radius:999px;
+    overflow:hidden;
 }
 
-.yd_slide {
-  flex: 0 0 100%;
-  min-width: 100%;
-  height: 400px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-size: 2rem;
-  color: white;
+.yd_autoplay-progress-fill{
+    height:100%;
+    width:var(--ap-progress,0%);
+    background:#ff5500;
+    transition:width .05s linear;
 }
-
-/* =========================================
-   ACTIVE STATES
-========================================= */
-
-.yd_slide {
-  transition:
-    opacity .3s ease,
-    transform .3s ease;
-}
-
-.yd_slide:not(.active) {
-  opacity: .8;
-}
-
-.yd_slide.active {
-  opacity: 1;
-}
-
-/* =========================================
-   NAV BUTTONS
-========================================= */
-
-.yd_prev,
-.yd_next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-
-  width: 44px;
-  height: 44px;
-
-  border: none;
-  border-radius: 999px;
-
-  background: rgba(0, 0, 0, .7);
-  color: white;
-
-  cursor: pointer;
-  z-index: 10;
-}
-
-.yd_prev {
-  left: 12px;
-}
-
-.yd_next {
-  right: 12px;
-}
-
-.yd_prev:hover,
-.yd_next:hover {
-  background: black;
-}
-
-/* =========================================
-   DOTS
-========================================= */
-
-.yd_dots {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-
-  margin-top: 20px;
-}
-
-.yd_dot {
-  width: 12px;
-  height: 12px;
-
-  border: none;
-  border-radius: 999px;
-
-  cursor: pointer;
-
-  background: #cbd5e1;
-}
-
-.yd_dot.active {
-  background: #2563eb;
-}
-
-/* =========================================
-   COUNTER
-========================================= */
-
-.yd_counter {
-  text-align: center;
-  margin-top: 12px;
-  font-weight: 600;
-}
+``
 </style>
 
-<div class="yd_carousel loop keyboard autoplay" data-delay="3000">
+<div class="yd_carousel pn-relative">
 
-  <div class="yd_viewport">
-    <div class="yd_container">
-      <div class="yd_slide bg-main">
-        <h2>Slide 1</h2>
+  <div class="yd_viewport of-hidden">
+    <div class="yd_container slides-3">
+      <div class="yd_slide px-sm">
+        <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
       </div>
-      <div class="yd_slide bg-sub">
-        <h2>Slide 2</h2>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
       </div>
-      <div class="yd_slide bg-acnt">
-        <h2>Slide 3</h2>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
       </div>
-      <div class="yd_slide bg-g8">
-        <h2>Slide 4</h2>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+      </div>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+      </div>
+      <div class="yd_slide px-sm">
+        <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
       </div>
     </div>
   </div>
 
-  <button class="yd_prev"> ← </button>
-  <button class="yd_next"> → </button>
-  <div class="yd_dots"></div>
-  <div class="yd_counter"></div>
+  <div class="yd_controles">
+    <button class="yd_prev bg-g5 clr-white pn-absolute w-100p t-50p tt-50p ra-xs ba-0 l--20px w-fit px-sm py-xs"> Prev </button>
+    <button class="yd_next bg-g5 clr-white pn-absolute w-100p t-50p tt-50p ra-xs ba-0 r--20px w-fit px-sm py-xs"> Next </button>
 
-</div> -->
+    <div class="yd_dots">
+      <div class="yd_dot blur-md ac:blur-o"></div>
+    </div>
+
+    <div class="yd_counter"><span class="yd_current">1</span> / <span class="yd_total">4</span></div>
+
+    <div class="yd_progress of-hidden h-10px bg-g5">
+      <div class="yd_progress-fill bg-main h-100p ra-xl"></div>
+    </div>
+
+    <div class="yd_autoplay-progress of-hidden h-10px bg-g5">
+      <div class="yd_autoplay-progress-fill bg-main h-100p ra-xl"></div>
+    </div>
+
+    <div class="yd_scrollbar bg-g2 mt-sm ra-xl pa-2px">
+      <div class="yd_scrollbar-track h-10px ra-xl">
+        <div class="yd_scrollbar-thumb bg-main h-10px ra-xl"></div>
+      </div>
+    </div>
+
+
+  </div>
+
+</div>

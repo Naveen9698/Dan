@@ -27,14 +27,16 @@
      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'js/slider.php'; ?></code></pre>
   </div>
  -->
-  <p class="fz-14 clr-g5 lh-16 ml-md">
-    🟢 <b>z-*</b> utilities control <b>stacking order</b> (which element appears on top).<br>
-    🟢 Higher values appear above lower values.<br>
-    🟢 Works only on <b>positioned elements</b> (requires <b>pn-relative</b>, <b>pn-absolute</b>, etc.).<br>
-    🔴 z-index only affects stacking contexts and overlapping elements. <br>
-    🟡 Most common usage is with positioned elements (pn-relative, pn-absolute, pn-fixed, pn-sticky). <br>
-    🔴 Avoid large arbitrary values — keep stacking levels limited and predictable.
+ <p class="fz-14 clr-g5 lh-16 ml-md">
+   🟢 <b>z-*</b> utilities control <b>stacking order</b> (which element appears on top).<br>
+   🟢 Higher values appear above lower values.<br>
+   🟢 Works only on <b>positioned elements</b> (requires <b>pn-relative</b>, <b>pn-absolute</b>, etc.).<br>
+   🔴 z-index only affects stacking contexts and overlapping elements. <br>
+   🟡 Most common usage is with positioned elements (pn-relative, pn-absolute, pn-fixed, pn-sticky). <br>
+   🔴 Avoid large arbitrary values — keep stacking levels limited and predictable.
   </p>
+  
+  <?php include 'slider/slider.php'; ?>
 
   <h3 id="default">Default Carousel</h3>
   <p class="fz-14 clr-g5 lh-16 ml-md ">
@@ -73,5 +75,35 @@
   </p>
   <?php include 'slider/snap-counter.php'; ?>
   <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\snap-counter.php')) ?></code></pre>
+
+  <h3 id="scrollbar">Scrollbar</h3>
+  <p class="fz-14 clr-g5 lh-16 ml-md ">
+    🟢 Snap Count = 3 - snaps <br>
+    🟢 If Looped Snap Count = 5 - total slides <br>
+    🟢 Displays current slide index <br>
+    🟢 Shows total number of slides <br>
+    🟢 Updates automatically on navigation <br>
+  </p>
+  <?php include 'slider/scrollbar.php'; ?>
+  <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\scrollbar.php')) ?></code></pre>
+
+  <h3 id="progress-indicators">Progress Indicators</h3>
+  <p class="fz-14 clr-g5 lh-16 ml-md ">
+    🟢 Snap Count = 3 - snaps <br>
+    🟢 If Looped Snap Count = 5 - total slides <br>
+    🟢 Displays current slide index <br>
+    🟢 Shows total number of slides <br>
+    🟢 Updates automatically on navigation <br>
+  </p>
+  <?php include 'slider/progress-indicators.php'; ?>
+  <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\progress-indicators.php')) ?></code></pre>
+
+
+
+
+
+
+
+
 
 </section>
