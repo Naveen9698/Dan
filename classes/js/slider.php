@@ -14,6 +14,7 @@ class ydCarousel {
     'dragStart', 'dragMove', 'dragEnd',
     'scroll', 'settle',
     'beforeSelect', 'select', 'afterSelect',
+    // Note: 'activeSlideChange' represents a "Scroll group / page change" in the grouped scrolling model
     'activeSlideChange',
     'slideEnter', 'slideExit',
     'loopEnter', 'loopExit', 'loopReposition',
@@ -50,6 +51,7 @@ class ydCarousel {
     
     // CONFIGURATION
     const scrollAttr = this.root.dataset.scroll;
+    const parsedScroll = parseInt(scrollAttr, 10);
     this.options = {
       loop: this.root.classList.contains('loop'),
       dragFree: this.root.classList.contains('drag-free'),
@@ -61,7 +63,11 @@ class ydCarousel {
       autoplay: this.root.classList.contains('autoplay'),
       rtl: this.root.classList.contains('rtl'),
       vertical: this.root.classList.contains('vertical'),
-      scroll: scrollAttr === 'auto' ? 'auto' : (parseInt(scrollAttr) || 1),
+      scroll: scrollAttr === 'auto' 
+        ? 'auto' 
+        : Number.isInteger(parsedScroll) && parsedScroll > 0 
+          ? parsedScroll 
+          : 1,
       duration: parseFloat(this.root.dataset.duration) || 0.1,
       friction: parseFloat(this.root.dataset.friction) || 0.92,
       delay: parseInt(this.root.dataset.delay) || 4000
@@ -248,6 +254,7 @@ class ydCarousel {
       currentIndex: this.currentIndex,
       previousIndex: this.prevIndex,
       slideCount: this.slides.length,
+      groupCount: this.metrics.scrollSnaps.length,
       progress: this.scrollProgress(),
       isDragging: this.isDraggingActive,
       isSettled: this.isSettled,
