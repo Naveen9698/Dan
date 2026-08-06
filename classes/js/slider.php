@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * FINAL PRODUCTION RELEASE: Baseline Templates, Deterministic Lifecycles & Flawless Isolation
+ * FINAL PRODUCTION RELEASE: Baseline Templates, Deterministic Lifecycles, Flawless Isolation & Code Polish
  */
 
 class ydCarousel {
@@ -397,7 +397,6 @@ class ydCarousel {
     };
   }
 
-  // CRITICAL FIX: skipPayload bypasses dynamic payload generation during destroy lifecycle
   emit(event, customData = {}, skipPayload = false) {
     const payload = skipPayload ? { ...customData } : { ...this.getEventPayload(), ...customData };
     
@@ -408,7 +407,6 @@ class ydCarousel {
       });
     }
     
-    // NATIVE DOM EVENT DISPATCHER (Fires independently of internal listeners)
     if (typeof CustomEvent !== 'undefined') {
       this.root.dispatchEvent(new CustomEvent(`yd:${event}`, { detail: payload, bubbles: true }));
     }
@@ -481,10 +479,9 @@ class ydCarousel {
   }
 
   reInit() {
+    // Exclude stale layout coordinates; we rely on goTo() to calculate new pixel offsets safely.
     const savedState = {
       currentIndex: this.currentIndex,
-      targetPos: this.targetPos,
-      currentPos: this.currentPos,
       velocity: this._velocity,
       dragging: this.isDraggingActive,
       autoplayActive: this.isAutoplayRunning()
@@ -502,8 +499,6 @@ class ydCarousel {
     const safeIndex = Math.max(0, Math.min(savedState.currentIndex, newApi.groupCount() - 1));
 
     newApi.currentIndex = safeIndex;
-    newApi.targetPos = savedState.targetPos;
-    newApi.currentPos = savedState.currentPos;
     newApi._velocity = savedState.velocity;
     newApi.isDraggingActive = savedState.dragging;
     
@@ -985,7 +980,6 @@ class ydCarousel {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  // CRITICAL FIX: Destroy emits safely before listeners and properties are cleared.
   destroy(removeRef = true) {
     if (this.destroyed) return;
     
@@ -1225,7 +1219,6 @@ class ydCarousel {
             dotsContainer = api.root.querySelector('.yd_dots');
             if (!dotsContainer) return false;
             
-            // ISSUE #3 FIX: Preserve unpolluted baseline template directly at plugin init
             const templateNode = dotsContainer.querySelector('.yd_dot');
             if (templateNode) {
               baseTemplate = templateNode.cloneNode(true);
@@ -1263,7 +1256,6 @@ class ydCarousel {
 
             dotsContainer.innerHTML = '';
             api.metrics.scrollSnaps.forEach((_, idx) => {
-              // Strictly rely on the isolated baseTemplate rather than live DOM nodes
               const dot = baseTemplate.cloneNode(true);
               if (dot.tagName !== 'BUTTON') { dot.setAttribute('role', 'button'); dot.setAttribute('tabindex', '0'); }
               dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
