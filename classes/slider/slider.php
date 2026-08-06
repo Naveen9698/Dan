@@ -1,25 +1,25 @@
 <!-- <style>
   /* =========================================
-   yd-carousel
+   yd_carousel
 ========================================= */
 
-.yd-carousel {
+.yd_carousel {
   position: relative;
   max-width: 900px;
   margin: 0 auto;
 }
 
-.yd-viewport {
+.yd_viewport {
   overflow: hidden;
   border-radius: 16px;
 }
 
-.yd-container {
+.yd_container {
   display: flex;
   will-change: transform;
 }
 
-.yd-slide {
+.yd_slide {
   flex: 0 0 100%;
   min-width: 100%;
   height: 400px;
@@ -36,17 +36,17 @@
    ACTIVE STATES
 ========================================= */
 
-.yd-slide {
+.yd_slide {
   transition:
     opacity .3s ease,
     transform .3s ease;
 }
 
-.yd-slide:not(.active) {
+.yd_slide:not(.active) {
   opacity: .8;
 }
 
-.yd-slide.active {
+.yd_slide.active {
   opacity: 1;
 }
 
@@ -54,8 +54,8 @@
    NAV BUTTONS
 ========================================= */
 
-.yd-prev,
-.yd-next {
+.yd_prev,
+.yd_next {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -73,16 +73,16 @@
   z-index: 10;
 }
 
-.yd-prev {
+.yd_prev {
   left: 12px;
 }
 
-.yd-next {
+.yd_next {
   right: 12px;
 }
 
-.yd-prev:hover,
-.yd-next:hover {
+.yd_prev:hover,
+.yd_next:hover {
   background: black;
 }
 
@@ -90,7 +90,7 @@
    DOTS
 ========================================= */
 
-.yd-dots {
+.yd_dots {
   display: flex;
   justify-content: center;
   gap: 10px;
@@ -98,7 +98,7 @@
   margin-top: 20px;
 }
 
-.yd-dot {
+.yd_dot {
   width: 12px;
   height: 12px;
 
@@ -110,7 +110,7 @@
   background: #cbd5e1;
 }
 
-.yd-dot.active {
+.yd_dot.active {
   background: #2563eb;
 }
 
@@ -118,35 +118,35 @@
    COUNTER
 ========================================= */
 
-.yd-counter {
+.yd_counter {
   text-align: center;
   margin-top: 12px;
   font-weight: 600;
 }
 </style>
 
-<div class="yd-carousel loop keyboard autoplay" data-delay="3000">
+<div class="yd_carousel loop keyboard autoplay" data-delay="3000">
 
-  <div class="yd-viewport">
-    <div class="yd-container">
-      <div class="yd-slide bg-main">
+  <div class="yd_viewport">
+    <div class="yd_container">
+      <div class="yd_slide bg-main">
         <h2>Slide 1</h2>
       </div>
-      <div class="yd-slide bg-sub">
+      <div class="yd_slide bg-sub">
         <h2>Slide 2</h2>
       </div>
-      <div class="yd-slide bg-acnt">
+      <div class="yd_slide bg-acnt">
         <h2>Slide 3</h2>
       </div>
-      <div class="yd-slide bg-g8">
+      <div class="yd_slide bg-g8">
         <h2>Slide 4</h2>
       </div>
     </div>
   </div>
 
-  <button class="yd-prev"> ← </button>
-  <button class="yd-next"> → </button>
-  <div class="yd-dots"></div>
-  <div class="yd-counter"></div>
+  <button class="yd_prev"> ← </button>
+  <button class="yd_next"> → </button>
+  <div class="yd_dots"></div>
+  <div class="yd_counter"></div>
 
 </div> -->

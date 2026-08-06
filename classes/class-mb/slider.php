@@ -1,0 +1,12 @@
+.mb\:slides-1  { --yd-slides: 1;  }
+.mb\:slides-2  { --yd-slides: 2;  }
+.mb\:slides-3  { --yd-slides: 3;  }
+.mb\:slides-4  { --yd-slides: 4;  }
+.mb\:slides-5  { --yd-slides: 5;  }
+.mb\:slides-6  { --yd-slides: 6;  }
+.mb\:slides-7  { --yd-slides: 7;  }
+.mb\:slides-8  { --yd-slides: 8;  }
+.mb\:slides-9  { --yd-slides: 9;  }
+.mb\:slides-10 { --yd-slides: 10; }
+.mb\:slides-11 { --yd-slides: 11; }
+.mb\:slides-12 { --yd-slides: 12; }

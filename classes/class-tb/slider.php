@@ -1,0 +1,12 @@
+.tb\:slides-1  { --yd-slides: 1;  }
+.tb\:slides-2  { --yd-slides: 2;  }
+.tb\:slides-3  { --yd-slides: 3;  }
+.tb\:slides-4  { --yd-slides: 4;  }
+.tb\:slides-5  { --yd-slides: 5;  }
+.tb\:slides-6  { --yd-slides: 6;  }
+.tb\:slides-7  { --yd-slides: 7;  }
+.tb\:slides-8  { --yd-slides: 8;  }
+.tb\:slides-9  { --yd-slides: 9;  }
+.tb\:slides-10 { --yd-slides: 10; }
+.tb\:slides-11 { --yd-slides: 11; }
+.tb\:slides-12 { --yd-slides: 12; }

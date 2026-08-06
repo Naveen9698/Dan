@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 FINAL PRODUCTION RELEASE
- * 100% COMPLETION: Immutable Diagnostics, Runtime Capabilities, Memory Safety, and Performance Optimization
+ * 100% COMPLETION: Active Slide Grouping Fix, Immutable Diagnostics, Strict Memory Safety, Event Cleanup & API Polish
  */
 
 class ydCarousel {
@@ -17,7 +17,7 @@ class ydCarousel {
     'activeSlideChange',
     'slideEnter', 'slideExit',
     'loopEnter', 'loopExit', 'loopReposition',
-    'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop',
+    'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop', 'autoplayToggleRequest',
     'syncStart', 'syncUpdate', 'syncStop',
     'debugOpen', 'debugClose'
   ];
@@ -49,6 +49,7 @@ class ydCarousel {
     if (!this.track) return;
     
     // CONFIGURATION
+    const scrollAttr = this.root.dataset.scroll;
     this.options = {
       loop: this.root.classList.contains('loop'),
       dragFree: this.root.classList.contains('drag-free'),
@@ -60,6 +61,7 @@ class ydCarousel {
       autoplay: this.root.classList.contains('autoplay'),
       rtl: this.root.classList.contains('rtl'),
       vertical: this.root.classList.contains('vertical'),
+      scroll: scrollAttr === 'auto' ? 'auto' : (parseInt(scrollAttr) || 1),
       duration: parseFloat(this.root.dataset.duration) || 0.1,
       friction: parseFloat(this.root.dataset.friction) || 0.92,
       delay: parseInt(this.root.dataset.delay) || 4000
@@ -95,7 +97,8 @@ class ydCarousel {
       realTrackSize: 0, 
       prependOffset: 0,  
       slideSizes: [],
-      snapPoints: []
+      slideSnaps: [],
+      scrollSnaps: [] 
     };
 
     this.listeners = {};
@@ -193,7 +196,9 @@ class ydCarousel {
       events: true,
       diagnostics: true,
       snapshots: true,
-      observers: true
+      observers: true,
+      scrollbar: true,
+      autoplayProgress: true
     });
   }
 
@@ -208,7 +213,8 @@ class ydCarousel {
       contain: this.options.contain,
       containKeep: this.options.containKeep,
       alignCenter: this.options.alignCenter,
-      alignEnd: this.options.alignEnd
+      alignEnd: this.options.alignEnd,
+      scroll: this.options.scroll
     });
   }
 
@@ -232,7 +238,8 @@ class ydCarousel {
       runtimeCapabilities: this.runtimeCapabilities(),
       slidesInView: Object.freeze(this.slidesInView()),
       slidesNotInView: Object.freeze(this.slidesNotInView()),
-      activeSlide: this.selectedIndex()
+      activeIndex: this.selectedIndex(),
+      activeSlide: this.activeSlide()
     });
   }
 
@@ -272,7 +279,31 @@ class ydCarousel {
   scrollTo(index, immediate = false) { this.goTo(index, immediate); }
   selectedIndex() { return this.currentIndex; }
   previousIndex() { return this.prevIndex; }
-  activeSlide() { return this.slides[this.currentIndex] || null; }
+  
+  activeSlide() { 
+    if (!this.slides.length || !this.metrics.scrollSnaps.length) return null;
+    if (this.currentIndex < 0 || this.currentIndex >= this.metrics.scrollSnaps.length) return null;
+    
+    const targetSnap = this.metrics.scrollSnaps[this.currentIndex];
+    let closestIdx = 0;
+    let minDistance = Infinity;
+
+    this.metrics.slideSnaps.forEach((snap, idx) => {
+      let dist = Math.abs(snap - targetSnap);
+      if (this.options.loop) {
+        const d2 = Math.abs((snap + this.metrics.realTrackSize) - targetSnap);
+        const d3 = Math.abs((snap - this.metrics.realTrackSize) - targetSnap);
+        dist = Math.min(dist, d2, d3);
+      }
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestIdx = idx;
+      }
+    });
+    
+    return this.slides[closestIdx] || null; 
+  }
+
   slideNodes() { return this.slides; }
   isDragging() { return this.isDraggingActive; } 
   isLoop() { return this.options.loop; }         
@@ -290,8 +321,8 @@ class ydCarousel {
   }
 
   canScrollNext() {
-    if (this.root.classList.contains('stop-last') && this.currentIndex >= this.metrics.snapPoints.length - 1) return false;
-    return this.options.loop || this.currentIndex < this.metrics.snapPoints.length - 1;
+    if (this.root.classList.contains('stop-last') && this.currentIndex >= this.metrics.scrollSnaps.length - 1) return false;
+    return this.options.loop || this.currentIndex < this.metrics.scrollSnaps.length - 1;
   }
 
   canScrollPrev() {
@@ -308,7 +339,7 @@ class ydCarousel {
   }
 
   slideProgress(index) {
-    const snap = this.metrics.snapPoints[index] || 0;
+    const snap = this.metrics.slideSnaps[index] || 0;
     const distance = this.currentPos - snap;
     const progress = distance / (this.metrics.viewportSize || 1);
     return Math.max(-1, Math.min(1, progress));
@@ -323,7 +354,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // MEASUREMENT, ALIGNMENT, & CLONING
+  // MEASUREMENT, GROUPING, & CLONING
   // ==========================================
   
   updateMeasurements() {
@@ -361,7 +392,7 @@ class ydCarousel {
     this.metrics.trackSize = this.options.vertical ? this.track.scrollHeight : this.track.scrollWidth;
     
     let currentOffset = this.metrics.prependOffset;
-    this.metrics.snapPoints = this.metrics.slideSizes.map((size) => {
+    this.metrics.slideSnaps = this.metrics.slideSizes.map((size) => {
       let snap = currentOffset;
       if (this.options.alignCenter) snap -= (this.metrics.viewportSize / 2) - (size / 2);
       if (this.options.alignEnd) snap -= this.metrics.viewportSize - size;
@@ -371,8 +402,42 @@ class ydCarousel {
 
     this.maxScroll = Math.max(0, this.metrics.trackSize - this.metrics.viewportSize);
 
+    let clampedSnaps = this.metrics.slideSnaps;
     if (!this.options.loop && (this.options.contain || this.options.containKeep)) {
-      this.metrics.snapPoints = this.metrics.snapPoints.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+      clampedSnaps = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+    }
+
+    let rawScrollSnaps = [];
+    if (this.options.scroll === 'auto') {
+      let lastSnap = clampedSnaps[0];
+      rawScrollSnaps.push(lastSnap);
+      for (let i = 1; i < clampedSnaps.length; i++) {
+        if (clampedSnaps[i] - lastSnap >= this.metrics.viewportSize * 0.9) {
+          rawScrollSnaps.push(clampedSnaps[i]);
+          lastSnap = clampedSnaps[i];
+        }
+      }
+      if (rawScrollSnaps[rawScrollSnaps.length - 1] !== clampedSnaps[clampedSnaps.length - 1]) {
+         rawScrollSnaps.push(clampedSnaps[clampedSnaps.length - 1]);
+      }
+    } else {
+      const step = this.options.scroll;
+      for (let i = 0; i < clampedSnaps.length; i += step) {
+        rawScrollSnaps.push(clampedSnaps[i]);
+      }
+      if ((this.options.contain || this.options.containKeep) && rawScrollSnaps[rawScrollSnaps.length - 1] !== clampedSnaps[clampedSnaps.length - 1]) {
+        rawScrollSnaps.push(clampedSnaps[clampedSnaps.length - 1]);
+      }
+    }
+
+    if (!this.options.loop && this.options.contain) {
+      this.metrics.scrollSnaps = [...new Set(rawScrollSnaps)];
+    } else {
+      this.metrics.scrollSnaps = rawScrollSnaps;
+    }
+
+    if (this.currentIndex >= this.metrics.scrollSnaps.length) {
+      this.currentIndex = Math.max(0, this.metrics.scrollSnaps.length - 1);
     }
 
     if (this.visibilityObserver) {
@@ -577,7 +642,7 @@ class ydCarousel {
     const isVert = this.options.vertical;
     
     if (e.key === 'Home') this.goTo(0);
-    if (e.key === 'End') this.goTo(this.metrics.snapPoints.length - 1);
+    if (e.key === 'End') this.goTo(this.metrics.scrollSnaps.length - 1);
     
     if (e.key === 'PageDown') this.scrollNext();
     if (e.key === 'PageUp') this.scrollPrev();
@@ -606,8 +671,8 @@ class ydCarousel {
     if (this.destroyed) return;
 
     if (this.options.loop) {
-      const firstSnap = this.metrics.snapPoints[0];
-      const lastSnap = this.metrics.snapPoints[this.slides.length - 1];
+      const firstSnap = this.metrics.slideSnaps[0];
+      const lastSnap = this.metrics.slideSnaps[this.slides.length - 1];
       
       if (this.currentPos < firstSnap - (this.metrics.realTrackSize / 2)) {
         this.emit('loopEnter', { position: 'start' });
@@ -703,7 +768,7 @@ class ydCarousel {
   // ==========================================
 
   goTo(index, immediate = false) {
-    const maxIndex = this.metrics.snapPoints.length - 1;
+    const maxIndex = this.metrics.scrollSnaps.length - 1;
     const targetIndex = Math.max(0, Math.min(index, maxIndex));
     
     const changed = (this.currentIndex !== targetIndex);
@@ -716,7 +781,7 @@ class ydCarousel {
       this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
     }
     
-    let nextTarget = this.metrics.snapPoints[this.currentIndex];
+    let nextTarget = this.metrics.scrollSnaps[this.currentIndex];
     this.inertia = 0; 
 
     if (this.options.loop && !immediate) {
@@ -743,7 +808,7 @@ class ydCarousel {
   snapToClosest() {
     let closestIndex = 0;
     let minDistance = Infinity;
-    this.metrics.snapPoints.forEach((point, index) => {
+    this.metrics.scrollSnaps.forEach((point, index) => {
       const d1 = Math.abs(point - this.targetPos);
       const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - this.targetPos) : Infinity;
       const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - this.targetPos) : Infinity;
@@ -757,24 +822,39 @@ class ydCarousel {
   }
 
   scrollNext() {
-    if (this.currentIndex < this.metrics.snapPoints.length - 1) this.goTo(this.currentIndex + 1);
+    if (this.currentIndex < this.metrics.scrollSnaps.length - 1) this.goTo(this.currentIndex + 1);
     else if (this.options.loop && this.canScrollNext()) this.goTo(0); 
   }
 
   scrollPrev() {
     if (this.currentIndex > 0) this.goTo(this.currentIndex - 1);
-    else if (this.options.loop && this.canScrollPrev()) this.goTo(this.metrics.snapPoints.length - 1);
+    else if (this.options.loop && this.canScrollPrev()) this.goTo(this.metrics.scrollSnaps.length - 1);
   }
 
   updateSlideStates() {
+    let closestSlideIdx = 0;
+    let minDistance = Infinity;
+    this.metrics.slideSnaps.forEach((snap, idx) => {
+      let dist = Math.abs(snap - this.targetPos);
+      if (this.options.loop) {
+        const d2 = Math.abs((snap + this.metrics.realTrackSize) - this.targetPos);
+        const d3 = Math.abs((snap - this.metrics.realTrackSize) - this.targetPos);
+        dist = Math.min(dist, d2, d3);
+      }
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestSlideIdx = idx;
+      }
+    });
+
     const total = this.slides.length;
-    const prevIdx = this.options.loop ? (total + this.currentIndex - 1) % total : this.currentIndex - 1;
-    const nextIdx = this.options.loop ? (this.currentIndex + 1) % total : this.currentIndex + 1;
+    const prevIdx = this.options.loop ? (total + closestSlideIdx - 1) % total : closestSlideIdx - 1;
+    const nextIdx = this.options.loop ? (closestSlideIdx + 1) % total : closestSlideIdx + 1;
 
     this.slides.forEach((slide, idx) => {
       slide.classList.remove('active', 'prev', 'next');
       slide.removeAttribute('aria-current');
-      if (idx === this.currentIndex) {
+      if (idx === closestSlideIdx) {
         slide.classList.add('active');
         slide.setAttribute('aria-current', 'true');
       } else if (idx === prevIdx) slide.classList.add('prev');
@@ -798,7 +878,7 @@ class ydCarousel {
     }
     
     this.announceHandler = (api, payload) => {
-      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slides.length}`;
+      announcer.textContent = `Page ${payload.currentIndex + 1} of ${api.metrics.scrollSnaps.length}`;
     };
     this.on('select', this.announceHandler);
   }
@@ -845,11 +925,22 @@ class ydCarousel {
         return {
           name: 'dots',
           init: (api) => {
+            let template = dotsContainer.querySelector('.yd_dot');
+            if (template) {
+              template = template.cloneNode(true);
+            } else {
+              template = document.createElement('button');
+              template.className = 'yd_dot';
+            }
             dotsContainer.innerHTML = '';
-            api.metrics.snapPoints.forEach((_, idx) => {
-              const dot = document.createElement('button');
-              dot.className = 'yd_dot';
-              dot.setAttribute('aria-label', `Go to slide ${idx + 1}`);
+            
+            api.metrics.scrollSnaps.forEach((_, idx) => {
+              const dot = template.cloneNode(true);
+              if (dot.tagName !== 'BUTTON') {
+                dot.setAttribute('role', 'button');
+                dot.setAttribute('tabindex', '0');
+              }
+              dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
               dot.addEventListener('click', () => api.scrollTo(idx));
               dotsContainer.appendChild(dot);
             });
@@ -878,8 +969,19 @@ class ydCarousel {
         return {
           name: 'counter',
           init: (api) => {
+            const currentEl = counterEl.querySelector('.yd_current');
+            const totalEl = counterEl.querySelector('.yd_total');
+            
             updateCounter = (api, payload) => {
-              counterEl.textContent = `${payload.currentIndex + 1} / ${api.metrics.snapPoints.length}`;
+              const currentText = payload.currentIndex + 1;
+              const totalText = api.metrics.scrollSnaps.length;
+              
+              if (currentEl && totalEl) {
+                currentEl.textContent = currentText;
+                totalEl.textContent = totalText;
+              } else {
+                counterEl.textContent = `${currentText} / ${totalText}`;
+              }
             };
             api.on('select', updateCounter);
             updateCounter(api, api.getEventPayload());
@@ -913,7 +1015,7 @@ class ydCarousel {
 
     if (this.options.autoplay) {
       const autoplay = (() => {
-        let playTimer, play, stop, onVisChange, onFocusIn, onFocusOut;
+        let playTimer, play, stop, onVisChange, onFocusIn, onFocusOut, onToggleRequest;
         let isPaused = false;
         let hasStarted = false;
         return {
@@ -943,6 +1045,12 @@ class ydCarousel {
             onFocusIn = () => stop();
             onFocusOut = () => play();
 
+            onToggleRequest = () => {
+              if (hasStarted && !isPaused) stop();
+              else play();
+            };
+            api.on('autoplayToggleRequest', onToggleRequest);
+
             api.on('dragStart', stop);
             api.on('dragEnd', play);
             if (api.root.classList.contains('pause-hover')) {
@@ -959,6 +1067,7 @@ class ydCarousel {
             api.emit('autoplayStop');
             api.off('dragStart', stop);
             api.off('dragEnd', play);
+            api.off('autoplayToggleRequest', onToggleRequest); 
             api.root.removeEventListener('mouseenter', stop);
             api.root.removeEventListener('mouseleave', play);
             document.removeEventListener('visibilitychange', onVisChange);
@@ -969,13 +1078,203 @@ class ydCarousel {
       })();
       autoplay.init(this);
       this.plugins.push(autoplay);
+
+      // AUTOPLAY TOGGLE BUTTON
+      const autoplayToggle = this.root.querySelector('.yd_autoplay-toggle');
+      if (autoplayToggle) {
+        const togglePlugin = (() => {
+          let onClick, onPause, onResume, onStart;
+          return {
+            name: 'autoplay-toggle',
+            init: (api) => {
+              onClick = () => api.emit('autoplayToggleRequest');
+              autoplayToggle.addEventListener('click', onClick);
+              
+              onPause = () => autoplayToggle.classList.add('paused');
+              onResume = () => autoplayToggle.classList.remove('paused');
+              onStart = () => autoplayToggle.classList.remove('paused');
+              
+              api.on('autoplayPause', onPause);
+              api.on('autoplayResume', onResume);
+              api.on('autoplayStart', onStart);
+            },
+            destroy: (api) => {
+              autoplayToggle.removeEventListener('click', onClick);
+              api.off('autoplayPause', onPause);
+              api.off('autoplayResume', onResume);
+              api.off('autoplayStart', onStart); 
+            }
+          };
+        })();
+        togglePlugin.init(this);
+        this.plugins.push(togglePlugin);
+      }
+
+      // AUTOPLAY PROGRESS INDICATOR
+      const autoplayProgressEl = this.root.querySelector('.yd_autoplay-progress');
+      if (autoplayProgressEl) {
+        const autoplayProgress = (() => {
+          let rafId, startTime, elapsed = 0, isPlaying = false;
+          let delayMs = 4000;
+          let onSlideChange, onStartEvt, onResumeEvt, onPauseEvt, onStopEvt, onDragStartEvt;
+          
+          const tick = () => {
+            if (!isPlaying) return;
+            const now = performance.now();
+            const currentElapsed = elapsed + (now - startTime);
+            let pct = Math.min(100, (currentElapsed / delayMs) * 100);
+            autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
+            
+            if (pct < 100) rafId = requestAnimationFrame(tick);
+          };
+
+          const start = () => {
+            isPlaying = true;
+            startTime = performance.now();
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(tick);
+          };
+
+          const pause = () => {
+            isPlaying = false;
+            elapsed += (performance.now() - startTime);
+            cancelAnimationFrame(rafId);
+          };
+
+          const reset = () => {
+            elapsed = 0;
+            autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`);
+          };
+
+          return {
+            name: 'autoplay-progress',
+            init: (api) => {
+              delayMs = api.options.delay;
+              
+              onSlideChange = () => { reset(); if (api.options.autoplay) start(); };
+              onStartEvt = () => { reset(); start(); };
+              onResumeEvt = start;
+              onPauseEvt = pause;
+              onStopEvt = () => { pause(); reset(); };
+              onDragStartEvt = pause;
+              
+              api.on('activeSlideChange', onSlideChange);
+              api.on('autoplayStart', onStartEvt);
+              api.on('autoplayResume', onResumeEvt);
+              api.on('autoplayPause', onPauseEvt);
+              api.on('autoplayStop', onStopEvt);
+              api.on('dragStart', onDragStartEvt);
+            },
+            destroy: (api) => {
+              cancelAnimationFrame(rafId);
+              api.off('activeSlideChange', onSlideChange);
+              api.off('autoplayStart', onStartEvt);
+              api.off('autoplayResume', onResumeEvt);
+              api.off('autoplayPause', onPauseEvt);
+              api.off('autoplayStop', onStopEvt);
+              api.off('dragStart', onDragStartEvt); 
+            }
+          };
+        })();
+        autoplayProgress.init(this);
+        this.plugins.push(autoplayProgress);
+      }
     }
 
     // ==========================================
     // ADVANCED MODULES
     // ==========================================
 
-    // MOUSEWHEEL NAVIGATION
+    // SCROLLBAR INTERACTION PLUGIN
+    const scrollbarEl = this.root.querySelector('.yd_scrollbar');
+    if (scrollbarEl) {
+      const scrollbar = (() => {
+        let thumb, track, isDragging = false, startPos, startProgress;
+        let updateThumb;
+        let onTrackClick, onPointerDown, onPointerMove, onPointerUp;
+
+        return {
+          name: 'scrollbar',
+          init: (api) => {
+            thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
+            track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
+            
+            updateThumb = (api) => {
+              if (isDragging) return;
+              const pct = api.scrollProgress() * 100;
+              if (thumb) thumb.style.setProperty('--scroll-progress', `${pct}%`);
+            };
+            
+            api.on('scroll', updateThumb);
+            updateThumb(api);
+            
+            onTrackClick = (e) => {
+              if (e.target === thumb || isDragging) return;
+              const rect = track.getBoundingClientRect();
+              const clickPct = api.options.vertical 
+                ? (e.clientY - rect.top) / rect.height 
+                : (e.clientX - rect.left) / rect.width;
+              
+              const targetScroll = clickPct * api.maxScroll;
+              let closestIdx = 0, minDiff = Infinity;
+              api.metrics.scrollSnaps.forEach((snap, idx) => {
+                if (Math.abs(snap - targetScroll) < minDiff) {
+                  minDiff = Math.abs(snap - targetScroll);
+                  closestIdx = idx;
+                }
+              });
+              api.scrollTo(closestIdx);
+            };
+            track.addEventListener('click', onTrackClick);
+
+            if (thumb) {
+              onPointerDown = (e) => {
+                isDragging = true;
+                startPos = api.options.vertical ? e.clientY : e.clientX;
+                startProgress = api.scrollProgress();
+                thumb.setPointerCapture(e.pointerId);
+                api.isDraggingActive = true;
+              };
+              onPointerMove = (e) => {
+                if (!isDragging) return;
+                const rect = track.getBoundingClientRect();
+                const delta = api.options.vertical ? e.clientY - startPos : e.clientX - startPos;
+                const trackSize = api.options.vertical ? rect.height : rect.width;
+                
+                let newProgress = startProgress + (delta / trackSize);
+                newProgress = Math.max(0, Math.min(1, newProgress));
+                
+                thumb.style.setProperty('--scroll-progress', `${newProgress * 100}%`);
+                api.targetPos = newProgress * api.maxScroll; 
+              };
+              onPointerUp = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                thumb.releasePointerCapture(e.pointerId);
+                api.isDraggingActive = false;
+                api.snapToClosest();
+              };
+              
+              thumb.addEventListener('pointerdown', onPointerDown);
+              thumb.addEventListener('pointermove', onPointerMove);
+              thumb.addEventListener('pointerup', onPointerUp);
+            }
+          },
+          destroy: (api) => {
+            api.off('scroll', updateThumb);
+            if (track) track.removeEventListener('click', onTrackClick);
+            if (thumb) {
+              thumb.removeEventListener('pointerdown', onPointerDown);
+              thumb.removeEventListener('pointermove', onPointerMove);
+              thumb.removeEventListener('pointerup', onPointerUp); 
+            }
+          }
+        };
+      })();
+      scrollbar.init(this);
+      this.plugins.push(scrollbar);
+    }
+
     if (this.root.classList.contains('wheel')) {
       const wheel = (() => {
         let onWheel, resetTimer;
@@ -1010,7 +1309,6 @@ class ydCarousel {
       this.plugins.push(wheel);
     }
 
-    // HASH NAVIGATION
     if (this.root.classList.contains('hash')) {
       const hashPlugin = (() => {
         let onHash, onSelect;
@@ -1030,13 +1328,21 @@ class ydCarousel {
                   return; 
                 }
               }
-              const targetIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
-              if (targetIdx > -1 && targetIdx !== api.selectedIndex()) api.scrollTo(targetIdx);
+              const targetSlideIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
+              if (targetSlideIdx > -1) {
+                 const snapTarget = api.metrics.slideSnaps[targetSlideIdx];
+                 let closestIndex = 0, minDistance = Infinity;
+                 api.metrics.scrollSnaps.forEach((p, i) => {
+                   if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
+                 });
+                 if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
+              }
             };
             
             onSelect = (api, payload) => {
               if (!updateUrl) return;
-              const slideHash = api.slides[payload.currentIndex]?.dataset.hash;
+              const activeNode = api.activeSlide();
+              const slideHash = activeNode ? activeNode.dataset.hash : null;
               if (slideHash) {
                 const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
                 history.replaceState(null, null, newHash);
@@ -1057,7 +1363,6 @@ class ydCarousel {
       this.plugins.push(hashPlugin);
     }
 
-    // THUMBNAIL SYNCING & SYNC GROUPS
     const syncTarget = this.root.dataset.sync;
     const syncGroup = this.syncGroup();
     if (syncTarget || syncGroup) {
@@ -1106,7 +1411,6 @@ class ydCarousel {
       this.plugins.push(syncPlugin);
     }
 
-    // CREATIVE EFFECTS
     if (this.root.classList.contains('creative')) {
       const creative = (() => {
         let onScroll;
@@ -1136,7 +1440,6 @@ class ydCarousel {
       this.plugins.push(creative);
     }
 
-    // LAZY LOAD
     if (this.root.classList.contains('lazy-load')) {
       const lazyLoad = (() => {
         let onSelect;
@@ -1144,11 +1447,16 @@ class ydCarousel {
           name: 'lazy-load',
           init: (api) => {
             onSelect = (api, payload) => {
+              const activeNode = api.activeSlide();
+              if(!activeNode) return;
+              const activeSlideIndex = parseInt(activeNode.getAttribute('data-slide-index'), 10);
+              
               const toLoad = [
-                payload.currentIndex - 1, 
-                payload.currentIndex, 
-                payload.currentIndex + 1
+                activeSlideIndex - 1, 
+                activeSlideIndex, 
+                activeSlideIndex + 1
               ];
+              
               toLoad.forEach(idx => {
                 let targetIdx = idx;
                 if (api.isLoop()) {
@@ -1175,7 +1483,6 @@ class ydCarousel {
       this.plugins.push(lazyLoad);
     }
 
-    // DEBUG PLUGIN 
     if (this.root.classList.contains('debug')) {
       const debugPlugin = (() => {
          let debugEl, onUpdate, lastUpdate = 0;
