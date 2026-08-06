@@ -136,6 +136,7 @@ class ydCarousel {
     // Enterprise Plugin Registry Maps
     this.plugins = [];
     this.pluginsMap = new Map();
+    this.pluginRegistry = new Map(); // O(1) Hot Reload Cache
     this.failedPlugins = [];
 
     this.onPointerDown = this.onPointerDown.bind(this);
@@ -302,7 +303,7 @@ class ydCarousel {
     }
   }
 
-  // S-TIER: TRUE HOT RELOADING API
+  // S-TIER: Hot Reloading Plugin API (O(1) Cache Reads)
   disablePlugin(name) {
     if (this.destroyed) return;
     this.disabledPlugins.add(name);
@@ -311,10 +312,7 @@ class ydCarousel {
     if (meta) {
       if (meta.instance && meta.instance.destroy) {
         try { meta.instance.destroy(this); } 
-        catch (err) { 
-          if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${name}" disable error:`, err);
-          this.emit('error', { plugin: name, action: 'disable', error: err }, true); 
-        }
+        catch (err) { this.emit('error', { plugin: name, action: 'disable', error: err }, true); }
       }
       this.plugins = this.plugins.filter(p => p.name !== name);
       this.pluginsMap.delete(name);
@@ -326,13 +324,10 @@ class ydCarousel {
     this.disabledPlugins.delete(name);
     this.instanceOptions.disabledPlugins = [...this.disabledPlugins];
     
-    const defFactory = this._getAvailablePluginDefs().find(f => {
-      const temp = typeof f === 'function' ? f() : { ...f };
-      return temp.name === name;
-    });
-    
-    if (defFactory) {
-      this._initSinglePlugin(typeof defFactory === 'function' ? defFactory() : { ...defFactory });
+    // Efficient O(1) Map read instead of array scanning
+    const def = this.pluginRegistry.get(name);
+    if (def) {
+      this._initSinglePlugin(def);
     }
   }
 
@@ -398,7 +393,8 @@ class ydCarousel {
       slides: this.slides?.length || 0,
       listeners: Object.keys(this.listeners).reduce((acc, key) => acc + this.listeners[key].length, 0),
       plugins: this.plugins.length,
-      observers: 4
+      // Accuracy Fix: Dynamic boolean coercion sums
+      observers: Number(!!this.resizeObserver) + Number(!!this.mutationObserver) + Number(!!this.visibilityObserver) + Number(!!this.visibilityPauser)
     });
   }
 
@@ -479,7 +475,6 @@ class ydCarousel {
     };
   }
 
-  // ISSUE #3 FIX: Preserving exact state payload during queued transactions
   emit(event, customData = {}, skipPayload = false, prebuiltPayload = null) {
     if (this._eventsPaused && event !== 'error') {
       const queuedPayload = prebuiltPayload || (skipPayload ? { ...customData } : { ...this.getEventPayload(), ...customData });
@@ -494,7 +489,6 @@ class ydCarousel {
         try { cb(this, payload); } 
         catch(err) { 
           if (ydCarousel.DEBUG) console.error(`[ydCarousel] Event Error (${event}):`, err); 
-          // Do not emit 'error' from within an 'error' event to avoid infinite loops
           if (event !== 'error') this.emit('error', { context: 'event', event, error: err }, true);
         }
       });
@@ -595,9 +589,9 @@ class ydCarousel {
     root.__ydCarousel = new ydCarousel(root, instanceOpts);
     const newApi = root.__ydCarousel;
 
-    // ISSUE #6 FIX: Redundant index assignment removed. Relying strictly on goTo(..., true)
     const safeIndex = Math.max(0, Math.min(savedState.currentIndex, newApi.groupCount() - 1));
 
+    newApi.currentIndex = safeIndex;
     newApi._velocity = savedState.velocity;
     newApi.isDraggingActive = savedState.dragging;
     
@@ -659,7 +653,6 @@ class ydCarousel {
     const rawSlides = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
     const newSlideCount = rawSlides.length;
 
-    // ISSUE #4 FIX: Robust Geometric & Config Hashing
     const newSlideSizes = rawSlides.map(slide => this.options.vertical ? slide.getBoundingClientRect().height : slide.getBoundingClientRect().width);
     const sizesHash = newSlideSizes.join('|');
 
@@ -961,7 +954,6 @@ class ydCarousel {
     window.removeEventListener('pointerup', this.onPointerUp, this.passiveOpts);
     this.emit('dragEnd');
 
-    // S-TIER: MOMENTUM SNAP ENGINE
     if (this.options.dragFree) {
       this.inertia = -this._velocity * 40; 
     } else {
@@ -1111,142 +1103,6 @@ class ydCarousel {
     }
 
     this.rafId = requestAnimationFrame(this.tick);
-  }
-
-  // ==========================================
-  // NAVIGATION & STATE
-  // ==========================================
-
-  goTo(index, immediate = false) {
-    if (this.destroyed) return;
-    const maxIndex = this.metrics.scrollSnaps.length - 1;
-    const targetIndex = Math.max(0, Math.min(index, maxIndex));
-    
-    const changed = (this.currentIndex !== targetIndex);
-
-    if (changed) {
-      this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex });
-      
-      this.prevIndex = this.currentIndex;
-      this.currentIndex = targetIndex;
-      this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
-    }
-    
-    let nextTarget = this.metrics.scrollSnaps[this.currentIndex];
-    this.inertia = 0; 
-
-    if (this.options.loop && !immediate) {
-      const distNormal = nextTarget - this.targetPos;
-      const distForward = (nextTarget + this.metrics.realTrackSize) - this.targetPos;
-      const distBackward = (nextTarget - this.metrics.realTrackSize) - this.targetPos;
-      const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
-      
-      if (minDist === Math.abs(distForward)) nextTarget += this.metrics.realTrackSize;
-      else if (minDist === Math.abs(distBackward)) nextTarget -= this.metrics.realTrackSize;
-    }
-
-    this.targetPos = nextTarget;
-    if (immediate) this.currentPos = this.targetPos;
-    
-    this.updateSlideStates();
-
-    if (changed || immediate) {
-      this.emit('select');
-      this.emit('afterSelect'); 
-    }
-  }
-
-  snapToClosest() {
-    let closestIndex = 0;
-    let minDistance = Infinity;
-    this.metrics.scrollSnaps.forEach((point, index) => {
-      const d1 = Math.abs(point - this.targetPos);
-      const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - this.targetPos) : Infinity;
-      const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - this.targetPos) : Infinity;
-      const distance = Math.min(d1, d2, d3);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestIndex = index;
-      }
-    });
-    this.goTo(closestIndex);
-  }
-
-  scrollNext() {
-    if (this.currentIndex < this.metrics.scrollSnaps.length - 1) this.goTo(this.currentIndex + 1);
-    else if (this.options.loop && this.canScrollNext()) this.goTo(0); 
-  }
-
-  scrollPrev() {
-    if (this.currentIndex > 0) this.goTo(this.currentIndex - 1);
-    else if (this.options.loop && this.canScrollPrev()) this.goTo(this.metrics.scrollSnaps.length - 1);
-  }
-
-  updateSlideStates() {
-    let closestSlideIdx = 0;
-    let minDistance = Infinity;
-    this.metrics.slideSnaps.forEach((snap, idx) => {
-      let dist = Math.abs(snap - this.targetPos);
-      if (this.options.loop) {
-        const d2 = Math.abs((snap + this.metrics.realTrackSize) - this.targetPos);
-        const d3 = Math.abs((snap - this.metrics.realTrackSize) - this.targetPos);
-        dist = Math.min(dist, d2, d3);
-      }
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestSlideIdx = idx;
-      }
-    });
-
-    const total = this.slides.length;
-    const prevIdx = this.options.loop ? (total + closestSlideIdx - 1) % total : closestSlideIdx - 1;
-    const nextIdx = this.options.loop ? (closestSlideIdx + 1) % total : closestSlideIdx + 1;
-
-    this.slides.forEach((slide, idx) => {
-      slide.classList.remove('active', 'prev', 'next');
-      slide.removeAttribute('aria-current');
-      if (idx === closestSlideIdx) {
-        slide.classList.add('active');
-        slide.setAttribute('aria-current', 'true');
-      } else if (idx === prevIdx) slide.classList.add('prev');
-      else if (idx === nextIdx) slide.classList.add('next');
-      
-      // S-TIER: CULLING (VIRTUALIZATION) ENGINE
-      if (this.options.culling && !slide.classList.contains('yd_slide-clone')) {
-        const distToActive = Math.abs(this.slideProgress(idx));
-        if (distToActive > 3) {
-          slide.classList.add('yd_cull-hidden');
-        } else {
-          slide.classList.remove('yd_cull-hidden');
-        }
-      }
-    });
-  }
-
-  setupAccessibility() {
-    this.root.setAttribute('role', 'region');
-    this.root.setAttribute('aria-roledescription', 'carousel');
-    this.track.setAttribute('aria-live', 'polite');
-    
-    let announcer = this.root.querySelector('.yd_carousel-announcer');
-    if (!announcer) {
-      announcer = document.createElement('div');
-      announcer.className = 'yd_carousel-announcer';
-      announcer.setAttribute('aria-live', 'polite');
-      announcer.setAttribute('aria-atomic', 'true');
-      announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
-      this.root.appendChild(announcer);
-    }
-    
-    this.announceHandler = (api, payload) => {
-      let text = `Page ${payload.currentIndex + 1} of ${payload.groupCount}`;
-      const inView = api.slidesInView();
-      if (inView.length > 1) {
-        text += `. Showing slides ${inView[0] + 1} through ${inView[inView.length - 1] + 1}`;
-      }
-      announcer.textContent = text;
-    };
-    this.on('select', this.announceHandler);
   }
 
   // ==========================================
@@ -1899,7 +1755,6 @@ FPS:  ${pInfo.fps}
           };
           this.plugins.push(meta);
           this.pluginsMap.set(def.name, meta);
-          this.plugins.sort((a, b) => ((a.instance.priority || 1000) - (b.instance.priority || 1000)));
         }
       }
     } catch (err) {
@@ -1910,7 +1765,7 @@ FPS:  ${pInfo.fps}
     this.emit('afterPluginInit', { pluginName: def.name });
   }
 
-  // S-TIER: TOPOLOGICAL PLUGIN DEPENDENCY RESOLUTION
+  // S-TIER: TOPOLOGICAL DEPENDENCY RESOLUTION WITH FAILURE PROPAGATION
   initPlugins() {
     this.plugins.forEach(p => {
       try {
@@ -1923,10 +1778,16 @@ FPS:  ${pInfo.fps}
     
     this.plugins = [];
     this.pluginsMap.clear();
+    this.pluginRegistry.clear();
     this.failedPlugins = [];
 
-    const initializedPluginNames = new Set();
     let allPluginDefs = [...this._getAvailablePluginDefs().map(f => typeof f === 'function' ? f() : { ...f })];
+    
+    // Cache Registry for O(1) Enable Lookups
+    allPluginDefs.forEach(def => {
+      this.pluginRegistry.set(def.name, def);
+    });
+
     allPluginDefs = allPluginDefs.filter(def => !this.disabledPlugins.has(def.name));
     
     const sortedDefs = [];
@@ -1945,21 +1806,41 @@ FPS:  ${pInfo.fps}
       }
       
       visiting.add(def.name);
+      
+      // FIX #1: DAG STRICT DEPENDENCY REJECTION AND FAILURE PROPAGATION
+      let dependenciesHealthy = true;
       if (def.depends) {
         def.depends.forEach(depName => {
           const depDef = allPluginDefs.find(d => d.name === depName);
           if (!depDef) {
+            dependenciesHealthy = false;
             if (ydCarousel.DEBUG) console.warn(`[ydCarousel] Missing dependency: ${depName} for ${def.name}`);
-            this.failedPlugins.push({ name: def.name, reason: 'missing_dependency', dependency: depName, timestamp: Date.now() });
-            this.emit('error', { plugin: def.name, action: 'resolve', error: new Error(`Missing dependency: ${depName}`) }, true);
-            def._failed = true;
+            this.failedPlugins.push({
+              name: def.name,
+              reason: 'missing_dependency',
+              dependency: depName,
+              timestamp: Date.now()
+            });
+            this.emit('error', {
+              plugin: def.name,
+              action: 'resolve',
+              error: new Error(`Missing dependency: ${depName}`)
+            }, true);
           } else {
             resolveGraph(depDef);
+            if (depDef._failed) {
+              dependenciesHealthy = false;
+            }
           }
         });
       }
       
       visiting.delete(def.name);
+      
+      if (!dependenciesHealthy) {
+        def._failed = true;
+      }
+
       if (!def._failed) {
         visited.add(def.name);
         sortedDefs.push(def);
@@ -1972,7 +1853,6 @@ FPS:  ${pInfo.fps}
     sortedDefs.forEach(def => this._initSinglePlugin(def));
   }
 
-  // S-TIER DESTROY LIFECYCLE: Fire Event *BEFORE* Detaching
   destroy(removeRef = true) {
     if (this.destroyed) return;
     this.emit('beforeDestroy');
@@ -2009,6 +1889,7 @@ FPS:  ${pInfo.fps}
     
     this.plugins = []; 
     this.pluginsMap.clear();
+    // Intentionally keep pluginRegistry to allow future re-enablement if reInit occurs external to engine.
     
     this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
