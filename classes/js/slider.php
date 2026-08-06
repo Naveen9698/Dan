@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * 100% COMPLETION: Factory Closures, Microtask Sync Locks, Precise Plugin Registration & Correct Lifecycle Ordering
+ * FINAL PRODUCTION RELEASE: Baseline Templates, Deterministic Lifecycles & Flawless Isolation
  */
 
 class ydCarousel {
@@ -397,8 +397,9 @@ class ydCarousel {
     };
   }
 
-  emit(event, customData = {}) {
-    const payload = { ...this.getEventPayload(), ...customData };
+  // CRITICAL FIX: skipPayload bypasses dynamic payload generation during destroy lifecycle
+  emit(event, customData = {}, skipPayload = false) {
+    const payload = skipPayload ? { ...customData } : { ...this.getEventPayload(), ...customData };
     
     if (this.listeners[event]) {
       this.listeners[event].forEach(cb => {
@@ -497,13 +498,16 @@ class ydCarousel {
     root.__ydCarousel = new ydCarousel(root, instanceOpts);
     const newApi = root.__ydCarousel;
 
-    newApi.currentIndex = savedState.currentIndex;
+    // Defensively clamp in case slides were removed right before reInit
+    const safeIndex = Math.max(0, Math.min(savedState.currentIndex, newApi.groupCount() - 1));
+
+    newApi.currentIndex = safeIndex;
     newApi.targetPos = savedState.targetPos;
     newApi.currentPos = savedState.currentPos;
     newApi._velocity = savedState.velocity;
     newApi.isDraggingActive = savedState.dragging;
     
-    newApi.goTo(savedState.currentIndex, true);
+    newApi.goTo(safeIndex, true);
     
     if (savedState.autoplayActive && newApi.play) {
       newApi.play();
@@ -981,15 +985,18 @@ class ydCarousel {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  // ISSUE #2 FIX: Emit 'destroy' event FIRST before clearing plugins and listeners
+  // CRITICAL FIX: Destroy emits safely before listeners and properties are cleared.
   destroy(removeRef = true) {
     if (this.destroyed) return;
     
-    this.emit('destroy', { state: this.state() });
+    const snapshot = this.state();
+    const finalPayload = this.getEventPayload();
 
     this.destroyed = true; 
     this._mounted = false;
     
+    this.emit('destroy', { ...finalPayload, state: snapshot }, true);
+
     cancelAnimationFrame(this.rafId);
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
@@ -1186,613 +1193,603 @@ class ydCarousel {
     // CORE MODULE FACTORIES
     // ==========================================
     
-    const createControlsPlugin = () => {
-      let prevBtn, nextBtn, hPrev, hNext;
-      return {
-        name: 'controls', version: '1.0.0', author: 'yd', priority: 10,
-        init: (api) => {
-          prevBtn = api.root.querySelector('.yd_prev');
-          nextBtn = api.root.querySelector('.yd_next');
-          if (!prevBtn && !nextBtn) return false;
-          hPrev = () => api.scrollPrev();
-          hNext = () => api.scrollNext();
-          if (prevBtn) prevBtn.addEventListener('click', hPrev);
-          if (nextBtn) nextBtn.addEventListener('click', hNext);
-          return true;
-        },
-        destroy: () => {
-          if (prevBtn) prevBtn.removeEventListener('click', hPrev);
-          if (nextBtn) nextBtn.removeEventListener('click', hNext);
-        }
-      };
-    };
     if (this.root.querySelector('.yd_prev') || this.root.querySelector('.yd_next')) {
-      allPluginDefs.push(createControlsPlugin());
+      allPluginDefs.push((() => {
+        let prevBtn, nextBtn, hPrev, hNext;
+        return {
+          name: 'controls', version: '1.0.0', author: 'yd', priority: 10,
+          init: (api) => {
+            prevBtn = api.root.querySelector('.yd_prev');
+            nextBtn = api.root.querySelector('.yd_next');
+            if (!prevBtn && !nextBtn) return false;
+            hPrev = () => api.scrollPrev();
+            hNext = () => api.scrollNext();
+            if (prevBtn) prevBtn.addEventListener('click', hPrev);
+            if (nextBtn) nextBtn.addEventListener('click', hNext);
+            return true;
+          },
+          destroy: () => {
+            if (prevBtn) prevBtn.removeEventListener('click', hPrev);
+            if (nextBtn) nextBtn.removeEventListener('click', hNext);
+          }
+        };
+      })());
     }
 
-    const createDotsPlugin = () => {
-      let dotsContainer, template, onDotsClick, updateDots;
-      const plugin = {
-        name: 'dots', version: '1.0.0', author: 'yd', priority: 20,
-        init: (api) => {
-          dotsContainer = api.root.querySelector('.yd_dots');
-          if (!dotsContainer) return false;
-          
-          template = dotsContainer.querySelector('.yd_dot');
-          if (template) template = template.cloneNode(true);
-          else { template = document.createElement('button'); template.className = 'yd_dot'; }
-          
-          onDotsClick = (e) => {
-            const dot = e.target.closest('.yd_dot');
-            if (dot) {
-              const idx = parseInt(dot.getAttribute('data-index'), 10);
-              if (!isNaN(idx)) api.scrollTo(idx);
-            }
-          };
-          dotsContainer.addEventListener('click', onDotsClick);
-
-          updateDots = (api, payload) => {
-            Array.from(dotsContainer.children).forEach((dot, idx) => {
-              const isActive = idx === payload.currentIndex;
-              dot.classList.toggle('active', isActive);
-              if (isActive) dot.setAttribute('aria-current', 'true');
-              else dot.removeAttribute('aria-current');
-            });
-          };
-          api.on('select', updateDots);
-          
-          // ISSUE #1 FIX: Calling plugin.refresh(api) explicitly
-          plugin.refresh(api);
-          return true;
-        },
-        refresh: (api) => {
-          if (!dotsContainer) return;
-          dotsContainer.innerHTML = '';
-          api.metrics.scrollSnaps.forEach((_, idx) => {
-            const dot = template.cloneNode(true);
-            if (dot.tagName !== 'BUTTON') { dot.setAttribute('role', 'button'); dot.setAttribute('tabindex', '0'); }
-            dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
-            dot.setAttribute('data-index', idx);
-            dotsContainer.appendChild(dot);
-          });
-          if (updateDots) updateDots(api, api.getEventPayload());
-        },
-        destroy: (api) => {
-          if (dotsContainer) dotsContainer.removeEventListener('click', onDotsClick);
-          if (updateDots) api.off('select', updateDots);
-        }
-      };
-      return plugin;
-    };
     if (this.root.querySelector('.yd_dots')) {
-      allPluginDefs.push(createDotsPlugin());
-    }
+      allPluginDefs.push((() => {
+        let dotsContainer, baseTemplate, onDotsClick, updateDots;
+        const plugin = {
+          name: 'dots', version: '1.0.0', author: 'yd', priority: 20,
+          init: (api) => {
+            dotsContainer = api.root.querySelector('.yd_dots');
+            if (!dotsContainer) return false;
+            
+            // ISSUE #3 FIX: Preserve unpolluted baseline template directly at plugin init
+            const templateNode = dotsContainer.querySelector('.yd_dot');
+            if (templateNode) {
+              baseTemplate = templateNode.cloneNode(true);
+              baseTemplate.classList.remove('active');
+              baseTemplate.removeAttribute('aria-current');
+              baseTemplate.removeAttribute('data-index');
+            } else { 
+              baseTemplate = document.createElement('button'); 
+              baseTemplate.className = 'yd_dot'; 
+            }
+            
+            onDotsClick = (e) => {
+              const dot = e.target.closest('.yd_dot');
+              if (dot) {
+                const idx = parseInt(dot.getAttribute('data-index'), 10);
+                if (!isNaN(idx)) api.scrollTo(idx);
+              }
+            };
+            dotsContainer.addEventListener('click', onDotsClick);
 
-    const createCounterPlugin = () => {
-      let counterEl, currentEl, totalEl, updateCounter;
-      const plugin = {
-        name: 'counter', version: '1.0.0', author: 'yd', priority: 30,
-        init: (api) => {
-          counterEl = api.root.querySelector('.yd_counter');
-          if (!counterEl) return false;
-          currentEl = counterEl.querySelector('.yd_current');
-          totalEl = counterEl.querySelector('.yd_total');
-          updateCounter = (api, payload) => {
-            const currentText = payload.currentIndex + 1;
-            const totalText = payload.groupCount;
-            if (currentEl && totalEl) { currentEl.textContent = currentText; totalEl.textContent = totalText; }
-            else counterEl.textContent = `${currentText} / ${totalText}`;
-          };
-          api.on('select', updateCounter);
-          
-          // ISSUE #1 FIX: Calling plugin.refresh(api) explicitly
-          plugin.refresh(api);
-          return true;
-        },
-        refresh: (api) => {
-          if (counterEl && updateCounter) updateCounter(api, api.getEventPayload());
-        },
-        destroy: (api) => {
-          if (updateCounter) api.off('select', updateCounter);
-        }
-      };
-      return plugin;
-    };
-    if (this.root.querySelector('.yd_counter')) {
-      allPluginDefs.push(createCounterPlugin());
-    }
+            updateDots = (api, payload) => {
+              Array.from(dotsContainer.children).forEach((dot, idx) => {
+                const isActive = idx === payload.currentIndex;
+                dot.classList.toggle('active', isActive);
+                if (isActive) dot.setAttribute('aria-current', 'true');
+                else dot.removeAttribute('aria-current');
+              });
+            };
+            api.on('select', updateDots);
+            plugin.refresh(api);
+            return true;
+          },
+          refresh: (api) => {
+            if (!dotsContainer || !baseTemplate) return;
 
-    const createProgressPlugin = () => {
-      let progressEl, updateProgress;
-      return {
-        name: 'progress', version: '1.0.0', author: 'yd', priority: 40,
-        init: (api) => {
-          progressEl = api.root.querySelector('.yd_progress');
-          if (!progressEl) return false;
-          updateProgress = (api, payload) => {
-            const pct = payload.progress * 100;
-            progressEl.style.setProperty('--progress', `${pct}%`);
-          };
-          api.on('scrollHeavy', updateProgress);
-          updateProgress(api, api.getEventPayload());
-          return true;
-        },
-        destroy: (api) => {
-          if (updateProgress) api.off('scrollHeavy', updateProgress);
-        }
-      };
-    };
-    if (this.root.querySelector('.yd_progress')) {
-      allPluginDefs.push(createProgressPlugin());
-    }
-
-    const createAutoplayPlugin = () => {
-      let playTimer, isPaused = false, hasStarted = false;
-      let onVisPause, onVisResume, onToggleRequest, onHoverStop, onHoverPlay;
-      return {
-        name: 'autoplay', version: '1.0.0', author: 'yd', priority: 100,
-        init: (api) => {
-          if (!api.options.autoplay) return false;
-          
-          const start = () => {
-            clearTimeout(playTimer);
-            if (!hasStarted) { hasStarted = true; api.emit('autoplayStart'); } 
-            else if (isPaused) { isPaused = false; api.emit('autoplayResume'); }
-            if (!api.canScrollNext()) return;
-            playTimer = setTimeout(() => { api.scrollNext(); start(); }, api.options.delay);
-          };
-          const stop = () => {
-            clearTimeout(playTimer);
-            if (hasStarted && !isPaused) { isPaused = true; api.emit('autoplayPause'); }
-          };
-
-          api.autoplayController = {
-            play: () => start(),
-            pause: () => stop(),
-            toggle: () => { if (hasStarted && !isPaused) stop(); else start(); },
-            isPlaying: () => hasStarted && !isPaused
-          };
-
-          onVisPause = () => stop();
-          onVisResume = () => start();
-          onToggleRequest = () => api.autoplayController.toggle();
-          onHoverStop = () => stop();
-          onHoverPlay = () => start();
-
-          api.on('visibilityPause', onVisPause);
-          api.on('visibilityResume', onVisResume);
-          api.on('autoplayToggleRequest', onToggleRequest);
-          api.on('dragStart', onHoverStop);
-          api.on('dragEnd', onHoverPlay);
-          
-          if (api.root.classList.contains('pause-hover')) {
-            api.root.addEventListener('mouseenter', onHoverStop);
-            api.root.addEventListener('mouseleave', onHoverPlay);
-          }
-          api.root.addEventListener('focusin', onHoverStop);
-          api.root.addEventListener('focusout', onHoverPlay);
-          
-          start();
-          return true;
-        },
-        destroy: (api) => {
-          if(api.autoplayController) {
-             api.autoplayController.pause();
-             delete api.autoplayController;
-          }
-          api.emit('autoplayStop');
-          api.off('visibilityPause', onVisPause);
-          api.off('visibilityResume', onVisResume);
-          api.off('autoplayToggleRequest', onToggleRequest);
-          api.off('dragStart', onHoverStop);
-          api.off('dragEnd', onHoverPlay);
-          api.root.removeEventListener('mouseenter', onHoverStop);
-          api.root.removeEventListener('mouseleave', onHoverPlay);
-          api.root.removeEventListener('focusin', onHoverStop);
-          api.root.removeEventListener('focusout', onHoverPlay);
-        }
-      };
-    };
-    if (this.options.autoplay) {
-      allPluginDefs.push(createAutoplayPlugin());
-    }
-
-    const createAutoplayTogglePlugin = () => {
-      let autoplayToggle, onClick, onPause, onResume, onStart;
-      return {
-        name: 'autoplay-toggle', version: '1.0.0', author: 'yd', priority: 110,
-        init: (api) => {
-          autoplayToggle = api.root.querySelector('.yd_autoplay-toggle');
-          if (!autoplayToggle) return false;
-          
-          onClick = () => api.emit('autoplayToggleRequest');
-          autoplayToggle.addEventListener('click', onClick);
-          onPause = () => autoplayToggle.classList.add('paused');
-          onResume = () => autoplayToggle.classList.remove('paused');
-          onStart = () => autoplayToggle.classList.remove('paused');
-          
-          api.on('autoplayPause', onPause);
-          api.on('autoplayResume', onResume);
-          api.on('autoplayStart', onStart);
-          return true;
-        },
-        destroy: (api) => {
-          if (autoplayToggle) autoplayToggle.removeEventListener('click', onClick);
-          if (onPause) api.off('autoplayPause', onPause);
-          if (onResume) api.off('autoplayResume', onResume);
-          if (onStart) api.off('autoplayStart', onStart);
-        }
-      };
-    };
-    if (this.root.querySelector('.yd_autoplay-toggle')) {
-      allPluginDefs.push(createAutoplayTogglePlugin());
-    }
-
-    const createAutoplayProgressPlugin = () => {
-      let autoplayProgressEl, rafId, startTime, elapsed = 0, isPlaying = false;
-      let delayMs, onSlideChange, onStartEvt, onResumeEvt, onPauseEvt, onStopEvt, onDragStartEvt;
-      return {
-        name: 'autoplay-progress', version: '1.0.0', author: 'yd', priority: 120,
-        init: (api) => {
-          autoplayProgressEl = api.root.querySelector('.yd_autoplay-progress');
-          if (!autoplayProgressEl) return false;
-
-          delayMs = api.options.delay;
-          const tick = () => {
-            if (!isPlaying) return;
-            const now = performance.now();
-            const currentElapsed = elapsed + (now - startTime);
-            let pct = Math.min(100, (currentElapsed / delayMs) * 100);
-            autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
-            if (pct < 100) rafId = requestAnimationFrame(tick);
-          };
-          const start = () => { isPlaying = true; startTime = performance.now(); cancelAnimationFrame(rafId); rafId = requestAnimationFrame(tick); };
-          
-          // ISSUE #3 FIX: Autoplay Progress NaN Check
-          const pause = () => { 
-            if (!isPlaying || !startTime) return; 
-            isPlaying = false; 
-            elapsed += (performance.now() - startTime); 
-            cancelAnimationFrame(rafId); 
-          };
-          const reset = () => { elapsed = 0; autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`); };
-          
-          onSlideChange = () => { reset(); if (api.isAutoplayRunning()) start(); };
-          onStartEvt = () => { reset(); start(); };
-          onResumeEvt = start;
-          onPauseEvt = pause;
-          onStopEvt = () => { pause(); reset(); };
-          onDragStartEvt = pause;
-          
-          api.on('activeSlideChange', onSlideChange);
-          api.on('autoplayStart', onStartEvt);
-          api.on('autoplayResume', onResumeEvt);
-          api.on('autoplayPause', onPauseEvt);
-          api.on('autoplayStop', onStopEvt);
-          api.on('dragStart', onDragStartEvt);
-          return true;
-        },
-        destroy: (api) => {
-          cancelAnimationFrame(rafId);
-          if (onSlideChange) api.off('activeSlideChange', onSlideChange);
-          if (onStartEvt) api.off('autoplayStart', onStartEvt);
-          if (onResumeEvt) api.off('autoplayResume', onResumeEvt);
-          if (onPauseEvt) api.off('autoplayPause', onPauseEvt);
-          if (onStopEvt) api.off('autoplayStop', onStopEvt);
-          if (onDragStartEvt) api.off('dragStart', onDragStartEvt); 
-        }
-      };
-    };
-    if (this.root.querySelector('.yd_autoplay-progress')) {
-      allPluginDefs.push(createAutoplayProgressPlugin());
-    }
-
-    const createScrollbarPlugin = () => {
-      let scrollbarEl, thumb, track, isDragging = false, startPos, startProgress;
-      let updateThumb, onTrackClick, onPointerDown, onPointerMove, onPointerUp;
-      return {
-        name: 'scrollbar', version: '1.0.0', author: 'yd', priority: 50,
-        init: (api) => {
-          scrollbarEl = api.root.querySelector('.yd_scrollbar');
-          if (!scrollbarEl) return false;
-          
-          thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
-          track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
-          
-          updateThumb = () => {
-            if (isDragging) return;
-            const pct = api.scrollProgress() * 100;
-            if (thumb) thumb.style.setProperty('--scroll-progress', `${pct}%`);
-          };
-          api.on('scroll', updateThumb);
-          updateThumb(api);
-          
-          onTrackClick = (e) => {
-            if (e.target === thumb || isDragging) return;
-            const rect = track.getBoundingClientRect();
-            const clickPct = api.options.vertical ? (e.clientY - rect.top) / rect.height : (e.clientX - rect.left) / rect.width;
-            const targetScroll = clickPct * api.maxScroll;
-            let closestIdx = 0, minDiff = Infinity;
-            api.metrics.scrollSnaps.forEach((snap, idx) => {
-              if (Math.abs(snap - targetScroll) < minDiff) { minDiff = Math.abs(snap - targetScroll); closestIdx = idx; }
+            dotsContainer.innerHTML = '';
+            api.metrics.scrollSnaps.forEach((_, idx) => {
+              // Strictly rely on the isolated baseTemplate rather than live DOM nodes
+              const dot = baseTemplate.cloneNode(true);
+              if (dot.tagName !== 'BUTTON') { dot.setAttribute('role', 'button'); dot.setAttribute('tabindex', '0'); }
+              dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
+              dot.setAttribute('data-index', idx);
+              dotsContainer.appendChild(dot);
             });
-            api.scrollTo(closestIdx);
-          };
-          track.addEventListener('click', onTrackClick);
+            if (updateDots) updateDots(api, api.getEventPayload());
+          },
+          destroy: (api) => {
+            if (dotsContainer) dotsContainer.removeEventListener('click', onDotsClick);
+            if (updateDots) api.off('select', updateDots);
+          }
+        };
+        return plugin;
+      })());
+    }
 
-          if (thumb) {
-            onPointerDown = (e) => {
-              isDragging = true;
-              startPos = api.options.vertical ? e.clientY : e.clientX;
-              startProgress = api.scrollProgress();
-              thumb.setPointerCapture(e.pointerId);
-              api.isDraggingActive = true;
+    if (this.root.querySelector('.yd_counter')) {
+      allPluginDefs.push((() => {
+        let counterEl, currentEl, totalEl, updateCounter;
+        const plugin = {
+          name: 'counter', version: '1.0.0', author: 'yd', priority: 30,
+          init: (api) => {
+            counterEl = api.root.querySelector('.yd_counter');
+            if (!counterEl) return false;
+            currentEl = counterEl.querySelector('.yd_current');
+            totalEl = counterEl.querySelector('.yd_total');
+            updateCounter = (api, payload) => {
+              const currentText = payload.currentIndex + 1;
+              const totalText = payload.groupCount;
+              if (currentEl && totalEl) { currentEl.textContent = currentText; totalEl.textContent = totalText; }
+              else counterEl.textContent = `${currentText} / ${totalText}`;
             };
-            onPointerMove = (e) => {
-              if (!isDragging) return;
-              const rect = track.getBoundingClientRect();
-              const delta = api.options.vertical ? e.clientY - startPos : e.clientX - startPos;
-              const trackSize = api.options.vertical ? rect.height : rect.width;
-              let newProgress = startProgress + (delta / trackSize);
-              newProgress = Math.max(0, Math.min(1, newProgress));
-              thumb.style.setProperty('--scroll-progress', `${newProgress * 100}%`);
-              api.targetPos = newProgress * api.maxScroll; 
-            };
-            onPointerUp = (e) => {
-              if (!isDragging) return;
-              isDragging = false;
-              thumb.releasePointerCapture(e.pointerId);
-              api.isDraggingActive = false;
-              api.snapToClosest();
-            };
-            thumb.addEventListener('pointerdown', onPointerDown);
-            thumb.addEventListener('pointermove', onPointerMove, api.passiveOpts);
-            thumb.addEventListener('pointerup', onPointerUp, api.passiveOpts);
+            api.on('select', updateCounter);
+            plugin.refresh(api);
+            return true;
+          },
+          refresh: (api) => {
+            if (counterEl && updateCounter) updateCounter(api, api.getEventPayload());
+          },
+          destroy: (api) => {
+            if (updateCounter) api.off('select', updateCounter);
           }
-          return true;
-        },
-        destroy: (api) => {
-          if (updateThumb) api.off('scroll', updateThumb);
-          if (track) track.removeEventListener('click', onTrackClick);
-          if (thumb) {
-            thumb.removeEventListener('pointerdown', onPointerDown);
-            thumb.removeEventListener('pointermove', onPointerMove, api.passiveOpts);
-            thumb.removeEventListener('pointerup', onPointerUp, api.passiveOpts); 
+        };
+        return plugin;
+      })());
+    }
+
+    if (this.root.querySelector('.yd_progress')) {
+      allPluginDefs.push((() => {
+        let progressEl, updateProgress;
+        return {
+          name: 'progress', version: '1.0.0', author: 'yd', priority: 40,
+          init: (api) => {
+            progressEl = api.root.querySelector('.yd_progress');
+            if (!progressEl) return false;
+            updateProgress = (api, payload) => {
+              const pct = payload.progress * 100;
+              progressEl.style.setProperty('--progress', `${pct}%`);
+            };
+            api.on('scrollHeavy', updateProgress);
+            updateProgress(api, api.getEventPayload());
+            return true;
+          },
+          destroy: (api) => {
+            if (updateProgress) api.off('scrollHeavy', updateProgress);
           }
-        }
-      };
-    };
+        };
+      })());
+    }
+
+    if (this.options.autoplay) {
+      allPluginDefs.push((() => {
+        let playTimer, isPaused = false, hasStarted = false;
+        let onVisPause, onVisResume, onToggleRequest, onHoverStop, onHoverPlay;
+        return {
+          name: 'autoplay', version: '1.0.0', author: 'yd', priority: 100,
+          init: (api) => {
+            if (!api.options.autoplay) return false;
+            
+            const start = () => {
+              clearTimeout(playTimer);
+              if (!hasStarted) { hasStarted = true; api.emit('autoplayStart'); } 
+              else if (isPaused) { isPaused = false; api.emit('autoplayResume'); }
+              if (!api.canScrollNext()) return;
+              playTimer = setTimeout(() => { api.scrollNext(); start(); }, api.options.delay);
+            };
+            const stop = () => {
+              clearTimeout(playTimer);
+              if (hasStarted && !isPaused) { isPaused = true; api.emit('autoplayPause'); }
+            };
+
+            api.autoplayController = {
+              play: () => start(),
+              pause: () => stop(),
+              toggle: () => { if (hasStarted && !isPaused) stop(); else start(); },
+              isPlaying: () => hasStarted && !isPaused
+            };
+
+            onVisPause = () => stop();
+            onVisResume = () => start();
+            onToggleRequest = () => api.autoplayController.toggle();
+            onHoverStop = () => stop();
+            onHoverPlay = () => start();
+
+            api.on('visibilityPause', onVisPause);
+            api.on('visibilityResume', onVisResume);
+            api.on('autoplayToggleRequest', onToggleRequest);
+            api.on('dragStart', onHoverStop);
+            api.on('dragEnd', onHoverPlay);
+            
+            if (api.root.classList.contains('pause-hover')) {
+              api.root.addEventListener('mouseenter', onHoverStop);
+              api.root.addEventListener('mouseleave', onHoverPlay);
+            }
+            api.root.addEventListener('focusin', onHoverStop);
+            api.root.addEventListener('focusout', onHoverPlay);
+            
+            start();
+            return true;
+          },
+          destroy: (api) => {
+            if(api.autoplayController) {
+               api.autoplayController.pause();
+               delete api.autoplayController;
+            }
+            api.emit('autoplayStop');
+            api.off('visibilityPause', onVisPause);
+            api.off('visibilityResume', onVisResume);
+            api.off('autoplayToggleRequest', onToggleRequest);
+            api.off('dragStart', onHoverStop);
+            api.off('dragEnd', onHoverPlay);
+            api.root.removeEventListener('mouseenter', onHoverStop);
+            api.root.removeEventListener('mouseleave', onHoverPlay);
+            api.root.removeEventListener('focusin', onHoverStop);
+            api.root.removeEventListener('focusout', onHoverPlay);
+          }
+        };
+      })());
+    }
+
+    if (this.root.querySelector('.yd_autoplay-toggle')) {
+      allPluginDefs.push((() => {
+        let autoplayToggle, onClick, onPause, onResume, onStart;
+        return {
+          name: 'autoplay-toggle', version: '1.0.0', author: 'yd', priority: 110,
+          init: (api) => {
+            autoplayToggle = api.root.querySelector('.yd_autoplay-toggle');
+            if (!autoplayToggle) return false;
+            
+            onClick = () => api.emit('autoplayToggleRequest');
+            autoplayToggle.addEventListener('click', onClick);
+            onPause = () => autoplayToggle.classList.add('paused');
+            onResume = () => autoplayToggle.classList.remove('paused');
+            onStart = () => autoplayToggle.classList.remove('paused');
+            
+            api.on('autoplayPause', onPause);
+            api.on('autoplayResume', onResume);
+            api.on('autoplayStart', onStart);
+            return true;
+          },
+          destroy: (api) => {
+            if (autoplayToggle) autoplayToggle.removeEventListener('click', onClick);
+            if (onPause) api.off('autoplayPause', onPause);
+            if (onResume) api.off('autoplayResume', onResume);
+            if (onStart) api.off('autoplayStart', onStart);
+          }
+        };
+      })());
+    }
+
+    if (this.root.querySelector('.yd_autoplay-progress')) {
+      allPluginDefs.push((() => {
+        let autoplayProgressEl, rafId, startTime, elapsed = 0, isPlaying = false;
+        let delayMs, onSlideChange, onStartEvt, onResumeEvt, onPauseEvt, onStopEvt, onDragStartEvt;
+        return {
+          name: 'autoplay-progress', version: '1.0.0', author: 'yd', priority: 120,
+          init: (api) => {
+            autoplayProgressEl = api.root.querySelector('.yd_autoplay-progress');
+            if (!autoplayProgressEl) return false;
+
+            delayMs = api.options.delay;
+            const tick = () => {
+              if (!isPlaying) return;
+              const now = performance.now();
+              const currentElapsed = elapsed + (now - startTime);
+              let pct = Math.min(100, (currentElapsed / delayMs) * 100);
+              autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
+              if (pct < 100) rafId = requestAnimationFrame(tick);
+            };
+            const start = () => { isPlaying = true; startTime = performance.now(); cancelAnimationFrame(rafId); rafId = requestAnimationFrame(tick); };
+            const pause = () => { 
+              if (!isPlaying || !startTime) return; 
+              isPlaying = false; 
+              elapsed += (performance.now() - startTime); 
+              cancelAnimationFrame(rafId); 
+            };
+            const reset = () => { elapsed = 0; autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`); };
+            
+            onSlideChange = () => { reset(); if (api.isAutoplayRunning()) start(); };
+            onStartEvt = () => { reset(); start(); };
+            onResumeEvt = start;
+            onPauseEvt = pause;
+            onStopEvt = () => { pause(); reset(); };
+            onDragStartEvt = pause;
+            
+            api.on('activeSlideChange', onSlideChange);
+            api.on('autoplayStart', onStartEvt);
+            api.on('autoplayResume', onResumeEvt);
+            api.on('autoplayPause', onPauseEvt);
+            api.on('autoplayStop', onStopEvt);
+            api.on('dragStart', onDragStartEvt);
+            return true;
+          },
+          destroy: (api) => {
+            cancelAnimationFrame(rafId);
+            if (onSlideChange) api.off('activeSlideChange', onSlideChange);
+            if (onStartEvt) api.off('autoplayStart', onStartEvt);
+            if (onResumeEvt) api.off('autoplayResume', onResumeEvt);
+            if (onPauseEvt) api.off('autoplayPause', onPauseEvt);
+            if (onStopEvt) api.off('autoplayStop', onStopEvt);
+            if (onDragStartEvt) api.off('dragStart', onDragStartEvt); 
+          }
+        };
+      })());
+    }
+
     if (this.root.querySelector('.yd_scrollbar')) {
-      allPluginDefs.push(createScrollbarPlugin());
+      allPluginDefs.push((() => {
+        let scrollbarEl, thumb, track, isDragging = false, startPos, startProgress;
+        let updateThumb, onTrackClick, onPointerDown, onPointerMove, onPointerUp;
+        return {
+          name: 'scrollbar', version: '1.0.0', author: 'yd', priority: 50,
+          init: (api) => {
+            scrollbarEl = api.root.querySelector('.yd_scrollbar');
+            if (!scrollbarEl) return false;
+            
+            thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
+            track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
+            
+            updateThumb = () => {
+              if (isDragging) return;
+              const pct = api.scrollProgress() * 100;
+              if (thumb) thumb.style.setProperty('--scroll-progress', `${pct}%`);
+            };
+            api.on('scroll', updateThumb);
+            updateThumb(api);
+            
+            onTrackClick = (e) => {
+              if (e.target === thumb || isDragging) return;
+              const rect = track.getBoundingClientRect();
+              const clickPct = api.options.vertical ? (e.clientY - rect.top) / rect.height : (e.clientX - rect.left) / rect.width;
+              const targetScroll = clickPct * api.maxScroll;
+              let closestIdx = 0, minDiff = Infinity;
+              api.metrics.scrollSnaps.forEach((snap, idx) => {
+                if (Math.abs(snap - targetScroll) < minDiff) { minDiff = Math.abs(snap - targetScroll); closestIdx = idx; }
+              });
+              api.scrollTo(closestIdx);
+            };
+            track.addEventListener('click', onTrackClick);
+
+            if (thumb) {
+              onPointerDown = (e) => {
+                isDragging = true;
+                startPos = api.options.vertical ? e.clientY : e.clientX;
+                startProgress = api.scrollProgress();
+                thumb.setPointerCapture(e.pointerId);
+                api.isDraggingActive = true;
+              };
+              onPointerMove = (e) => {
+                if (!isDragging) return;
+                const rect = track.getBoundingClientRect();
+                const delta = api.options.vertical ? e.clientY - startPos : e.clientX - startPos;
+                const trackSize = api.options.vertical ? rect.height : rect.width;
+                let newProgress = startProgress + (delta / trackSize);
+                newProgress = Math.max(0, Math.min(1, newProgress));
+                thumb.style.setProperty('--scroll-progress', `${newProgress * 100}%`);
+                api.targetPos = newProgress * api.maxScroll; 
+              };
+              onPointerUp = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                thumb.releasePointerCapture(e.pointerId);
+                api.isDraggingActive = false;
+                api.snapToClosest();
+              };
+              thumb.addEventListener('pointerdown', onPointerDown);
+              thumb.addEventListener('pointermove', onPointerMove, api.passiveOpts);
+              thumb.addEventListener('pointerup', onPointerUp, api.passiveOpts);
+            }
+            return true;
+          },
+          destroy: (api) => {
+            if (updateThumb) api.off('scroll', updateThumb);
+            if (track) track.removeEventListener('click', onTrackClick);
+            if (thumb) {
+              thumb.removeEventListener('pointerdown', onPointerDown);
+              thumb.removeEventListener('pointermove', onPointerMove, api.passiveOpts);
+              thumb.removeEventListener('pointerup', onPointerUp, api.passiveOpts); 
+            }
+          }
+        };
+      })());
     }
 
-    const createWheelPlugin = () => {
-      let onWheel, resetTimer, accumulator = 0;
-      return {
-        name: 'wheel', version: '1.0.0', author: 'yd', priority: 60,
-        init: (api) => {
-          if (!api.root.classList.contains('wheel')) return false;
-          const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
-          onWheel = (e) => {
-            if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
-            e.preventDefault();
-            const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
-            accumulator += delta;
-            if (Math.abs(accumulator) >= threshold) {
-               accumulator > 0 ? api.scrollNext() : api.scrollPrev();
-               accumulator = 0;
-            }
-            clearTimeout(resetTimer);
-            resetTimer = setTimeout(() => { accumulator = 0; }, 100);
-          };
-          api.root.addEventListener('wheel', onWheel, { passive: false });
-          return true;
-        },
-        destroy: (api) => {
-          clearTimeout(resetTimer); 
-          if (onWheel) api.root.removeEventListener('wheel', onWheel);
-        }
-      };
-    };
     if (this.root.classList.contains('wheel')) {
-      allPluginDefs.push(createWheelPlugin());
+      allPluginDefs.push((() => {
+        let onWheel, resetTimer, accumulator = 0;
+        return {
+          name: 'wheel', version: '1.0.0', author: 'yd', priority: 60,
+          init: (api) => {
+            if (!api.root.classList.contains('wheel')) return false;
+            const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
+            onWheel = (e) => {
+              if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+              e.preventDefault();
+              const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
+              accumulator += delta;
+              if (Math.abs(accumulator) >= threshold) {
+                 accumulator > 0 ? api.scrollNext() : api.scrollPrev();
+                 accumulator = 0;
+              }
+              clearTimeout(resetTimer);
+              resetTimer = setTimeout(() => { accumulator = 0; }, 100);
+            };
+            api.root.addEventListener('wheel', onWheel, { passive: false });
+            return true;
+          },
+          destroy: (api) => {
+            clearTimeout(resetTimer); 
+            if (onWheel) api.root.removeEventListener('wheel', onWheel);
+          }
+        };
+      })());
     }
 
-    const createHashPlugin = () => {
-      let onHash, onSelect;
-      return {
-        name: 'hash', version: '1.0.0', author: 'yd', priority: 70,
-        init: (api) => {
-          if (!api.root.classList.contains('hash')) return false;
-          const updateUrl = api.root.dataset.hashUpdate !== 'false';
-          const hashGroup = api.hashGroup(); 
-          onHash = () => {
-            const rawHash = window.location.hash.replace('#', '');
-            let slideHash = rawHash;
-            if (hashGroup) {
-              if (rawHash.startsWith(`${hashGroup}:`)) slideHash = rawHash.split(':')[1];
-              else return; 
-            }
-            const targetSlideIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
-            if (targetSlideIdx > -1) {
-               const snapTarget = api.metrics.slideSnaps[targetSlideIdx];
-               let closestIndex = 0, minDistance = Infinity;
-               api.metrics.scrollSnaps.forEach((p, i) => {
-                 if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
-               });
-               if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
-            }
-          };
-          onSelect = (api, payload) => {
-            if (!updateUrl) return;
-            const activeNode = api.activeSlide();
-            const slideHash = activeNode ? activeNode.dataset.hash : null;
-            if (slideHash) {
-              const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
-              history.replaceState(null, null, newHash);
-            }
-          };
-          window.addEventListener('hashchange', onHash);
-          api.on('select', onSelect);
-          setTimeout(onHash, 0);
-          return true;
-        },
-        destroy: (api) => {
-          window.removeEventListener('hashchange', onHash);
-          if (onSelect) api.off('select', onSelect);
-        }
-      };
-    };
     if (this.root.classList.contains('hash')) {
-      allPluginDefs.push(createHashPlugin());
+      allPluginDefs.push((() => {
+        let onHash, onSelect;
+        return {
+          name: 'hash', version: '1.0.0', author: 'yd', priority: 70,
+          init: (api) => {
+            if (!api.root.classList.contains('hash')) return false;
+            const updateUrl = api.root.dataset.hashUpdate !== 'false';
+            const hashGroup = api.hashGroup(); 
+            onHash = () => {
+              const rawHash = window.location.hash.replace('#', '');
+              let slideHash = rawHash;
+              if (hashGroup) {
+                if (rawHash.startsWith(`${hashGroup}:`)) slideHash = rawHash.split(':')[1];
+                else return; 
+              }
+              const targetSlideIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
+              if (targetSlideIdx > -1) {
+                 const snapTarget = api.metrics.slideSnaps[targetSlideIdx];
+                 let closestIndex = 0, minDistance = Infinity;
+                 api.metrics.scrollSnaps.forEach((p, i) => {
+                   if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
+                 });
+                 if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
+              }
+            };
+            onSelect = (api, payload) => {
+              if (!updateUrl) return;
+              const activeNode = api.activeSlide();
+              const slideHash = activeNode ? activeNode.dataset.hash : null;
+              if (slideHash) {
+                const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
+                history.replaceState(null, null, newHash);
+              }
+            };
+            window.addEventListener('hashchange', onHash);
+            api.on('select', onSelect);
+            setTimeout(onHash, 0);
+            return true;
+          },
+          destroy: (api) => {
+            window.removeEventListener('hashchange', onHash);
+            if (onSelect) api.off('select', onSelect);
+          }
+        };
+      })());
     }
 
-    const createSyncPlugin = () => {
-      let onSelect, hasSynced = false;
-      return {
-        name: 'sync', version: '1.0.0', author: 'yd', priority: 80,
-        init: (api) => {
-          const syncTarget = api.root.dataset.sync;
-          const syncGroup = api.syncGroup();
-          if (!syncTarget && !syncGroup) return false;
+    if (this.root.dataset.sync || this.syncGroup()) {
+      allPluginDefs.push((() => {
+        let onSelect, hasSynced = false;
+        return {
+          name: 'sync', version: '1.0.0', author: 'yd', priority: 80,
+          init: (api) => {
+            const syncTarget = api.root.dataset.sync;
+            const syncGroup = api.syncGroup();
+            if (!syncTarget && !syncGroup) return false;
 
-          onSelect = (api, payload) => {
-            if (api._syncLock) return; // Stops Sync Feedback Loops
+            onSelect = (api, payload) => {
+              if (api._syncLock) return;
 
-            let targets = [];
-            if (syncTarget) {
-               const el = document.querySelector(syncTarget);
-               if (el && el.__ydCarousel) targets.push(el.__ydCarousel);
-            }
-            if (syncGroup) { 
-               document.querySelectorAll(`.yd_carousel[data-sync-group="${syncGroup}"]`).forEach(el => {
-                  if (el !== api.root && el.__ydCarousel) targets.push(el.__ydCarousel);
-               });
-            }
-            if (targets.length) {
-              if (!hasSynced) { hasSynced = true; api.emit('syncStart'); } 
-              else { api.emit('syncUpdate'); }
-              
-              // ISSUE #3 FIX: Microtask Lock Release
-              targets.forEach(targetApi => {
-                if (targetApi.selectedIndex() !== payload.currentIndex) {
-                   try {
-                     targetApi._syncLock = true;
-                     targetApi.scrollTo(payload.currentIndex);
-                   } finally {
-                     queueMicrotask(() => {
-                       targetApi._syncLock = false;
-                     });
-                   }
+              let targets = [];
+              if (syncTarget) {
+                 const el = document.querySelector(syncTarget);
+                 if (el && el.__ydCarousel) targets.push(el.__ydCarousel);
+              }
+              if (syncGroup) { 
+                 document.querySelectorAll(`.yd_carousel[data-sync-group="${syncGroup}"]`).forEach(el => {
+                    if (el !== api.root && el.__ydCarousel) targets.push(el.__ydCarousel);
+                 });
+              }
+              if (targets.length) {
+                if (!hasSynced) { hasSynced = true; api.emit('syncStart'); } 
+                else { api.emit('syncUpdate'); }
+                
+                targets.forEach(targetApi => {
+                  if (targetApi.selectedIndex() !== payload.currentIndex) {
+                     try {
+                       targetApi._syncLock = true;
+                       targetApi.scrollTo(payload.currentIndex);
+                     } finally {
+                       queueMicrotask(() => {
+                         targetApi._syncLock = false;
+                       });
+                     }
+                  }
+                });
+              }
+            };
+            api.on('select', onSelect);
+            return true;
+          },
+          destroy: (api) => {
+            api.emit('syncStop');
+            if (onSelect) api.off('select', onSelect);
+          }
+        };
+      })());
+    }
+
+    if (this.root.classList.contains('creative')) {
+      allPluginDefs.push((() => {
+        let onScroll;
+        return {
+          name: 'creative', version: '1.0.0', author: 'yd', priority: 90,
+          init: (api) => {
+            if (!api.root.classList.contains('creative')) return false;
+            onScroll = () => {
+              api.slides.forEach((slide, idx) => {
+                const progress = api.slideProgress(idx); 
+                slide.style.setProperty('--slide-progress', progress.toFixed(4));
+                slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
+              });
+            };
+            api.on('scrollHeavy', onScroll);
+            onScroll();
+            return true;
+          },
+          destroy: (api) => {
+            if (onScroll) api.off('scrollHeavy', onScroll);
+            api.slides.forEach(s => {
+              s.style.removeProperty('--slide-progress');
+              s.style.removeProperty('--slide-abs-progress');
+            });
+          }
+        };
+      })());
+    }
+
+    if (this.root.classList.contains('lazy-load')) {
+      allPluginDefs.push((() => {
+        let onSelect;
+        const plugin = {
+          name: 'lazy-load', version: '1.0.0', author: 'yd', priority: 150,
+          init: (api) => {
+            if (!api.root.classList.contains('lazy-load')) return false;
+            onSelect = (api, payload) => {
+              const activeNode = api.activeSlide();
+              if(!activeNode) return;
+              const activeSlideIndex = parseInt(activeNode.getAttribute('data-slide-index'), 10);
+              const toLoad = [activeSlideIndex - 1, activeSlideIndex, activeSlideIndex + 1];
+              toLoad.forEach(idx => {
+                let targetIdx = idx;
+                if (api.isLoop()) targetIdx = (idx + api.slides.length) % api.slides.length;
+                const slide = api.slides[targetIdx];
+                if (slide && !slide.dataset.loaded) {
+                  const img = slide.querySelector('img[data-src]');
+                  if (img && img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                  }
+                  slide.dataset.loaded = "true";
                 }
               });
-            }
-          };
-          api.on('select', onSelect);
-          return true;
-        },
-        destroy: (api) => {
-          api.emit('syncStop');
-          if (onSelect) api.off('select', onSelect);
-        }
-      };
-    };
-    if (this.root.dataset.sync || this.syncGroup()) {
-      allPluginDefs.push(createSyncPlugin());
+            };
+            api.on('select', onSelect);
+            onSelect(api, api.getEventPayload());
+            return true;
+          },
+          refresh: (api) => {
+            if (onSelect) onSelect(api, api.getEventPayload());
+          },
+          destroy: (api) => {
+            if (onSelect) api.off('select', onSelect);
+          }
+        };
+        return plugin;
+      })());
     }
 
-    const createCreativePlugin = () => {
-      let onScroll;
-      return {
-        name: 'creative', version: '1.0.0', author: 'yd', priority: 90,
-        init: (api) => {
-          if (!api.root.classList.contains('creative')) return false;
-          onScroll = () => {
-            api.slides.forEach((slide, idx) => {
-              const progress = api.slideProgress(idx); 
-              slide.style.setProperty('--slide-progress', progress.toFixed(4));
-              slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
-            });
-          };
-          api.on('scrollHeavy', onScroll);
-          onScroll();
-          return true;
-        },
-        destroy: (api) => {
-          if (onScroll) api.off('scrollHeavy', onScroll);
-          api.slides.forEach(s => {
-            s.style.removeProperty('--slide-progress');
-            s.style.removeProperty('--slide-abs-progress');
-          });
-        }
-      };
-    };
-    if (this.root.classList.contains('creative')) {
-      allPluginDefs.push(createCreativePlugin());
-    }
-
-    const createLazyLoadPlugin = () => {
-      let onSelect;
-      const plugin = {
-        name: 'lazy-load', version: '1.0.0', author: 'yd', priority: 150,
-        init: (api) => {
-          if (!api.root.classList.contains('lazy-load')) return false;
-          onSelect = (api, payload) => {
-            const activeNode = api.activeSlide();
-            if(!activeNode) return;
-            const activeSlideIndex = parseInt(activeNode.getAttribute('data-slide-index'), 10);
-            const toLoad = [activeSlideIndex - 1, activeSlideIndex, activeSlideIndex + 1];
-            toLoad.forEach(idx => {
-              let targetIdx = idx;
-              if (api.isLoop()) targetIdx = (idx + api.slides.length) % api.slides.length;
-              const slide = api.slides[targetIdx];
-              if (slide && !slide.dataset.loaded) {
-                const img = slide.querySelector('img[data-src]');
-                if (img && img.dataset.src) {
-                  img.src = img.dataset.src;
-                  img.removeAttribute('data-src');
-                }
-                slide.dataset.loaded = "true";
-              }
-            });
-          };
-          api.on('select', onSelect);
-          onSelect(api, api.getEventPayload());
-          return true;
-        },
-        // ISSUE #6 FIX: Added refresh API to Lazy Load plugin
-        refresh: (api) => {
-          if (onSelect) onSelect(api, api.getEventPayload());
-        },
-        destroy: (api) => {
-          if (onSelect) api.off('select', onSelect);
-        }
-      };
-      return plugin;
-    };
-    if (this.root.classList.contains('lazy-load')) {
-      allPluginDefs.push(createLazyLoadPlugin());
-    }
-
-    const createDebugPlugin = () => {
-      let debugEl, onUpdate, lastUpdate = 0;
-      return {
-        name: 'debug', version: '1.0.0', author: 'yd', priority: 999,
-        init: (api) => {
-          if (!api.root.classList.contains('debug')) return false;
-          api.emit('debugOpen'); 
-          debugEl = document.createElement('div');
-          debugEl.className = 'yd_carousel-debug-panel';
-          debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
-          api.root.appendChild(debugEl);
-          
-          onUpdate = (api, payload) => {
-            const now = performance.now();
-            if (now - lastUpdate < (parseInt(api.root.dataset.debugDelay) || 150)) return; 
-            lastUpdate = now;
-            const state = api.state();
-            const pInfo = api.performance();
-            debugEl.textContent = `
+    if (this.root.classList.contains('debug')) {
+      allPluginDefs.push((() => {
+        let debugEl, onUpdate, lastUpdate = 0;
+        return {
+          name: 'debug', version: '1.0.0', author: 'yd', priority: 999,
+          init: (api) => {
+            if (!api.root.classList.contains('debug')) return false;
+            api.emit('debugOpen'); 
+            debugEl = document.createElement('div');
+            debugEl.className = 'yd_carousel-debug-panel';
+            debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
+            api.root.appendChild(debugEl);
+            
+            onUpdate = (api, payload) => {
+              const now = performance.now();
+              if (now - lastUpdate < (parseInt(api.root.dataset.debugDelay) || 150)) return; 
+              lastUpdate = now;
+              const state = api.state();
+              const pInfo = api.performance();
+              debugEl.textContent = `
 [ydCarousel v${state.version}]
 Idx:  ${state.index}
 Prog: ${state.progress.toFixed(2)}
@@ -1802,25 +1799,23 @@ Loop: ${state.looping}
 Vel:  ${state.velocity.toFixed(2)}
 InVw: ${pInfo.visibleSlides.join(',')}
 FPS:  ${pInfo.fps}
-            `.trim();
-          };
-          api.on('scrollHeavy', onUpdate);
-          api.on('select', onUpdate);
-          onUpdate(api, api.getEventPayload());
-          return true;
-        },
-        destroy: (api) => {
-          if (debugEl) debugEl.remove();
-          if (onUpdate) {
-            api.off('scrollHeavy', onUpdate);
-            api.off('select', onUpdate);
+              `.trim();
+            };
+            api.on('scrollHeavy', onUpdate);
+            api.on('select', onUpdate);
+            onUpdate(api, api.getEventPayload());
+            return true;
+          },
+          destroy: (api) => {
+            if (debugEl) debugEl.remove();
+            if (onUpdate) {
+              api.off('scrollHeavy', onUpdate);
+              api.off('select', onUpdate);
+            }
+            api.emit('debugClose'); 
           }
-          api.emit('debugClose'); 
-        }
-      };
-    };
-    if (this.root.classList.contains('debug')) {
-      allPluginDefs.push(createDebugPlugin());
+        };
+      })());
     }
 
     // MULTI-PASS INITIALIZATION & DEPENDENCY RESOLUTION
@@ -1840,7 +1835,6 @@ FPS:  ${pInfo.fps}
       try {
         const instance = typeof def === 'function' ? def() : { ...def };
         if (instance && typeof instance.init === 'function') {
-          // ISSUE #4 FIX: Accurate Activation Checking
           const active = instance.init(this);
           if (active !== false) {
             const meta = {
