@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * FINAL PRODUCTION RELEASE: S+ Architecture, Safe Observers, Strict Init Ordering & Mutation Recovery
+ * FINAL PRODUCTION RELEASE: O(1) Graph Resolution, Early Refresh Execution & Sorted Initialization
  */
 
 class ydCarousel {
@@ -658,8 +658,9 @@ class ydCarousel {
     this.scheduleRefresh(true);
   }
 
+  // FIX #1: Plugin Refresh ignores `!this._mounted` so it runs cleanly on startup
   refreshPlugins() {
-    if (this.destroyed || !this._mounted) return;
+    if (this.destroyed) return;
     this.plugins.forEach(p => {
       const instance = p.instance || p;
       if (instance && typeof instance.refresh === 'function') {
@@ -1362,6 +1363,7 @@ class ydCarousel {
               });
             };
             api.on('select', updateDots);
+            plugin.refresh(api);
             return true;
           },
           refresh: (api) => {
@@ -1404,6 +1406,7 @@ class ydCarousel {
               else counterEl.textContent = `${currentText} / ${totalText}`;
             };
             api.on('select', updateCounter);
+            plugin.refresh(api);
             return true;
           },
           refresh: (api) => {
@@ -1935,8 +1938,7 @@ FPS:  ${pInfo.fps}
     try {
       const instance = typeof def === 'function' ? def() : { ...def };
       if (instance && typeof instance.init === 'function') {
-        const context = { api: this, root: this.root, options: this.options, plugins: this.pluginsMap, events: this.listeners };
-        const active = instance.init(this, context);
+        const active = instance.init(this);
         if (active !== false) {
           const meta = {
             name: def.name,
@@ -1946,6 +1948,7 @@ FPS:  ${pInfo.fps}
           };
           this.plugins.push(meta);
           this.pluginsMap.set(def.name, meta);
+          this.plugins.sort((a, b) => ((a.instance.priority || 1000) - (b.instance.priority || 1000)));
         }
       }
     } catch (err) {
@@ -2039,6 +2042,8 @@ FPS:  ${pInfo.fps}
     allPluginDefs.forEach(def => resolveGraph(def));
 
     sortedDefs.forEach(def => this._initSinglePlugin(def));
+    
+    this.refreshPlugins();
   }
 }
 
