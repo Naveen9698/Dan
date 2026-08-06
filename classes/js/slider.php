@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * FINAL PRODUCTION RELEASE: O(1) Graph Resolution, Early Refresh Execution & Complete Edge Case Hardening
+ * FINAL PRODUCTION RELEASE: Factory Registry Caching, Complete Destroy Lifecycle, Collision Guards & Full S+ Hardening
  */
 
 class ydCarousel {
@@ -67,10 +67,17 @@ class ydCarousel {
     }
   }
 
+  // Risk #4: Prevent Third-Party Plugin Name Collisions
   static use(pluginFactory) {
-    if (!this.globalPlugins.includes(pluginFactory)) {
-      this.globalPlugins.push(pluginFactory);
+    const probe = typeof pluginFactory === 'function' ? pluginFactory() : pluginFactory;
+    if (this.globalPlugins.some(p => {
+      const existing = typeof p === 'function' ? p() : p;
+      return existing.name === probe.name;
+    })) {
+      if (ydCarousel.DEBUG) console.warn('[ydCarousel] Plugin already registered:', probe.name);
+      return;
     }
+    this.globalPlugins.push(pluginFactory);
   }
 
   constructor(element, options = {}) {
@@ -143,7 +150,7 @@ class ydCarousel {
     // Enterprise Plugin Registry Maps
     this.plugins = [];
     this.pluginsMap = new Map();
-    this.pluginRegistry = new Map();
+    this.pluginRegistry = new Map(); // Issue #1: Factory Storage
     this.failedPlugins = [];
 
     this.onPointerDown = this.onPointerDown.bind(this);
@@ -1975,10 +1982,15 @@ FPS:  ${pInfo.fps}
     this.pluginRegistry.clear();
     this.failedPlugins = [];
 
-    let allPluginDefs = [...this._getAvailablePluginDefs().map(f => typeof f === 'function' ? f() : { ...f })];
-    
-    allPluginDefs.forEach(def => {
-      this.pluginRegistry.set(def.name, def);
+    // Issue #1 Fix: Store plugin factories instead of instantiated closures
+    const pluginFactories = this._getAvailablePluginDefs();
+    let allPluginDefs = pluginFactories.map(factory => 
+      typeof factory === 'function' ? factory() : { ...factory }
+    );
+
+    pluginFactories.forEach(factory => {
+      const probe = typeof factory === 'function' ? factory() : factory;
+      this.pluginRegistry.set(probe.name, factory);
     });
 
     allPluginDefs = allPluginDefs.filter(def => !this.disabledPlugins.has(def.name));
@@ -2049,6 +2061,56 @@ FPS:  ${pInfo.fps}
 
     sortedDefs.forEach(def => this._initSinglePlugin(def));
     this.refreshPlugins();
+  }
+
+  destroy(removeRef = true) {
+    if (this.destroyed) return;
+    this.emit('beforeDestroy');
+    
+    const snapshot = this.state();
+    const finalPayload = this.getEventPayload();
+
+    this.destroyed = true; 
+    this._mounted = false;
+    
+    this.emit('destroy', { ...finalPayload, state: snapshot }, true);
+
+    cancelAnimationFrame(this.rafId);
+    if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
+    if (this.resizeRaf) cancelAnimationFrame(this.resizeRaf);
+    
+    this.unbindEvents();
+    if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
+    if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
+    if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
+    if (this.visibilityPauser) { this.visibilityPauser.disconnect(); this.visibilityPauser = null; }
+    
+    if (this.announceHandler) this.off('select', this.announceHandler);
+
+    this.plugins.forEach(p => {
+      try {
+        if (p.instance && p.instance.destroy) p.instance.destroy(this);
+      } catch (err) {
+        if (ydCarousel.DEBUG) console.error(`[ydCarousel] Plugin "${p.name}" failed to destroy:`, err);
+        this.emit('error', { plugin: p.name, action: 'destroy', error: err }, true);
+      }
+    });
+    
+    this.plugins = []; 
+    this.pluginsMap.clear();
+    
+    this.root.classList.remove('yd_carousel-ready');
+    this.track.style.transform = '';
+    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
+    this.visibleSlides.clear();
+
+    if (removeRef && this.root.__ydCarousel === this) {
+      delete this.root.__ydCarousel;
+    }
+
+    this.emit('afterDestroy', {}, true);
+    this.listeners = {}; 
   }
 }
 
