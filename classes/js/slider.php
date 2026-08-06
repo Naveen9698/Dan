@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.2 - V1.0 ENTERPRISE EDITION
- * 100% COMPLETION: Extreme Scalability, CPU Halting, Event Delegation, Hooks & Dynamic APIs
+ * 100% COMPLETION: Responsive Breakpoints, Factory Plugins, Image Storm Prevention, CPU Halting & Runtime API
  */
 
 class ydCarousel {
@@ -8,6 +8,8 @@ class ydCarousel {
   static ENGINE = 'ydCarousel';
   static DEBUG = false; 
   static _autoInitObserver = null;
+  
+  // Enterprise Plugin Factory Storage
   static globalPlugins = [];
 
   static EVENTS = [
@@ -17,10 +19,11 @@ class ydCarousel {
     'dragStart', 'dragMove', 'dragEnd',
     'scroll', 'scrollHeavy', 'settle',
     'beforeSelect', 'select', 'afterSelect',
-    // Note: 'activeSlideChange' represents a "Scroll group / page change" in the grouped scrolling model
+    // 'activeSlideChange' represents a "Scroll group / page change" in the grouped scrolling model
     'activeSlideChange',
     'slideEnter', 'slideExit',
     'loopEnter', 'loopExit', 'loopReposition',
+    'visibilityPause', 'visibilityResume',
     'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop', 'autoplayToggleRequest',
     'syncStart', 'syncUpdate', 'syncStop',
     'debugOpen', 'debugClose'
@@ -47,9 +50,10 @@ class ydCarousel {
     }
   }
 
-  static use(plugin) {
-    if (!this.globalPlugins.includes(plugin)) {
-      this.globalPlugins.push(plugin);
+  // Enterprise Plugin Factory Registration
+  static use(pluginFactory) {
+    if (!this.globalPlugins.includes(pluginFactory)) {
+      this.globalPlugins.push(pluginFactory);
     }
   }
 
@@ -58,33 +62,9 @@ class ydCarousel {
     this.track = this.root.querySelector('.yd_container');
     if (!this.track) return;
     
-    // CONFIGURATION
-    const scrollAttr = this.root.dataset.scroll;
-    const parsedScroll = parseInt(scrollAttr, 10);
-    this.options = {
-      loop: this.root.classList.contains('loop'),
-      dragFree: this.root.classList.contains('drag-free'),
-      contain: this.root.classList.contains('contain'),
-      containKeep: this.root.classList.contains('contain-keep'),
-      alignCenter: this.root.classList.contains('align-center'),
-      alignEnd: this.root.classList.contains('align-end'),
-      keyboard: this.root.classList.contains('keyboard'),
-      autoplay: this.root.classList.contains('autoplay'),
-      rtl: this.root.classList.contains('rtl'),
-      vertical: this.root.classList.contains('vertical'),
-      scroll: scrollAttr === 'auto' 
-        ? 'auto' 
-        : Number.isInteger(parsedScroll) && parsedScroll > 0 ? parsedScroll : 1,
-      duration: parseFloat(this.root.dataset.duration) || 0.1,
-      friction: parseFloat(this.root.dataset.friction) || 0.92,
-      delay: parseInt(this.root.dataset.delay) || 4000
-    };
-
-    // REDUCED MOTION SUPPORT
-    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) this.options.duration = 1;
-
-    // PHYSICS & STATE
+    // Internal State
+    this._mounted = false;
+    this._isVisible = true;
     this.currentPos = 0;
     this.targetPos = 0;
     this.currentIndex = 0;
@@ -95,11 +75,11 @@ class ydCarousel {
     this.isDraggingActive = false;
     this.isSettled = true;
     this.destroyed = false;        
-    this.mounted = false;
-    this.isVisible = true;
     
     this.rafId = null;
     this.mutationRaf = null;
+    this.refreshRaf = null; // Image Storm Prevention
+    
     this.lastHeavyScrollTime = 0;
     this._currentFps = 60;
     this._frames = 0;
@@ -144,7 +124,8 @@ class ydCarousel {
   init() {
     if (this.destroyed) this.destroyed = false;
     this.emit('beforeInit');
-    
+
+    this.updateOptions();
     this.setupAccessibility();
     this.setupObservers();
     this.updateMeasurements();
@@ -154,8 +135,49 @@ class ydCarousel {
     
     this.root.classList.add('yd_carousel-ready');
     this.emit('init');
-    this.mounted = true;
+    this._mounted = true;
     this.emit('afterInit');
+  }
+
+  // ==========================================
+  // RESPONSIVE UTILITY ENGINE
+  // ==========================================
+
+  updateOptions() {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const has = (cls) => {
+      // Mobile < 768px, Tablet < 1024px, Desktop Default
+      if (w <= 768 && this.root.classList.contains(`mb:${cls}`)) return true;
+      if (w <= 1024 && this.root.classList.contains(`th:${cls}`)) return true;
+      return this.root.classList.contains(cls);
+    };
+
+    const scrollAttr = this.root.dataset.scroll;
+    const parsedScroll = parseInt(scrollAttr, 10);
+
+    this.options = {
+      loop: has('loop'),
+      dragFree: has('drag-free'),
+      contain: has('contain'),
+      containKeep: has('contain-keep'),
+      alignCenter: has('align-center'),
+      alignEnd: has('align-end'),
+      keyboard: has('keyboard'),
+      autoplay: has('autoplay'),
+      rtl: has('rtl'),
+      vertical: has('vertical'),
+      scroll: scrollAttr === 'auto' 
+        ? 'auto' 
+        : Number.isInteger(parsedScroll) && parsedScroll > 0 ? parsedScroll : 1,
+      duration: parseFloat(this.root.dataset.duration) || 0.1,
+      friction: parseFloat(this.root.dataset.friction) || 0.92,
+      delay: parseInt(this.root.dataset.delay) || 4000
+    };
+
+    // Accessibility Override
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.options.duration = 1;
+    }
   }
 
   // ==========================================
@@ -172,30 +194,41 @@ class ydCarousel {
   velocity() { return this._velocity; }
   currentPosition() { return this.currentPos; }
   targetPosition() { return this.targetPos; }
-  
-  // ALIASES & CONVENIENCE
-  play() { this.emit('autoplayResume'); }
-  pause() { this.emit('autoplayPause'); }
+
+  // Runtime Controls
+  visible() { return this._isVisible; }
+  mounted() { return this._mounted; }
+  currentSlide() { return this.activeSlide(); }
+  activeSlideIndex() { return this.currentIndex; }
+  slideCount() { return this.slides.length; }
+  groupCount() { return this.metrics.scrollSnaps.length; }
+
+  // Autoplay Controls
+  play() { this.autoplayController?.play(); }
+  pause() { this.autoplayController?.pause(); }
+  toggleAutoplay() { this.autoplayController?.toggle(); }
+
+  // Navigation Aliases
   goToNext() { this.scrollNext(); }
   goToPrev() { this.scrollPrev(); }
   currentPage() { return this.currentIndex + 1; }
   pageCount() { return this.metrics.scrollSnaps.length; }
 
-  // DYNAMIC SLIDE API
+  // Dynamic Slide API
   addSlide(node) {
     this.track.appendChild(node);
-    this.refresh();
+    this.scheduleRefresh();
   }
   removeSlide(index) {
     if (this.slides[index]) {
       this.slides[index].remove();
-      this.refresh();
+      this.scheduleRefresh();
     }
   }
   replaceSlide(index, node) {
     if (this.slides[index]) {
       this.track.replaceChild(node, this.slides[index]);
-      this.refresh();
+      this.scheduleRefresh();
     }
   }
   
@@ -217,7 +250,6 @@ class ydCarousel {
   }
 
   get stateData() { return this.state(); }
-  
   snapshot() { return this.state(); }
 
   toJSON() {
@@ -225,18 +257,20 @@ class ydCarousel {
       engine: ydCarousel.ENGINE,
       version: this.version(),
       state: this.state(),
-      slideCount: this.slides.length,
-      groupCount: this.metrics.scrollSnaps.length
+      slideCount: this.slideCount(),
+      groupCount: this.groupCount()
     };
   }
 
   performance() {
     return Object.freeze({
       fps: this._currentFps,
-      slideCount: this.slides.length,
-      groupCount: this.metrics.scrollSnaps.length,
-      plugins: this.pluginsList(),
-      visibleSlides: this.slidesInView()
+      mounted: this._mounted,
+      visible: this._isVisible,
+      running: !!this.rafId,
+      slideCount: this.slideCount(),
+      groupCount: this.groupCount(),
+      pluginCount: this.plugins.length
     });
   }
 
@@ -256,7 +290,7 @@ class ydCarousel {
       loop: true, dragFree: true, rtl: true, vertical: true, autoplay: true, keyboard: true,
       wheel: true, hash: true, sync: true, creative: true, lazyLoad: true, accessibility: true,
       debug: true, plugins: true, events: true, diagnostics: true, snapshots: true,
-      observers: true, scrollbar: true, autoplayProgress: true, dynamicApi: true
+      observers: true, scrollbar: true, autoplayProgress: true, dynamicApi: true, responsiveUtilities: true
     });
   }
 
@@ -289,7 +323,7 @@ class ydCarousel {
       runtimeCapabilities: this.runtimeCapabilities(),
       slidesInView: Object.freeze(this.slidesInView()),
       slidesNotInView: Object.freeze(this.slidesNotInView()),
-      activeIndex: this.selectedIndex(),
+      activeIndex: this.activeSlideIndex(),
       activeSlide: this.activeSlide()
     });
   }
@@ -298,8 +332,8 @@ class ydCarousel {
     return {
       currentIndex: this.currentIndex,
       previousIndex: this.prevIndex,
-      slideCount: this.slides.length,
-      groupCount: this.metrics.scrollSnaps.length,
+      slideCount: this.slideCount(),
+      groupCount: this.groupCount(),
       progress: this.scrollProgress(),
       isDragging: this.isDraggingActive,
       isSettled: this.isSettled,
@@ -313,7 +347,6 @@ class ydCarousel {
     const payload = { ...this.getEventPayload(), ...customData };
     this.listeners[event].forEach(cb => cb(this, payload));
     
-    // NATIVE DOM EVENT DISPATCHER
     if (typeof CustomEvent !== 'undefined') {
       this.root.dispatchEvent(new CustomEvent(`yd-${event}`, { detail: payload, bubbles: true }));
     }
@@ -365,9 +398,17 @@ class ydCarousel {
   isDragging() { return this.isDraggingActive; } 
   isLoop() { return this.options.loop; }         
 
+  // IMAGE REFRESH STORM PREVENTION
+  scheduleRefresh() {
+    if (this.refreshRaf || this.destroyed) return;
+    this.refreshRaf = requestAnimationFrame(() => {
+      this.updateMeasurements();
+      this.refreshRaf = null;
+    });
+  }
+
   refresh() {
-    if (this.destroyed) return;
-    this.updateMeasurements();
+    this.scheduleRefresh();
   }
 
   reInit() {
@@ -415,7 +456,10 @@ class ydCarousel {
   // ==========================================
   
   updateMeasurements() {
+    if (this.destroyed) return;
     this.emit('beforeResize');
+    this.updateOptions(); // Parse Breakpoint Utilities
+
     this.visibleSlides.clear();
 
     if (this.mutationObserver) this.mutationObserver.disconnect();
@@ -424,7 +468,6 @@ class ydCarousel {
     this.slides = Array.from(this.track.children);
     if (!this.slides.length) return;
 
-    // IMAGE CLS DETECTION & REFRESH BINDING
     this.slides.forEach((slide, idx) => {
       slide.setAttribute('data-slide-index', idx);
       
@@ -435,7 +478,7 @@ class ydCarousel {
         }
         if (!img.dataset.ydLoaded) {
            img.dataset.ydLoaded = 'true';
-           img.addEventListener('load', () => this.refresh(), { once: true });
+           img.addEventListener('load', () => this.scheduleRefresh(), { once: true });
         }
       });
     });
@@ -545,7 +588,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // OBSERVERS (VISIBILITY PAUSE & CPU HALT)
+  // OBSERVERS
   // ==========================================
   
   setupObservers() {
@@ -553,12 +596,19 @@ class ydCarousel {
     this.resizeObserver.observe(this.root);
     this.mutationObserver = new MutationObserver(this.onMutation);
 
-    // CPU Halting Visibility Observer
     this.visibilityPauser = new IntersectionObserver((entries) => {
-      this.isVisible = entries[0].isIntersecting;
-      if (this.isVisible && !this.isSettled && !this.rafId && this.mounted) {
-        this.lastPointerTime = performance.now();
-        this.startPhysicsLoop();
+      const isIntersecting = entries[0].isIntersecting;
+      if (isIntersecting !== this._isVisible) {
+        this._isVisible = isIntersecting;
+        if (this._isVisible) {
+          this.emit('visibilityResume');
+          if (!this.isSettled && !this.rafId && this._mounted) {
+            this.lastPointerTime = performance.now();
+            this.startPhysicsLoop();
+          }
+        } else {
+          this.emit('visibilityPause');
+        }
       }
     });
     this.visibilityPauser.observe(this.root);
@@ -596,7 +646,7 @@ class ydCarousel {
     }, { root: this.root, threshold: 0.01 });
   }
 
-  onResize() { this.updateMeasurements(); }
+  onResize() { this.scheduleRefresh(); }
 
   onMutation(mutations) {
     if (mutations.some(m => m.target.classList && m.target.classList.contains('yd_slide-clone'))) return;
@@ -607,7 +657,7 @@ class ydCarousel {
       const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
       const newLength = realNodes.length;
 
-      this.updateMeasurements();
+      this.scheduleRefresh();
       if (newLength !== oldLength) this.initPlugins(); 
     });
   }
@@ -653,7 +703,6 @@ class ydCarousel {
     this.track.setPointerCapture(e.pointerId);
     this.track.style.cursor = 'grabbing';
     
-    // PASSIVE LISTENER DELEGATION
     window.addEventListener('pointermove', this.onPointerMove, { passive: true });
     window.addEventListener('pointerup', this.onPointerUp, { passive: true });
     
@@ -753,14 +802,12 @@ class ydCarousel {
 
   tick() {
     if (this.destroyed) return;
-    
-    // VISIBILITY-BASED PAUSING (CPU SAVE)
-    if (!this.isVisible) {
+
+    if (!this._isVisible) {
       this.rafId = null;
       return;
     }
 
-    // DIAGNOSTIC FPS TRACKING
     this._frames++;
     const now = performance.now();
     if (now - this._lastFpsTime >= 1000) {
@@ -831,8 +878,7 @@ class ydCarousel {
     }
 
     this.emit('scroll');
-    
-    // RAF-THROTTLED HEAVY SCROLL (Performance Saver)
+
     if (now - this.lastHeavyScrollTime > 50) {
       this.emit('scrollHeavy');
       this.lastHeavyScrollTime = now;
@@ -844,8 +890,11 @@ class ydCarousel {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true; 
+    this._mounted = false;
+    
     cancelAnimationFrame(this.rafId);
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    if (this.refreshRaf) cancelAnimationFrame(this.refreshRaf);
     
     this.unbindEvents();
     if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
@@ -1004,651 +1053,577 @@ class ydCarousel {
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = [];
 
-    // Combine local plugins with global public plugins
-    const activePlugins = [
-      ...ydCarousel.globalPlugins
+    const allPluginDefs = [
+      ...ydCarousel.globalPlugins.map(f => f())
     ];
-
-    // ==========================================
-    // CORE MODULES
-    // ==========================================
 
     const prevBtn = this.root.querySelector('.yd_prev');
     const nextBtn = this.root.querySelector('.yd_next');
     if (prevBtn || nextBtn) {
-      const controls = (() => {
-        let hPrev, hNext;
-        return {
-          name: 'controls',
-          init: (api) => {
-            hPrev = () => api.scrollPrev();
-            hNext = () => api.scrollNext();
-            if (prevBtn) prevBtn.addEventListener('click', hPrev);
-            if (nextBtn) nextBtn.addEventListener('click', hNext);
-          },
-          destroy: () => {
-            if (prevBtn) prevBtn.removeEventListener('click', hPrev);
-            if (nextBtn) nextBtn.removeEventListener('click', hNext);
-          }
-        };
-      })();
-      activePlugins.push(controls);
+      allPluginDefs.push({
+        name: 'controls',
+        priority: 10,
+        init: (api) => {
+          this._hPrev = () => api.scrollPrev();
+          this._hNext = () => api.scrollNext();
+          if (prevBtn) prevBtn.addEventListener('click', this._hPrev);
+          if (nextBtn) nextBtn.addEventListener('click', this._hNext);
+        },
+        destroy: () => {
+          if (prevBtn) prevBtn.removeEventListener('click', this._hPrev);
+          if (nextBtn) nextBtn.removeEventListener('click', this._hNext);
+        }
+      });
     }
 
     const dotsContainer = this.root.querySelector('.yd_dots');
     if (dotsContainer) {
-      const dots = (() => {
-        let updateDots, onDotsClick;
-        return {
-          name: 'dots',
-          init: (api) => {
-            let template = dotsContainer.querySelector('.yd_dot');
-            if (template) {
-              template = template.cloneNode(true);
-            } else {
-              template = document.createElement('button');
-              template.className = 'yd_dot';
-            }
-            dotsContainer.innerHTML = '';
-            
-            // Centralized Event Delegation
-            onDotsClick = (e) => {
-              const dot = e.target.closest('.yd_dot');
-              if (dot) {
-                const idx = parseInt(dot.getAttribute('data-index'), 10);
-                if (!isNaN(idx)) api.scrollTo(idx);
-              }
-            };
-            dotsContainer.addEventListener('click', onDotsClick);
-
-            api.metrics.scrollSnaps.forEach((_, idx) => {
-              const dot = template.cloneNode(true);
-              if (dot.tagName !== 'BUTTON') {
-                dot.setAttribute('role', 'button');
-                dot.setAttribute('tabindex', '0');
-              }
-              dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
-              dot.setAttribute('data-index', idx);
-              dotsContainer.appendChild(dot);
-            });
-            updateDots = (api, payload) => {
-              Array.from(dotsContainer.children).forEach((dot, idx) => {
-                const isActive = idx === payload.currentIndex;
-                dot.classList.toggle('active', isActive);
-                if (isActive) dot.setAttribute('aria-current', 'true');
-                else dot.removeAttribute('aria-current');
-              });
-            };
-            api.on('select', updateDots);
-            updateDots(api, api.getEventPayload());
-          },
-          destroy: (api) => {
-            dotsContainer.removeEventListener('click', onDotsClick);
-            api.off('select', updateDots);
+      allPluginDefs.push({
+        name: 'dots',
+        priority: 20,
+        init: (api) => {
+          let template = dotsContainer.querySelector('.yd_dot');
+          if (template) {
+            template = template.cloneNode(true);
+          } else {
+            template = document.createElement('button');
+            template.className = 'yd_dot';
           }
-        };
-      })();
-      activePlugins.push(dots);
+          dotsContainer.innerHTML = '';
+          
+          this._onDotsClick = (e) => {
+            const dot = e.target.closest('.yd_dot');
+            if (dot) {
+              const idx = parseInt(dot.getAttribute('data-index'), 10);
+              if (!isNaN(idx)) api.scrollTo(idx);
+            }
+          };
+          dotsContainer.addEventListener('click', this._onDotsClick);
+
+          api.metrics.scrollSnaps.forEach((_, idx) => {
+            const dot = template.cloneNode(true);
+            if (dot.tagName !== 'BUTTON') {
+              dot.setAttribute('role', 'button');
+              dot.setAttribute('tabindex', '0');
+            }
+            dot.setAttribute('aria-label', `Go to page ${idx + 1}`);
+            dot.setAttribute('data-index', idx);
+            dotsContainer.appendChild(dot);
+          });
+          this._updateDots = (api, payload) => {
+            Array.from(dotsContainer.children).forEach((dot, idx) => {
+              const isActive = idx === payload.currentIndex;
+              dot.classList.toggle('active', isActive);
+              if (isActive) dot.setAttribute('aria-current', 'true');
+              else dot.removeAttribute('aria-current');
+            });
+          };
+          api.on('select', this._updateDots);
+          this._updateDots(api, api.getEventPayload());
+        },
+        destroy: (api) => {
+          dotsContainer.removeEventListener('click', this._onDotsClick);
+          api.off('select', this._updateDots);
+        }
+      });
     }
 
     const counterEl = this.root.querySelector('.yd_counter');
     if (counterEl) {
-      const counter = (() => {
-        let updateCounter;
-        return {
-          name: 'counter',
-          init: (api) => {
-            const currentEl = counterEl.querySelector('.yd_current');
-            const totalEl = counterEl.querySelector('.yd_total');
+      allPluginDefs.push({
+        name: 'counter',
+        priority: 30,
+        init: (api) => {
+          const currentEl = counterEl.querySelector('.yd_current');
+          const totalEl = counterEl.querySelector('.yd_total');
+          
+          this._updateCounter = (api, payload) => {
+            const currentText = payload.currentIndex + 1;
+            const totalText = payload.groupCount;
             
-            updateCounter = (api, payload) => {
-              const currentText = payload.currentIndex + 1;
-              const totalText = payload.groupCount;
-              
-              if (currentEl && totalEl) {
-                currentEl.textContent = currentText;
-                totalEl.textContent = totalText;
-              } else {
-                counterEl.textContent = `${currentText} / ${totalText}`;
-              }
-            };
-            api.on('select', updateCounter);
-            updateCounter(api, api.getEventPayload());
-          },
-          destroy: (api) => api.off('select', updateCounter)
-        };
-      })();
-      activePlugins.push(counter);
+            if (currentEl && totalEl) {
+              currentEl.textContent = currentText;
+              totalEl.textContent = totalText;
+            } else {
+              counterEl.textContent = `${currentText} / ${totalText}`;
+            }
+          };
+          api.on('select', this._updateCounter);
+          this._updateCounter(api, api.getEventPayload());
+        },
+        destroy: (api) => api.off('select', this._updateCounter)
+      });
     }
 
     const progressEl = this.root.querySelector('.yd_progress');
     if (progressEl) {
-      const progress = (() => {
-        let updateProgress;
-        return {
-          name: 'progress',
-          init: (api) => {
-            updateProgress = (api, payload) => {
-              const pct = payload.progress * 100;
-              progressEl.style.setProperty('--progress', `${pct}%`);
-            };
-            // Use heavily throttled scroll to save CPU on progress bar
-            api.on('scrollHeavy', updateProgress);
-            updateProgress(api, api.getEventPayload());
-          },
-          destroy: (api) => api.off('scrollHeavy', updateProgress)
-        };
-      })();
-      activePlugins.push(progress);
+      allPluginDefs.push({
+        name: 'progress',
+        priority: 40,
+        init: (api) => {
+          this._updateProgress = (api, payload) => {
+            const pct = payload.progress * 100;
+            progressEl.style.setProperty('--progress', `${pct}%`);
+          };
+          api.on('scrollHeavy', this._updateProgress);
+          this._updateProgress(api, api.getEventPayload());
+        },
+        destroy: (api) => api.off('scrollHeavy', this._updateProgress)
+      });
     }
 
     if (this.options.autoplay) {
-      const autoplay = (() => {
-        let playTimer, play, stop, onVisChange, onFocusIn, onFocusOut, onToggleRequest;
-        let isPaused = false;
-        let hasStarted = false;
-        return {
-          name: 'autoplay',
-          init: (api) => {
-            play = () => {
-              clearTimeout(playTimer);
-              if (!hasStarted) {
-                hasStarted = true;
-                api.emit('autoplayStart');
-              } else if (isPaused) {
-                isPaused = false;
-                api.emit('autoplayResume'); 
-              }
-              if (!api.canScrollNext()) return;
-              playTimer = setTimeout(() => { api.scrollNext(); play(); }, api.options.delay);
-            };
-            stop = () => {
-              clearTimeout(playTimer);
-              if (hasStarted && !isPaused) {
-                isPaused = true;
-                api.emit('autoplayPause');
-              }
-            };
-
-            onVisChange = () => document.hidden ? stop() : play();
-            onFocusIn = () => stop();
-            onFocusOut = () => play();
-
-            onToggleRequest = () => {
-              if (hasStarted && !isPaused) stop();
-              else play();
-            };
-            api.on('autoplayToggleRequest', onToggleRequest);
-
-            api.on('dragStart', stop);
-            api.on('dragEnd', play);
-            if (api.root.classList.contains('pause-hover')) {
-              api.root.addEventListener('mouseenter', stop);
-              api.root.addEventListener('mouseleave', play);
+      allPluginDefs.push({
+        name: 'autoplay',
+        priority: 100,
+        init: (api) => {
+          let playTimer;
+          let isPaused = false;
+          let hasStarted = false;
+          
+          const start = () => {
+            clearTimeout(playTimer);
+            if (!hasStarted) {
+              hasStarted = true;
+              api.emit('autoplayStart');
+            } else if (isPaused) {
+              isPaused = false;
+              api.emit('autoplayResume'); 
             }
-            document.addEventListener('visibilitychange', onVisChange);
-            api.root.addEventListener('focusin', onFocusIn);
-            api.root.addEventListener('focusout', onFocusOut);
-            play();
-          },
-          destroy: (api) => {
-            stop();
-            api.emit('autoplayStop');
-            api.off('dragStart', stop);
-            api.off('dragEnd', play);
-            api.off('autoplayToggleRequest', onToggleRequest); 
-            api.root.removeEventListener('mouseenter', stop);
-            api.root.removeEventListener('mouseleave', play);
-            document.removeEventListener('visibilitychange', onVisChange);
-            api.root.removeEventListener('focusin', onFocusIn);
-            api.root.removeEventListener('focusout', onFocusOut);
-          }
-        };
-      })();
-      activePlugins.push(autoplay);
+            if (!api.canScrollNext()) return;
+            playTimer = setTimeout(() => { api.scrollNext(); start(); }, api.options.delay);
+          };
+          const stop = () => {
+            clearTimeout(playTimer);
+            if (hasStarted && !isPaused) {
+              isPaused = true;
+              api.emit('autoplayPause');
+            }
+          };
 
-      // AUTOPLAY TOGGLE BUTTON
+          // Assign Public Interface
+          api.autoplayController = {
+            play: () => start(),
+            pause: () => stop(),
+            toggle: () => { if (hasStarted && !isPaused) stop(); else start(); },
+            isPlaying: () => hasStarted && !isPaused
+          };
+
+          this._onVisPause = () => stop();
+          this._onVisResume = () => start();
+          this._onToggleRequest = () => api.autoplayController.toggle();
+
+          api.on('visibilityPause', this._onVisPause);
+          api.on('visibilityResume', this._onVisResume);
+          api.on('autoplayToggleRequest', this._onToggleRequest);
+          api.on('dragStart', stop);
+          api.on('dragEnd', start);
+          
+          this._onHoverStop = () => stop();
+          this._onHoverPlay = () => start();
+          if (api.root.classList.contains('pause-hover')) {
+            api.root.addEventListener('mouseenter', this._onHoverStop);
+            api.root.addEventListener('mouseleave', this._onHoverPlay);
+          }
+          api.root.addEventListener('focusin', this._onHoverStop);
+          api.root.addEventListener('focusout', this._onHoverPlay);
+          
+          start();
+        },
+        destroy: (api) => {
+          api.autoplayController.pause();
+          delete api.autoplayController;
+          api.emit('autoplayStop');
+          api.off('visibilityPause', this._onVisPause);
+          api.off('visibilityResume', this._onVisResume);
+          api.off('autoplayToggleRequest', this._onToggleRequest);
+          api.off('dragStart', this._onHoverStop);
+          api.off('dragEnd', this._onHoverPlay);
+          api.root.removeEventListener('mouseenter', this._onHoverStop);
+          api.root.removeEventListener('mouseleave', this._onHoverPlay);
+          api.root.removeEventListener('focusin', this._onHoverStop);
+          api.root.removeEventListener('focusout', this._onHoverPlay);
+        }
+      });
+
       const autoplayToggle = this.root.querySelector('.yd_autoplay-toggle');
       if (autoplayToggle) {
-        const togglePlugin = (() => {
-          let onClick, onPause, onResume, onStart;
-          return {
-            name: 'autoplay-toggle',
-            init: (api) => {
-              onClick = () => api.emit('autoplayToggleRequest');
-              autoplayToggle.addEventListener('click', onClick);
-              
-              onPause = () => autoplayToggle.classList.add('paused');
-              onResume = () => autoplayToggle.classList.remove('paused');
-              onStart = () => autoplayToggle.classList.remove('paused');
-              
-              api.on('autoplayPause', onPause);
-              api.on('autoplayResume', onResume);
-              api.on('autoplayStart', onStart);
-            },
-            destroy: (api) => {
-              autoplayToggle.removeEventListener('click', onClick);
-              api.off('autoplayPause', onPause);
-              api.off('autoplayResume', onResume);
-              api.off('autoplayStart', onStart); 
-            }
-          };
-        })();
-        activePlugins.push(togglePlugin);
+        allPluginDefs.push({
+          name: 'autoplay-toggle',
+          priority: 110,
+          init: (api) => {
+            this._onClickToggle = () => api.emit('autoplayToggleRequest');
+            autoplayToggle.addEventListener('click', this._onClickToggle);
+            
+            this._onPauseEvt = () => autoplayToggle.classList.add('paused');
+            this._onResumeEvt = () => autoplayToggle.classList.remove('paused');
+            this._onStartEvt = () => autoplayToggle.classList.remove('paused');
+            
+            api.on('autoplayPause', this._onPauseEvt);
+            api.on('autoplayResume', this._onResumeEvt);
+            api.on('autoplayStart', this._onStartEvt);
+          },
+          destroy: (api) => {
+            autoplayToggle.removeEventListener('click', this._onClickToggle);
+            api.off('autoplayPause', this._onPauseEvt);
+            api.off('autoplayResume', this._onResumeEvt);
+            api.off('autoplayStart', this._onStartEvt);
+          }
+        });
       }
 
-      // AUTOPLAY PROGRESS INDICATOR
       const autoplayProgressEl = this.root.querySelector('.yd_autoplay-progress');
       if (autoplayProgressEl) {
-        const autoplayProgress = (() => {
-          let rafId, startTime, elapsed = 0, isPlaying = false;
-          let delayMs = 4000;
-          let onSlideChange, onStartEvt, onResumeEvt, onPauseEvt, onStopEvt, onDragStartEvt;
-          
-          const tick = () => {
-            if (!isPlaying) return;
-            const now = performance.now();
-            const currentElapsed = elapsed + (now - startTime);
-            let pct = Math.min(100, (currentElapsed / delayMs) * 100);
-            autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
+        allPluginDefs.push({
+          name: 'autoplay-progress',
+          priority: 120,
+          init: (api) => {
+            let rafId, startTime, elapsed = 0, isPlaying = false;
+            let delayMs = api.options.delay;
             
-            if (pct < 100) rafId = requestAnimationFrame(tick);
-          };
+            const tick = () => {
+              if (!isPlaying) return;
+              const now = performance.now();
+              const currentElapsed = elapsed + (now - startTime);
+              let pct = Math.min(100, (currentElapsed / delayMs) * 100);
+              autoplayProgressEl.style.setProperty('--autoplay-progress', `${pct}%`);
+              if (pct < 100) rafId = requestAnimationFrame(tick);
+            };
 
-          const start = () => {
-            isPlaying = true;
-            startTime = performance.now();
-            cancelAnimationFrame(rafId);
-            rafId = requestAnimationFrame(tick);
-          };
-
-          const pause = () => {
-            isPlaying = false;
-            elapsed += (performance.now() - startTime);
-            cancelAnimationFrame(rafId);
-          };
-
-          const reset = () => {
-            elapsed = 0;
-            autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`);
-          };
-
-          return {
-            name: 'autoplay-progress',
-            init: (api) => {
-              delayMs = api.options.delay;
-              
-              onSlideChange = () => { reset(); if (api.options.autoplay) start(); };
-              onStartEvt = () => { reset(); start(); };
-              onResumeEvt = start;
-              onPauseEvt = pause;
-              onStopEvt = () => { pause(); reset(); };
-              onDragStartEvt = pause;
-              
-              api.on('activeSlideChange', onSlideChange);
-              api.on('autoplayStart', onStartEvt);
-              api.on('autoplayResume', onResumeEvt);
-              api.on('autoplayPause', onPauseEvt);
-              api.on('autoplayStop', onStopEvt);
-              api.on('dragStart', onDragStartEvt);
-            },
-            destroy: (api) => {
+            const start = () => {
+              isPlaying = true;
+              startTime = performance.now();
               cancelAnimationFrame(rafId);
-              api.off('activeSlideChange', onSlideChange);
-              api.off('autoplayStart', onStartEvt);
-              api.off('autoplayResume', onResumeEvt);
-              api.off('autoplayPause', onPauseEvt);
-              api.off('autoplayStop', onStopEvt);
-              api.off('dragStart', onDragStartEvt); 
-            }
-          };
-        })();
-        activePlugins.push(autoplayProgress);
+              rafId = requestAnimationFrame(tick);
+            };
+
+            const pause = () => {
+              isPlaying = false;
+              elapsed += (performance.now() - startTime);
+              cancelAnimationFrame(rafId);
+            };
+
+            const reset = () => {
+              elapsed = 0;
+              autoplayProgressEl.style.setProperty('--autoplay-progress', `0%`);
+            };
+            
+            this._onSlideChange = () => { reset(); if (api.autoplayController && api.autoplayController.isPlaying()) start(); };
+            this._onStartProg = () => { reset(); start(); };
+            this._onResumeProg = start;
+            this._onPauseProg = pause;
+            this._onStopProg = () => { pause(); reset(); };
+            this._onDragStartProg = pause;
+            
+            api.on('activeSlideChange', this._onSlideChange);
+            api.on('autoplayStart', this._onStartProg);
+            api.on('autoplayResume', this._onResumeProg);
+            api.on('autoplayPause', this._onPauseProg);
+            api.on('autoplayStop', this._onStopProg);
+            api.on('dragStart', this._onDragStartProg);
+          },
+          destroy: (api) => {
+            api.off('activeSlideChange', this._onSlideChange);
+            api.off('autoplayStart', this._onStartProg);
+            api.off('autoplayResume', this._onResumeProg);
+            api.off('autoplayPause', this._onPauseProg);
+            api.off('autoplayStop', this._onStopProg);
+            api.off('dragStart', this._onDragStartProg);
+          }
+        });
       }
     }
 
-    // ==========================================
-    // ADVANCED MODULES
-    // ==========================================
-
-    // SCROLLBAR INTERACTION PLUGIN
     const scrollbarEl = this.root.querySelector('.yd_scrollbar');
     if (scrollbarEl) {
-      const scrollbar = (() => {
-        let thumb, track, isDragging = false, startPos, startProgress;
-        let updateThumb;
-        let onTrackClick, onPointerDown, onPointerMove, onPointerUp;
+      allPluginDefs.push({
+        name: 'scrollbar',
+        priority: 50,
+        init: (api) => {
+          const thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
+          const track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
+          let isDragging = false, startPos, startProgress;
+          
+          this._updateThumb = (api) => {
+            if (isDragging) return;
+            const pct = api.scrollProgress() * 100;
+            if (thumb) thumb.style.setProperty('--scroll-progress', `${pct}%`);
+          };
+          api.on('scroll', this._updateThumb);
+          this._updateThumb(api);
+          
+          this._onTrackClick = (e) => {
+            if (e.target === thumb || isDragging) return;
+            const rect = track.getBoundingClientRect();
+            const clickPct = api.options.vertical ? (e.clientY - rect.top) / rect.height : (e.clientX - rect.left) / rect.width;
+            const targetScroll = clickPct * api.maxScroll;
+            let closestIdx = 0, minDiff = Infinity;
+            api.metrics.scrollSnaps.forEach((snap, idx) => {
+              if (Math.abs(snap - targetScroll) < minDiff) { minDiff = Math.abs(snap - targetScroll); closestIdx = idx; }
+            });
+            api.scrollTo(closestIdx);
+          };
+          track.addEventListener('click', this._onTrackClick);
 
-        return {
-          name: 'scrollbar',
-          init: (api) => {
-            thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
-            track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
-            
-            updateThumb = (api) => {
-              if (isDragging) return;
-              const pct = api.scrollProgress() * 100;
-              if (thumb) thumb.style.setProperty('--scroll-progress', `${pct}%`);
+          if (thumb) {
+            this._onSbPointerDown = (e) => {
+              isDragging = true;
+              startPos = api.options.vertical ? e.clientY : e.clientX;
+              startProgress = api.scrollProgress();
+              thumb.setPointerCapture(e.pointerId);
+              api.isDraggingActive = true;
             };
-            
-            api.on('scroll', updateThumb);
-            updateThumb(api);
-            
-            onTrackClick = (e) => {
-              if (e.target === thumb || isDragging) return;
+            this._onSbPointerMove = (e) => {
+              if (!isDragging) return;
               const rect = track.getBoundingClientRect();
-              const clickPct = api.options.vertical 
-                ? (e.clientY - rect.top) / rect.height 
-                : (e.clientX - rect.left) / rect.width;
-              
-              const targetScroll = clickPct * api.maxScroll;
-              let closestIdx = 0, minDiff = Infinity;
-              api.metrics.scrollSnaps.forEach((snap, idx) => {
-                if (Math.abs(snap - targetScroll) < minDiff) {
-                  minDiff = Math.abs(snap - targetScroll);
-                  closestIdx = idx;
-                }
-              });
-              api.scrollTo(closestIdx);
+              const delta = api.options.vertical ? e.clientY - startPos : e.clientX - startPos;
+              const trackSize = api.options.vertical ? rect.height : rect.width;
+              let newProgress = startProgress + (delta / trackSize);
+              newProgress = Math.max(0, Math.min(1, newProgress));
+              thumb.style.setProperty('--scroll-progress', `${newProgress * 100}%`);
+              api.targetPos = newProgress * api.maxScroll; 
             };
-            track.addEventListener('click', onTrackClick);
-
-            if (thumb) {
-              onPointerDown = (e) => {
-                isDragging = true;
-                startPos = api.options.vertical ? e.clientY : e.clientX;
-                startProgress = api.scrollProgress();
-                thumb.setPointerCapture(e.pointerId);
-                api.isDraggingActive = true;
-              };
-              onPointerMove = (e) => {
-                if (!isDragging) return;
-                const rect = track.getBoundingClientRect();
-                const delta = api.options.vertical ? e.clientY - startPos : e.clientX - startPos;
-                const trackSize = api.options.vertical ? rect.height : rect.width;
-                
-                let newProgress = startProgress + (delta / trackSize);
-                newProgress = Math.max(0, Math.min(1, newProgress));
-                
-                thumb.style.setProperty('--scroll-progress', `${newProgress * 100}%`);
-                api.targetPos = newProgress * api.maxScroll; 
-              };
-              onPointerUp = (e) => {
-                if (!isDragging) return;
-                isDragging = false;
-                thumb.releasePointerCapture(e.pointerId);
-                api.isDraggingActive = false;
-                api.snapToClosest();
-              };
-              
-              thumb.addEventListener('pointerdown', onPointerDown);
-              // Safe passive listeners attached to thumb directly
-              thumb.addEventListener('pointermove', onPointerMove, { passive: true });
-              thumb.addEventListener('pointerup', onPointerUp, { passive: true });
-            }
-          },
-          destroy: (api) => {
-            api.off('scroll', updateThumb);
-            if (track) track.removeEventListener('click', onTrackClick);
-            if (thumb) {
-              thumb.removeEventListener('pointerdown', onPointerDown);
-              thumb.removeEventListener('pointermove', onPointerMove);
-              thumb.removeEventListener('pointerup', onPointerUp); 
-            }
+            this._onSbPointerUp = (e) => {
+              if (!isDragging) return;
+              isDragging = false;
+              thumb.releasePointerCapture(e.pointerId);
+              api.isDraggingActive = false;
+              api.snapToClosest();
+            };
+            thumb.addEventListener('pointerdown', this._onSbPointerDown);
+            thumb.addEventListener('pointermove', this._onSbPointerMove, { passive: true });
+            thumb.addEventListener('pointerup', this._onSbPointerUp, { passive: true });
           }
-        };
-      })();
-      activePlugins.push(scrollbar);
+        },
+        destroy: (api) => {
+          api.off('scroll', this._updateThumb);
+          const track = scrollbarEl.querySelector('.yd_scrollbar-track') || scrollbarEl;
+          const thumb = scrollbarEl.querySelector('.yd_scrollbar-thumb');
+          if (track) track.removeEventListener('click', this._onTrackClick);
+          if (thumb) {
+            thumb.removeEventListener('pointerdown', this._onSbPointerDown);
+            thumb.removeEventListener('pointermove', this._onSbPointerMove);
+            thumb.removeEventListener('pointerup', this._onSbPointerUp); 
+          }
+        }
+      });
     }
 
     if (this.root.classList.contains('wheel')) {
-      const wheel = (() => {
-        let onWheel, resetTimer;
-        let accumulator = 0;
-        return {
-          name: 'wheel',
-          init: (api) => {
-            const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
-            onWheel = (e) => {
-              if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
-              e.preventDefault();
-              
-              const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
-              accumulator += delta;
-              
-              if (Math.abs(accumulator) >= threshold) {
-                 accumulator > 0 ? api.scrollNext() : api.scrollPrev();
-                 accumulator = 0;
-              }
-              clearTimeout(resetTimer);
-              resetTimer = setTimeout(() => { accumulator = 0; }, 100);
-            };
-            api.root.addEventListener('wheel', onWheel, { passive: false });
-          },
-          destroy: (api) => {
-            clearTimeout(resetTimer); 
-            api.root.removeEventListener('wheel', onWheel);
-          }
-        };
-      })();
-      activePlugins.push(wheel);
+      allPluginDefs.push({
+        name: 'wheel',
+        priority: 60,
+        init: (api) => {
+          const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
+          let accumulator = 0;
+          this._onWheel = (e) => {
+            if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+            e.preventDefault();
+            const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
+            accumulator += delta;
+            if (Math.abs(accumulator) >= threshold) {
+               accumulator > 0 ? api.scrollNext() : api.scrollPrev();
+               accumulator = 0;
+            }
+            clearTimeout(this._wheelResetTimer);
+            this._wheelResetTimer = setTimeout(() => { accumulator = 0; }, 100);
+          };
+          api.root.addEventListener('wheel', this._onWheel, { passive: false });
+        },
+        destroy: (api) => {
+          clearTimeout(this._wheelResetTimer); 
+          api.root.removeEventListener('wheel', this._onWheel);
+        }
+      });
     }
 
     if (this.root.classList.contains('hash')) {
-      const hashPlugin = (() => {
-        let onHash, onSelect;
-        return {
-          name: 'hash',
-          init: (api) => {
-            const updateUrl = api.root.dataset.hashUpdate !== 'false';
-            const hashGroup = api.hashGroup(); 
-            
-            onHash = () => {
-              const rawHash = window.location.hash.replace('#', '');
-              let slideHash = rawHash;
-              if (hashGroup) {
-                if (rawHash.startsWith(`${hashGroup}:`)) {
-                  slideHash = rawHash.split(':')[1];
-                } else {
-                  return; 
-                }
-              }
-              const targetSlideIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
-              if (targetSlideIdx > -1) {
-                 const snapTarget = api.metrics.slideSnaps[targetSlideIdx];
-                 let closestIndex = 0, minDistance = Infinity;
-                 api.metrics.scrollSnaps.forEach((p, i) => {
-                   if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
-                 });
-                 if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
-              }
-            };
-            
-            onSelect = (api, payload) => {
-              if (!updateUrl) return;
-              const activeNode = api.activeSlide();
-              const slideHash = activeNode ? activeNode.dataset.hash : null;
-              if (slideHash) {
-                const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
-                history.replaceState(null, null, newHash);
-              }
-            };
-            
-            window.addEventListener('hashchange', onHash);
-            api.on('select', onSelect);
-            setTimeout(onHash, 0);
-          },
-          destroy: (api) => {
-            window.removeEventListener('hashchange', onHash);
-            api.off('select', onSelect);
-          }
-        };
-      })();
-      activePlugins.push(hashPlugin);
+      allPluginDefs.push({
+        name: 'hash',
+        priority: 70,
+        init: (api) => {
+          const updateUrl = api.root.dataset.hashUpdate !== 'false';
+          const hashGroup = api.hashGroup(); 
+          this._onHashChange = () => {
+            const rawHash = window.location.hash.replace('#', '');
+            let slideHash = rawHash;
+            if (hashGroup) {
+              if (rawHash.startsWith(`${hashGroup}:`)) slideHash = rawHash.split(':')[1];
+              else return; 
+            }
+            const targetSlideIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
+            if (targetSlideIdx > -1) {
+               const snapTarget = api.metrics.slideSnaps[targetSlideIdx];
+               let closestIndex = 0, minDistance = Infinity;
+               api.metrics.scrollSnaps.forEach((p, i) => {
+                 if (Math.abs(p - snapTarget) < minDistance) { minDistance = Math.abs(p - snapTarget); closestIndex = i; }
+               });
+               if (closestIndex !== api.selectedIndex()) api.scrollTo(closestIndex);
+            }
+          };
+          this._onHashSelect = (api, payload) => {
+            if (!updateUrl) return;
+            const activeNode = api.activeSlide();
+            const slideHash = activeNode ? activeNode.dataset.hash : null;
+            if (slideHash) {
+              const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
+              history.replaceState(null, null, newHash);
+            }
+          };
+          window.addEventListener('hashchange', this._onHashChange);
+          api.on('select', this._onHashSelect);
+          setTimeout(this._onHashChange, 0);
+        },
+        destroy: (api) => {
+          window.removeEventListener('hashchange', this._onHashChange);
+          api.off('select', this._onHashSelect);
+        }
+      });
     }
 
     const syncTarget = this.root.dataset.sync;
     const syncGroup = this.syncGroup();
     if (syncTarget || syncGroup) {
-      const syncPlugin = (() => {
-        let onSelect;
-        let hasSynced = false;
-        return {
-          name: 'sync',
-          init: (api) => {
-            onSelect = (api, payload) => {
-              let targets = [];
-              if (syncTarget) {
-                 const el = document.querySelector(syncTarget);
-                 if (el && el.__ydCarousel) targets.push(el.__ydCarousel);
-              }
-              if (syncGroup) { 
-                 document.querySelectorAll(`.yd_carousel[data-sync-group="${syncGroup}"]`).forEach(el => {
-                    if (el !== api.root && el.__ydCarousel) targets.push(el.__ydCarousel);
-                 });
-              }
-              
-              if (targets.length) {
-                if (!hasSynced) {
-                  hasSynced = true;
-                  api.emit('syncStart');
-                } else {
-                  api.emit('syncUpdate');
-                }
-                
-                targets.forEach(targetApi => {
-                  if (targetApi.selectedIndex() !== payload.currentIndex) {
-                     targetApi.scrollTo(payload.currentIndex);
-                  }
-                });
-              }
-            };
-            api.on('select', onSelect);
-          },
-          destroy: (api) => {
-            api.emit('syncStop');
-            api.off('select', onSelect);
-          }
-        };
-      })();
-      activePlugins.push(syncPlugin);
+      allPluginDefs.push({
+        name: 'sync',
+        priority: 80,
+        init: (api) => {
+          let hasSynced = false;
+          this._onSyncSelect = (api, payload) => {
+            let targets = [];
+            if (syncTarget) {
+               const el = document.querySelector(syncTarget);
+               if (el && el.__ydCarousel) targets.push(el.__ydCarousel);
+            }
+            if (syncGroup) { 
+               document.querySelectorAll(`.yd_carousel[data-sync-group="${syncGroup}"]`).forEach(el => {
+                  if (el !== api.root && el.__ydCarousel) targets.push(el.__ydCarousel);
+               });
+            }
+            if (targets.length) {
+              if (!hasSynced) { hasSynced = true; api.emit('syncStart'); } 
+              else { api.emit('syncUpdate'); }
+              targets.forEach(targetApi => {
+                if (targetApi.selectedIndex() !== payload.currentIndex) targetApi.scrollTo(payload.currentIndex);
+              });
+            }
+          };
+          api.on('select', this._onSyncSelect);
+        },
+        destroy: (api) => {
+          api.emit('syncStop');
+          api.off('select', this._onSyncSelect);
+        }
+      });
     }
 
     if (this.root.classList.contains('creative')) {
-      const creative = (() => {
-        let onScroll;
-        return {
-          name: 'creative',
-          init: (api) => {
-            onScroll = () => {
-              api.slides.forEach((slide, idx) => {
-                const progress = api.slideProgress(idx); 
-                slide.style.setProperty('--slide-progress', progress.toFixed(4));
-                slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
-              });
-            };
-            api.on('scroll', onScroll);
-            onScroll();
-          },
-          destroy: (api) => {
-            api.off('scroll', onScroll);
-            api.slides.forEach(s => {
-              s.style.removeProperty('--slide-progress');
-              s.style.removeProperty('--slide-abs-progress');
+      allPluginDefs.push({
+        name: 'creative',
+        priority: 90,
+        init: (api) => {
+          this._onCreativeScroll = () => {
+            api.slides.forEach((slide, idx) => {
+              const progress = api.slideProgress(idx); 
+              slide.style.setProperty('--slide-progress', progress.toFixed(4));
+              slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
             });
-          }
-        };
-      })();
-      activePlugins.push(creative);
+          };
+          api.on('scrollHeavy', this._onCreativeScroll);
+          this._onCreativeScroll();
+        },
+        destroy: (api) => {
+          api.off('scrollHeavy', this._onCreativeScroll);
+          api.slides.forEach(s => {
+            s.style.removeProperty('--slide-progress');
+            s.style.removeProperty('--slide-abs-progress');
+          });
+        }
+      });
     }
 
     if (this.root.classList.contains('lazy-load')) {
-      const lazyLoad = (() => {
-        let onSelect;
-        return {
-          name: 'lazy-load',
-          init: (api) => {
-            onSelect = (api, payload) => {
-              const activeNode = api.activeSlide();
-              if(!activeNode) return;
-              const activeSlideIndex = parseInt(activeNode.getAttribute('data-slide-index'), 10);
-              
-              const toLoad = [
-                activeSlideIndex - 1, 
-                activeSlideIndex, 
-                activeSlideIndex + 1
-              ];
-              
-              toLoad.forEach(idx => {
-                let targetIdx = idx;
-                if (api.isLoop()) {
-                  targetIdx = (idx + api.slides.length) % api.slides.length;
+      allPluginDefs.push({
+        name: 'lazy-load',
+        priority: 150,
+        init: (api) => {
+          this._onLazySelect = (api, payload) => {
+            const activeNode = api.activeSlide();
+            if(!activeNode) return;
+            const activeSlideIndex = parseInt(activeNode.getAttribute('data-slide-index'), 10);
+            const toLoad = [activeSlideIndex - 1, activeSlideIndex, activeSlideIndex + 1];
+            toLoad.forEach(idx => {
+              let targetIdx = idx;
+              if (api.isLoop()) targetIdx = (idx + api.slides.length) % api.slides.length;
+              const slide = api.slides[targetIdx];
+              if (slide && !slide.dataset.loaded) {
+                const img = slide.querySelector('img[data-src]');
+                if (img && img.dataset.src) {
+                  img.src = img.dataset.src;
+                  img.removeAttribute('data-src');
                 }
-                const slide = api.slides[targetIdx];
-                if (slide && !slide.dataset.loaded) {
-                  const img = slide.querySelector('img[data-src]');
-                  if (img && img.dataset.src) {
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
-                  }
-                  slide.dataset.loaded = "true";
-                }
-              });
-            };
-            api.on('select', onSelect);
-            onSelect(api, api.getEventPayload());
-          },
-          destroy: (api) => api.off('select', onSelect)
-        };
-      })();
-      activePlugins.push(lazyLoad);
+                slide.dataset.loaded = "true";
+              }
+            });
+          };
+          api.on('select', this._onLazySelect);
+          this._onLazySelect(api, api.getEventPayload());
+        },
+        destroy: (api) => api.off('select', this._onLazySelect)
+      });
     }
 
     if (this.root.classList.contains('debug')) {
-      const debugPlugin = (() => {
-         let debugEl, onUpdate;
-         return {
-            name: 'debug',
-            init: (api) => {
-               api.emit('debugOpen'); 
-               debugEl = document.createElement('div');
-               debugEl.className = 'yd_carousel-debug-panel';
-               debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
-               api.root.appendChild(debugEl);
-               
-               onUpdate = (api, payload) => {
-                  const pInfo = api.performance();
-                  debugEl.textContent = `
-[ydCarousel v${api.version()}]
-Idx:  ${payload.currentIndex}
-Prog: ${payload.progress.toFixed(2)}
-Drag: ${payload.isDragging}
-Setl: ${payload.isSettled}
-Loop: ${payload.looping}
-Vel:  ${api.velocity().toFixed(2)}
+      allPluginDefs.push({
+        name: 'debug',
+        priority: 999,
+        init: (api) => {
+          api.emit('debugOpen'); 
+          this._debugEl = document.createElement('div');
+          this._debugEl.className = 'yd_carousel-debug-panel';
+          this._debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
+          api.root.appendChild(this._debugEl);
+          
+          this._onDebugUpdate = (api, payload) => {
+            const state = api.state();
+            const pInfo = api.performance();
+            this._debugEl.textContent = `
+[ydCarousel v${state.version}]
+Idx:  ${state.index}
+Prog: ${state.progress.toFixed(2)}
+Drag: ${state.dragging}
+Setl: ${state.settled}
+Loop: ${state.looping}
+Vel:  ${state.velocity.toFixed(2)}
 InVw: ${pInfo.visibleSlides.join(',')}
 FPS:  ${pInfo.fps}
-                  `.trim();
-               };
-               // Using heavily throttled scroll to save CPU on debug panel
-               api.on('scrollHeavy', onUpdate);
-               api.on('select', onUpdate);
-               onUpdate(api, api.getEventPayload());
-            },
-            destroy: (api) => {
-               if (debugEl) debugEl.remove();
-               api.off('scrollHeavy', onUpdate);
-               api.off('select', onUpdate);
-               api.emit('debugClose'); 
-            }
-         };
-      })();
-      activePlugins.push(debugPlugin);
+            `.trim();
+          };
+          api.on('scrollHeavy', this._onDebugUpdate);
+          api.on('select', this._onDebugUpdate);
+          this._onDebugUpdate(api, api.getEventPayload());
+        },
+        destroy: (api) => {
+          if (this._debugEl) this._debugEl.remove();
+          api.off('scrollHeavy', this._onDebugUpdate);
+          api.off('select', this._onDebugUpdate);
+          api.emit('debugClose'); 
+        }
+      });
     }
 
-    // Initialize all active plugins
-    activePlugins.forEach(pluginDef => {
-      const instance = typeof pluginDef === 'function' ? new pluginDef() : Object.create(pluginDef);
+    // Sort and Check Dependencies
+    allPluginDefs.sort((a, b) => (a.priority || 1000) - (b.priority || 1000));
+    
+    allPluginDefs.forEach(def => {
+      if (def.depends) {
+        const missing = def.depends.filter(dep => !allPluginDefs.find(p => p.name === dep));
+        if (missing.length > 0) {
+          console.warn(`[ydCarousel] Plugin "${def.name}" disabled due to missing dependencies: ${missing.join(', ')}`);
+          return;
+        }
+      }
+      const instance = typeof def === 'function' ? new def() : Object.create(def);
       if (instance.init) {
         instance.init(this);
         this.plugins.push(instance);
