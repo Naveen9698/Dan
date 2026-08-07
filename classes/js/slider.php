@@ -1,7 +1,7 @@
 /**
  * ydCarousel 2.3 - V2.3 ENTERPRISE RELEASE
  * ROADMAP COMPLETION: Passes 1-10 Integrated
- * Includes: Auto-generating HTML templates & Flattened Scrollbar DOM
+ * Includes: Autoplay startup fix, Keyboard document binding, and Scrollbar thumb drag.
  */
 
 class ydCarousel {
@@ -479,9 +479,11 @@ class ydCarousel {
   bindEvents() {
     this.track.addEventListener('pointerdown', this.onPointerDown);
     this.track.addEventListener('click', this.onClick, { capture: true });
+    
+    // FIX #2: Bind keyboard event to document (Option B) to prevent focus loss issues
     if (this.options.keyboard) {
       this.root.setAttribute('tabindex', '0');
-      this.root.addEventListener('keydown', this.onKeyDown);
+      document.addEventListener('keydown', this.onKeyDown);
     }
   }
 
@@ -490,7 +492,9 @@ class ydCarousel {
     this.track.removeEventListener('click', this.onClick, { capture: true });
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
-    this.root.removeEventListener('keydown', this.onKeyDown);
+    
+    // Cleanup FIX #2 binding
+    document.removeEventListener('keydown', this.onKeyDown);
   }
 
   onPointerDown(e) {
@@ -948,11 +952,16 @@ class ydCarousel {
       this.plugins.push(counter);
     }
 
-    // SCROLLBAR CONTROL (Flattened DOM)
+    // SCROLLBAR CONTROL (Flattened DOM + FIX #3 Drag implemented)
     const scrollbar = this.root.querySelector('.yd_scrollbar');
     if (scrollbar) {
       const sbPlugin = (() => {
         let updateThumbSize, updateProgress, onClickTrack;
+        let onThumbDown, onThumbMove, onThumbUp;
+        let isDraggingThumb = false;
+        let startX = 0;
+        let startTargetPos = 0;
+
         return {
           name: 'scrollbar',
           init: (api) => {
@@ -982,9 +991,47 @@ class ydCarousel {
               api.snapToClosest();
             };
 
+            // FIX #3: THUMB DRAG LOGIC
+            onThumbDown = (e) => {
+              if (e.button !== 0) return;
+              e.preventDefault();
+              e.stopPropagation();
+              isDraggingThumb = true;
+              startX = e.clientX;
+              startTargetPos = api.targetPos;
+              thumb.setPointerCapture(e.pointerId);
+              thumb.style.cursor = 'grabbing';
+            };
+
+            onThumbMove = (e) => {
+              if (!isDraggingThumb) return;
+              const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
+              if (movableSpace <= 0) return;
+              
+              const deltaX = e.clientX - startX;
+              const progressDelta = deltaX / movableSpace;
+              
+              let newTarget = startTargetPos + (progressDelta * api.maxScroll);
+              newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
+              
+              api.targetPos = newTarget;
+            };
+
+            onThumbUp = (e) => {
+              if (!isDraggingThumb) return;
+              isDraggingThumb = false;
+              thumb.releasePointerCapture(e.pointerId);
+              thumb.style.cursor = '';
+              api.snapToClosest();
+            };
+
             api.on('resize', updateThumbSize);
             api.on('scroll', updateProgress);
             scrollbar.addEventListener('click', onClickTrack);
+            thumb.addEventListener('pointerdown', onThumbDown);
+            thumb.addEventListener('pointermove', onThumbMove);
+            thumb.addEventListener('pointerup', onThumbUp);
+            thumb.addEventListener('pointercancel', onThumbUp);
             
             updateThumbSize();
             updateProgress(api, api.getEventPayload());
@@ -993,6 +1040,13 @@ class ydCarousel {
             api.off('resize', updateThumbSize);
             api.off('scroll', updateProgress);
             scrollbar.removeEventListener('click', onClickTrack);
+            let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
+            if (thumb) {
+              thumb.removeEventListener('pointerdown', onThumbDown);
+              thumb.removeEventListener('pointermove', onThumbMove);
+              thumb.removeEventListener('pointerup', onThumbUp);
+              thumb.removeEventListener('pointercancel', onThumbUp);
+            }
           }
         };
       })();
@@ -1108,7 +1162,13 @@ class ydCarousel {
             document.addEventListener('visibilitychange', onVisChange);
             api.root.addEventListener('focusin', onFocusIn);
             api.root.addEventListener('focusout', onFocusOut);
-            play();
+            
+            // FIX #1: Defer initial play() and ensure measurements are populated
+            requestAnimationFrame(() => {
+              if (api.metrics.groupSnaps && api.metrics.groupSnaps.length > 0) {
+                play();
+              }
+            });
           },
           destroy: (api) => {
             stop();

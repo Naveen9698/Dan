@@ -61,12 +61,7 @@
   overflow: hidden;
 }
 
-.yd_scrollbar-track{
-  height: 100%;
-}
-
 .yd_scrollbar-thumb {
   height: 100%;
-  width: var(--scrollbar-thumb-width, 0%);
   background: #00cc66;
 }
