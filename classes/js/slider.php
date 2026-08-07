@@ -1,11 +1,18 @@
 /**
- * ydCarousel 2.3.5 - V2.3.5 ENTERPRISE FINAL
- * ROADMAP COMPLETION: Passes 1-10 + STABILIZATION POLISH
- * Includes: Anti-1.0 Progress Wrap, Configurable Drag Factor, ARIA Disabled states, Encapsulated Keyboard Lifecycle
+ * ydCarousel 2.3.6 - V2.3.6 ENTERPRISE FINAL
+ * ROADMAP COMPLETION: Passes 1-10 + STABILIZATION FINALE
+ * Includes: Autoplay Cleanup, Strict Drag Factor Validation, Disabled Tabindex Handling
+ * 
+ * DEVELOPER RULES:
+ * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
+ *    .yd_scrollbar.disabled { pointer-events: none; opacity: 0.5; }
+ * 2. EVENT MUTATION: Never directly modify `api.currentIndex` or `api.currentGroup`.
+ *    Always use `api.goToGroup()`, `api.goToSlide()`, or `api.snapToClosest()` to ensure 
+ *    `activeSlideChange` and `activeGroupChange` events fire correctly.
  */
 
 class ydCarousel {
-  static VERSION = '2.3.5'; 
+  static VERSION = '2.3.6'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -302,7 +309,6 @@ class ydCarousel {
     return this.options.loop || this.currentGroup > 0;
   }
 
-  // FIX #1: Loop Progress Anti-1.0 Polish
   scrollProgress() {
     if (this.options.loop) {
       let relativePos = this.currentPos - this.metrics.prependOffset;
@@ -535,7 +541,6 @@ class ydCarousel {
 
   getPointerPos(e) { return this.options.vertical ? e.clientY : e.clientX; }
 
-  // FIX #10: Keyboard Registration Encapsulation
   _registerKeyboard() {
     if (!this._keyboardRegistered) {
       ydCarousel._keyboardUsers++;
@@ -785,19 +790,15 @@ class ydCarousel {
     
     this.activePlugins.forEach((active, name) => this.disablePlugin(name));
 
-    // FIX #8: Destroy Order Dependency Documentation
-    // 1. Remove ready class
     this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
     this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
     this.visibleSlides.clear();
 
-    // 2. Delete instance reference
     if (this.root.__ydCarousel === this) {
       delete this.root.__ydCarousel;
     }
     
-    // 3. Promote new active carousel
     if (ydCarousel.activeCarousel === this) {
       ydCarousel.activeCarousel = null;
       const readyCarousels = Array.from(document.querySelectorAll('.yd_carousel-ready'))
@@ -1098,18 +1099,20 @@ class ydCarousel {
               scrollbar.appendChild(thumb);
             }
 
-            // FIX #2, #5: ARIA disabled states and pure CSS handling
+            // FIX #3: Tabindex & ARIA disabled integration
             updateThumbSize = () => {
               if (api.metrics.realTrackSize <= api.metrics.viewportSize && !api.options.loop) {
                 isDisabled = true;
                 scrollbar.classList.add('disabled');
                 scrollbar.setAttribute('aria-disabled', 'true');
+                thumb.setAttribute('tabindex', '-1');
                 thumb.style.width = '100%';
                 thumb.style.transform = 'translate3d(0,0,0)'; 
               } else {
                 isDisabled = false;
                 scrollbar.classList.remove('disabled');
                 scrollbar.removeAttribute('aria-disabled');
+                thumb.removeAttribute('tabindex');
                 const ratio = api.metrics.viewportSize / (api.metrics.realTrackSize || 1);
                 thumb.style.width = `${Math.max(10, Math.min(100, ratio * 100))}%`;
               }
@@ -1126,7 +1129,6 @@ class ydCarousel {
               const rect = scrollbar.getBoundingClientRect();
               const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
               
-              // FIX #9: Loop Click nearest snap precision
               if (api.options.loop) {
                  const targetPos = pct * api.metrics.realTrackSize;
                  const targetSlide = api.findNearestSlide(targetPos + api.metrics.prependOffset);
@@ -1160,8 +1162,12 @@ class ydCarousel {
               const deltaX = e.clientX - startX;
               const progressDelta = deltaX / movableSpace;
               
-              // FIX #3: Dynamic dataset driven Drag Factor
-              const dragFactor = parseFloat(api.root.dataset.dragFactor) || 1.2; 
+              // FIX #2: Validated drag factor parsing
+              let dragFactor = parseFloat(api.root.dataset.dragFactor);
+              if (!Number.isFinite(dragFactor) || dragFactor <= 0) {
+                 dragFactor = 1.2;
+              }
+              
               const dragDistance = api.options.loop ? (api.metrics.realTrackSize * dragFactor) : api.maxScroll;
               let newTarget = startTargetPos + (progressDelta * dragDistance);
               
@@ -1199,7 +1205,6 @@ class ydCarousel {
                  if (dist < minGroupDist) { minGroupDist = dist; closestGroup = i; }
               });
               
-              // FIX #6: Strict max clamp on hysteresis
               const hysteresis = Math.min(12, Math.max(5, api.metrics.viewportSize * 0.01));
               if (api.currentGroup !== closestGroup && minGroupDist < distToCurrent - hysteresis) {
                  api.prevGroup = api.currentGroup;
@@ -1328,7 +1333,6 @@ class ydCarousel {
               api.emit('autoplayStop');
             };
 
-            // FIX #4: Allow developers to reset permanent stop
             api.resetAutoplay = () => {
                permanentlyStopped = false;
                if (!hasStarted && api.metrics.groupSnaps.length > 0) play();
@@ -1397,6 +1401,9 @@ class ydCarousel {
             if (!permanentlyStopped) {
                api.emit('autoplayStop');
             }
+            // FIX #1: Clean up resetAutoplay API exposure on destroy
+            delete api.resetAutoplay; 
+            
             api.off('dragStart', stop);
             api.off('dragEnd', play);
             api.off('select', onSelect);
@@ -1646,7 +1653,7 @@ InVw:  ${api.slidesInView().join(',')}
                api.on('scroll', onUpdate);
                api.on('select', onUpdate);
                api.on('activeGroupChange', onUpdate);
-               api.on('activeSlideChange', onUpdate); // FIX #7: Track Slide Change
+               api.on('activeSlideChange', onUpdate); 
                onUpdate(api, api.getEventPayload());
             },
             destroy: (api) => {
