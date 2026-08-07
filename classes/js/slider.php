@@ -1,15 +1,18 @@
 /**
- * ydCarousel 2.3 - V2.3 ENTERPRISE RELEASE
- * ROADMAP COMPLETION: Passes 1-10 Integrated
- * Includes: Autoplay startup fix, Keyboard document binding, and Scrollbar thumb drag.
+ * ydCarousel 2.3.5 - V2.3.5 ENTERPRISE FINAL
+ * ROADMAP COMPLETION: Passes 1-10 + STABILIZATION POLISH
+ * Includes: Anti-1.0 Progress Wrap, Configurable Drag Factor, ARIA Disabled states, Encapsulated Keyboard Lifecycle
  */
 
 class ydCarousel {
-  static VERSION = '2.3.0';
+  static VERSION = '2.3.5'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
-  static _pluginRegistry = new Map(); // PASS 10: Enterprise Registry
+  static _pluginRegistry = new Map();
+  static activeCarousel = null; 
+  static _keyboardInitialized = false; 
+  static _keyboardUsers = 0; 
 
   static EVENTS = [
     'init', 'resize', 'destroy',
@@ -28,6 +31,12 @@ class ydCarousel {
   static registerPlugin(pluginDef) {
     if (!pluginDef.name) throw new Error('[ydCarousel] Plugin must have a name');
     this._pluginRegistry.set(pluginDef.name, pluginDef);
+  }
+
+  static _globalKeyDownHandler(e) {
+    if (ydCarousel.activeCarousel && ydCarousel.activeCarousel.options.keyboard) {
+      ydCarousel.activeCarousel.onKeyDown(e);
+    }
   }
 
   static startAutoInit() {
@@ -59,7 +68,7 @@ class ydCarousel {
     this.options = {
       loop: this.root.classList.contains('loop'),
       dragFree: this.root.classList.contains('drag-free'),
-      contain: true, 
+      contain: this.root.classList.contains('contain'), 
       containKeep: this.root.classList.contains('contain-keep'),
       alignCenter: this.root.classList.contains('align-center'),
       alignEnd: this.root.classList.contains('align-end'),
@@ -94,6 +103,7 @@ class ydCarousel {
     this.lastPointerPos = 0;
     this.lastPointerTime = 0;
     this.isClickSuppressed = false;
+    this._keyboardRegistered = false; 
 
     this.slides = []; 
     this.visibleSlides = new Set(); 
@@ -121,12 +131,16 @@ class ydCarousel {
     this.onResize = this.onResize.bind(this);
     this.onMutation = this.onMutation.bind(this);
     this.tick = this.tick.bind(this);
+    this.onActivate = () => { ydCarousel.activeCarousel = this; }; 
 
     this.init();
   }
 
   init() {
     if (this.destroyed) this.destroyed = false;
+    
+    if (!ydCarousel.activeCarousel) ydCarousel.activeCarousel = this; 
+    
     this.setupAccessibility();
     this.setupObservers();
     this.updateMeasurements();
@@ -181,7 +195,7 @@ class ydCarousel {
     return Object.freeze({
       engine: ydCarousel.ENGINE,
       version: this.version(),
-      build: 'enterprise',
+      build: 'enterprise-final',
       released: '2026-08'
     });
   }
@@ -288,10 +302,14 @@ class ydCarousel {
     return this.options.loop || this.currentGroup > 0;
   }
 
+  // FIX #1: Loop Progress Anti-1.0 Polish
   scrollProgress() {
     if (this.options.loop) {
-      const relativePos = this.currentPos - this.metrics.prependOffset;
-      return Math.max(0, Math.min(1, relativePos / (this.metrics.realTrackSize || 1)));
+      let relativePos = this.currentPos - this.metrics.prependOffset;
+      if (this.metrics.realTrackSize > 0) {
+        relativePos = ((relativePos % this.metrics.realTrackSize) + this.metrics.realTrackSize) % this.metrics.realTrackSize;
+      }
+      return Math.min(0.9999, relativePos / (this.metrics.realTrackSize || 1));
     }
     if (!this.maxScroll) return 0;
     return Math.max(0, Math.min(1, this.currentPos / this.maxScroll));
@@ -299,7 +317,15 @@ class ydCarousel {
 
   slideProgress(index) {
     const snap = this.metrics.slideSnaps[index] || 0;
-    const distance = this.currentPos - snap;
+    let distance = this.currentPos - snap;
+    
+    if (this.options.loop && this.metrics.realTrackSize > 0) {
+      const distFwd = distance - this.metrics.realTrackSize;
+      const distBwd = distance + this.metrics.realTrackSize;
+      if (Math.abs(distFwd) < Math.abs(distance)) distance = distFwd;
+      if (Math.abs(distBwd) < Math.abs(distance)) distance = distBwd;
+    }
+    
     const progress = distance / (this.metrics.viewportSize || 1);
     return Math.max(-1, Math.min(1, progress));
   }
@@ -310,6 +336,36 @@ class ydCarousel {
 
   slidesNotInView() {
     return this.slides.map((_, idx) => idx).filter(idx => !this.visibleSlides.has(idx));
+  }
+
+  // ==========================================
+  // HELPERS 
+  // ==========================================
+  
+  findNearestSlide(position) {
+    let minDistance = Infinity;
+    let nearest = 0;
+    
+    let searchPos = position;
+    if (this.options.loop && this.metrics.realTrackSize > 0) {
+      let rel = position - this.metrics.prependOffset;
+      rel = ((rel % this.metrics.realTrackSize) + this.metrics.realTrackSize) % this.metrics.realTrackSize;
+      searchPos = rel + this.metrics.prependOffset;
+    }
+
+    this.metrics.slideSnaps.forEach((snap, idx) => {
+      let dist = Math.abs(snap - searchPos);
+      if (this.options.loop) {
+        const distFwd = Math.abs((snap + this.metrics.realTrackSize) - searchPos);
+        const distBwd = Math.abs((snap - this.metrics.realTrackSize) - searchPos);
+        dist = Math.min(dist, distFwd, distBwd);
+      }
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearest = idx;
+      }
+    });
+    return nearest;
   }
 
   // ==========================================
@@ -350,8 +406,6 @@ class ydCarousel {
 
     this.metrics.trackSize = this.options.vertical ? this.track.scrollHeight : this.track.scrollWidth;
     
-    this.maxScroll = Math.max(0, this.metrics.trackSize - this.metrics.viewportSize);
-
     let currentOffset = this.metrics.prependOffset;
     let currentGroupStart = currentOffset;
     
@@ -375,7 +429,12 @@ class ydCarousel {
       currentOffset += size;
     });
 
-    if (!this.options.loop) {
+    const lastSnap = this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1] || 0;
+    this.maxScroll = (this.options.contain || this.options.containKeep) 
+      ? Math.max(0, this.metrics.trackSize - this.metrics.viewportSize) 
+      : lastSnap;
+
+    if (!this.options.loop && (this.options.contain || this.options.containKeep)) {
       this.metrics.slideSnaps = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
       let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
       this.metrics.groupSnaps = [...new Set(rawGroups)]; 
@@ -476,14 +535,41 @@ class ydCarousel {
 
   getPointerPos(e) { return this.options.vertical ? e.clientY : e.clientX; }
 
+  // FIX #10: Keyboard Registration Encapsulation
+  _registerKeyboard() {
+    if (!this._keyboardRegistered) {
+      ydCarousel._keyboardUsers++;
+      this._keyboardRegistered = true;
+      if (!ydCarousel._keyboardInitialized) {
+        document.addEventListener('keydown', ydCarousel._globalKeyDownHandler);
+        ydCarousel._keyboardInitialized = true;
+      }
+    }
+  }
+
+  _unregisterKeyboard() {
+    if (this._keyboardRegistered) {
+      ydCarousel._keyboardUsers--;
+      this._keyboardRegistered = false;
+      if (ydCarousel._keyboardUsers <= 0) {
+        document.removeEventListener('keydown', ydCarousel._globalKeyDownHandler);
+        ydCarousel._keyboardInitialized = false;
+        ydCarousel._keyboardUsers = 0;
+      }
+    }
+  }
+
   bindEvents() {
     this.track.addEventListener('pointerdown', this.onPointerDown);
     this.track.addEventListener('click', this.onClick, { capture: true });
     
-    // FIX #2: Bind keyboard event to document (Option B) to prevent focus loss issues
+    this.root.addEventListener('mouseenter', this.onActivate);
+    this.root.addEventListener('focusin', this.onActivate);
+    this.track.addEventListener('pointerdown', this.onActivate);
+
     if (this.options.keyboard) {
       this.root.setAttribute('tabindex', '0');
-      document.addEventListener('keydown', this.onKeyDown);
+      this._registerKeyboard();
     }
   }
 
@@ -493,8 +579,13 @@ class ydCarousel {
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     
-    // Cleanup FIX #2 binding
-    document.removeEventListener('keydown', this.onKeyDown);
+    this.root.removeEventListener('mouseenter', this.onActivate);
+    this.root.removeEventListener('focusin', this.onActivate);
+    this.track.removeEventListener('pointerdown', this.onActivate);
+
+    if (this.options.keyboard) {
+      this._unregisterKeyboard();
+    }
   }
 
   onPointerDown(e) {
@@ -551,7 +642,8 @@ class ydCarousel {
   onPointerUp(e) {
     if (!this.isDraggingActive) return;
     this.isDraggingActive = false;
-    this.track.releasePointerCapture(e.pointerId);
+    
+    try { this.track.releasePointerCapture(e.pointerId); } catch(err) {}
     this.track.style.cursor = '';
 
     window.removeEventListener('pointermove', this.onPointerMove);
@@ -577,6 +669,8 @@ class ydCarousel {
   }
 
   onKeyDown(e) {
+    if (ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) return;
+
     const isRtl = this.options.rtl;
     const isVert = this.options.vertical;
     
@@ -691,13 +785,29 @@ class ydCarousel {
     
     this.activePlugins.forEach((active, name) => this.disablePlugin(name));
 
+    // FIX #8: Destroy Order Dependency Documentation
+    // 1. Remove ready class
     this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
     this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
     this.visibleSlides.clear();
 
+    // 2. Delete instance reference
     if (this.root.__ydCarousel === this) {
       delete this.root.__ydCarousel;
+    }
+    
+    // 3. Promote new active carousel
+    if (ydCarousel.activeCarousel === this) {
+      ydCarousel.activeCarousel = null;
+      const readyCarousels = Array.from(document.querySelectorAll('.yd_carousel-ready'))
+        .map(el => el.__ydCarousel)
+        .filter(api => api && api !== this && !api.destroyed);
+      
+      if (readyCarousels.length > 0) {
+        const withKeyboard = readyCarousels.find(api => api.options.keyboard);
+        ydCarousel.activeCarousel = withKeyboard || readyCarousels[0];
+      }
     }
 
     this.emit('destroy');
@@ -738,8 +848,8 @@ class ydCarousel {
     if (immediate) this.currentPos = this.targetPos;
 
     this.prevIndex = this.currentIndex;
-    this.currentIndex = this.metrics.slideSnaps.findIndex(snap => snap >= nextTarget);
-    if (this.currentIndex === -1) this.currentIndex = 0;
+    this.currentIndex = this.findNearestSlide(nextTarget);
+    
     if (this.currentIndex !== this.prevIndex) {
       this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
     }
@@ -754,7 +864,13 @@ class ydCarousel {
 
   goToSlide(slideIndex, immediate = false) {
     const targetSnap = this.metrics.slideSnaps[Math.max(0, Math.min(slideIndex, this.metrics.slideSnaps.length - 1))];
-    const targetGroup = this.metrics.groupSnaps.findIndex(snap => snap >= targetSnap) || 0;
+    
+    let targetGroup = 0;
+    for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
+      if (this.metrics.groupSnaps[i] <= targetSnap) targetGroup = i;
+      else break;
+    }
+    
     this.goToGroup(targetGroup, immediate);
   }
 
@@ -914,9 +1030,13 @@ class ydCarousel {
               });
             };
             api.on('select', updateDots);
+            api.on('activeGroupChange', updateDots);
             updateDots(api, api.getEventPayload());
           },
-          destroy: (api) => api.off('select', updateDots)
+          destroy: (api) => {
+            api.off('select', updateDots);
+            api.off('activeGroupChange', updateDots);
+          }
         };
       })();
       dots.init(this);
@@ -943,22 +1063,27 @@ class ydCarousel {
               }
             };
             api.on('select', updateCounter);
+            api.on('activeGroupChange', updateCounter);
             updateCounter(api, api.getEventPayload());
           },
-          destroy: (api) => api.off('select', updateCounter)
+          destroy: (api) => {
+            api.off('select', updateCounter);
+            api.off('activeGroupChange', updateCounter);
+          }
         };
       })();
       counter.init(this);
       this.plugins.push(counter);
     }
 
-    // SCROLLBAR CONTROL (Flattened DOM + FIX #3 Drag implemented)
+    // SCROLLBAR CONTROL 
     const scrollbar = this.root.querySelector('.yd_scrollbar');
     if (scrollbar) {
       const sbPlugin = (() => {
         let updateThumbSize, updateProgress, onClickTrack;
         let onThumbDown, onThumbMove, onThumbUp;
         let isDraggingThumb = false;
+        let isDisabled = false;
         let startX = 0;
         let startTargetPos = 0;
 
@@ -973,27 +1098,47 @@ class ydCarousel {
               scrollbar.appendChild(thumb);
             }
 
+            // FIX #2, #5: ARIA disabled states and pure CSS handling
             updateThumbSize = () => {
-              const ratio = api.metrics.viewportSize / (api.metrics.trackSize || 1);
-              thumb.style.width = `${Math.max(10, Math.min(100, ratio * 100))}%`;
+              if (api.metrics.realTrackSize <= api.metrics.viewportSize && !api.options.loop) {
+                isDisabled = true;
+                scrollbar.classList.add('disabled');
+                scrollbar.setAttribute('aria-disabled', 'true');
+                thumb.style.width = '100%';
+                thumb.style.transform = 'translate3d(0,0,0)'; 
+              } else {
+                isDisabled = false;
+                scrollbar.classList.remove('disabled');
+                scrollbar.removeAttribute('aria-disabled');
+                const ratio = api.metrics.viewportSize / (api.metrics.realTrackSize || 1);
+                thumb.style.width = `${Math.max(10, Math.min(100, ratio * 100))}%`;
+              }
             };
 
             updateProgress = (api, payload) => {
+              if (isDisabled) return;
               const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
               thumb.style.transform = `translate3d(${payload.progress * movableSpace}px, 0, 0)`;
             };
 
             onClickTrack = (e) => {
-              if (e.target === thumb) return; 
+              if (isDisabled || e.target === thumb) return; 
               const rect = scrollbar.getBoundingClientRect();
-              const pct = (e.clientX - rect.left) / rect.width;
-              api.targetPos = pct * api.maxScroll;
-              api.snapToClosest();
+              const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+              
+              // FIX #9: Loop Click nearest snap precision
+              if (api.options.loop) {
+                 const targetPos = pct * api.metrics.realTrackSize;
+                 const targetSlide = api.findNearestSlide(targetPos + api.metrics.prependOffset);
+                 api.goToSlide(targetSlide);
+              } else {
+                 api.targetPos = pct * api.maxScroll;
+                 api.snapToClosest();
+              }
             };
 
-            // FIX #3: THUMB DRAG LOGIC
             onThumbDown = (e) => {
-              if (e.button !== 0) return;
+              if (isDisabled || e.button !== 0) return;
               e.preventDefault();
               e.stopPropagation();
               isDraggingThumb = true;
@@ -1001,6 +1146,10 @@ class ydCarousel {
               startTargetPos = api.targetPos;
               thumb.setPointerCapture(e.pointerId);
               thumb.style.cursor = 'grabbing';
+              
+              document.addEventListener('pointermove', onThumbMove);
+              document.addEventListener('pointerup', onThumbUp);
+              document.addEventListener('pointercancel', onThumbUp);
             };
 
             onThumbMove = (e) => {
@@ -1011,17 +1160,73 @@ class ydCarousel {
               const deltaX = e.clientX - startX;
               const progressDelta = deltaX / movableSpace;
               
-              let newTarget = startTargetPos + (progressDelta * api.maxScroll);
-              newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
+              // FIX #3: Dynamic dataset driven Drag Factor
+              const dragFactor = parseFloat(api.root.dataset.dragFactor) || 1.2; 
+              const dragDistance = api.options.loop ? (api.metrics.realTrackSize * dragFactor) : api.maxScroll;
+              let newTarget = startTargetPos + (progressDelta * dragDistance);
               
+              if (!api.options.loop) {
+                 newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
+              }
               api.targetPos = newTarget;
+
+              let searchTarget = newTarget;
+              if (api.options.loop && api.metrics.realTrackSize > 0) {
+                 let rel = newTarget - api.metrics.prependOffset;
+                 rel = ((rel % api.metrics.realTrackSize) + api.metrics.realTrackSize) % api.metrics.realTrackSize;
+                 searchTarget = rel + api.metrics.prependOffset;
+              }
+
+              let minGroupDist = Infinity, closestGroup = api.currentGroup;
+              let distToCurrent = Infinity;
+              
+              if (api.metrics.groupSnaps[api.currentGroup] !== undefined) {
+                 distToCurrent = Math.abs(api.metrics.groupSnaps[api.currentGroup] - searchTarget);
+                 if (api.options.loop && api.metrics.realTrackSize > 0) {
+                    const dFwd = Math.abs((api.metrics.groupSnaps[api.currentGroup] + api.metrics.realTrackSize) - searchTarget);
+                    const dBwd = Math.abs((api.metrics.groupSnaps[api.currentGroup] - api.metrics.realTrackSize) - searchTarget);
+                    distToCurrent = Math.min(distToCurrent, dFwd, dBwd);
+                 }
+              }
+
+              api.metrics.groupSnaps.forEach((p, i) => {
+                 let dist = Math.abs(p - searchTarget);
+                 if (api.options.loop && api.metrics.realTrackSize > 0) {
+                    const distFwd = Math.abs((p + api.metrics.realTrackSize) - searchTarget);
+                    const distBwd = Math.abs((p - api.metrics.realTrackSize) - searchTarget);
+                    dist = Math.min(dist, distFwd, distBwd);
+                 }
+                 if (dist < minGroupDist) { minGroupDist = dist; closestGroup = i; }
+              });
+              
+              // FIX #6: Strict max clamp on hysteresis
+              const hysteresis = Math.min(12, Math.max(5, api.metrics.viewportSize * 0.01));
+              if (api.currentGroup !== closestGroup && minGroupDist < distToCurrent - hysteresis) {
+                 api.prevGroup = api.currentGroup;
+                 api.currentGroup = closestGroup;
+                 api.emit('activeGroupChange', { currentGroup: api.currentGroup, previousGroup: api.prevGroup });
+              }
+              
+              let nearestSlide = api.findNearestSlide(newTarget);
+              if (api.currentIndex !== nearestSlide) {
+                 api.prevIndex = api.currentIndex;
+                 api.currentIndex = nearestSlide;
+                 api.updateSlideStates();
+                 api.emit('activeSlideChange', { currentIndex: api.currentIndex, previousIndex: api.prevIndex });
+              }
             };
 
             onThumbUp = (e) => {
               if (!isDraggingThumb) return;
               isDraggingThumb = false;
-              thumb.releasePointerCapture(e.pointerId);
+              
+              try { thumb.releasePointerCapture(e.pointerId); } catch(err) {}
               thumb.style.cursor = '';
+              
+              document.removeEventListener('pointermove', onThumbMove);
+              document.removeEventListener('pointerup', onThumbUp);
+              document.removeEventListener('pointercancel', onThumbUp);
+              
               api.snapToClosest();
             };
 
@@ -1029,9 +1234,6 @@ class ydCarousel {
             api.on('scroll', updateProgress);
             scrollbar.addEventListener('click', onClickTrack);
             thumb.addEventListener('pointerdown', onThumbDown);
-            thumb.addEventListener('pointermove', onThumbMove);
-            thumb.addEventListener('pointerup', onThumbUp);
-            thumb.addEventListener('pointercancel', onThumbUp);
             
             updateThumbSize();
             updateProgress(api, api.getEventPayload());
@@ -1043,10 +1245,10 @@ class ydCarousel {
             let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
             if (thumb) {
               thumb.removeEventListener('pointerdown', onThumbDown);
-              thumb.removeEventListener('pointermove', onThumbMove);
-              thumb.removeEventListener('pointerup', onThumbUp);
-              thumb.removeEventListener('pointercancel', onThumbUp);
             }
+            document.removeEventListener('pointermove', onThumbMove);
+            document.removeEventListener('pointerup', onThumbUp);
+            document.removeEventListener('pointercancel', onThumbUp);
           }
         };
       })();
@@ -1074,6 +1276,7 @@ class ydCarousel {
               progressEl.style.setProperty('--progress', `${pct}%`);
             };
             api.on('scroll', updateProgress);
+            updateProgress(api, api.getEventPayload());
           },
           destroy: (api) => api.off('scroll', updateProgress)
         };
@@ -1085,9 +1288,10 @@ class ydCarousel {
     // AUTOPLAY PROGRESS & SYSTEM
     if (this.options.autoplay) {
       const autoplay = (() => {
-        let playTimer, play, stop, loopProgress, onVisChange, onFocusIn, onFocusOut, onSelect;
+        let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, onSelect;
         let isPaused = false;
         let hasStarted = false;
+        let permanentlyStopped = false; 
         let startTime = 0;
         let animRaf = null;
         
@@ -1103,6 +1307,7 @@ class ydCarousel {
                 fill.className = 'yd_autoplay-progress-fill';
                 apProgressEl.appendChild(fill);
               }
+              apProgressEl.style.setProperty('--ap-progress', `0%`);
             }
             
             loopProgress = () => {
@@ -1113,7 +1318,24 @@ class ydCarousel {
               if (pct < 100) animRaf = requestAnimationFrame(loopProgress);
             };
 
+            stopPermanent = () => {
+              if (permanentlyStopped) return;
+              permanentlyStopped = true;
+              clearTimeout(playTimer);
+              cancelAnimationFrame(animRaf);
+              hasStarted = false;
+              isPaused = false;
+              api.emit('autoplayStop');
+            };
+
+            // FIX #4: Allow developers to reset permanent stop
+            api.resetAutoplay = () => {
+               permanentlyStopped = false;
+               if (!hasStarted && api.metrics.groupSnaps.length > 0) play();
+            };
+
             play = () => {
+              if (permanentlyStopped) return; 
               clearTimeout(playTimer);
               cancelAnimationFrame(animRaf);
               
@@ -1127,9 +1349,10 @@ class ydCarousel {
               
               if (!api.canScrollNext()) {
                 if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `100%`);
+                stopPermanent();
                 return;
               }
-              
+
               startTime = performance.now();
               loopProgress();
               playTimer = setTimeout(() => { api.scrollNext(); play(); }, api.options.delay);
@@ -1138,7 +1361,7 @@ class ydCarousel {
             stop = () => {
               clearTimeout(playTimer);
               cancelAnimationFrame(animRaf);
-              if (hasStarted && !isPaused) {
+              if (hasStarted && !isPaused && !permanentlyStopped) {
                 isPaused = true;
                 api.emit('autoplayPause');
               }
@@ -1163,7 +1386,6 @@ class ydCarousel {
             api.root.addEventListener('focusin', onFocusIn);
             api.root.addEventListener('focusout', onFocusOut);
             
-            // FIX #1: Defer initial play() and ensure measurements are populated
             requestAnimationFrame(() => {
               if (api.metrics.groupSnaps && api.metrics.groupSnaps.length > 0) {
                 play();
@@ -1172,7 +1394,9 @@ class ydCarousel {
           },
           destroy: (api) => {
             stop();
-            api.emit('autoplayStop');
+            if (!permanentlyStopped) {
+               api.emit('autoplayStop');
+            }
             api.off('dragStart', stop);
             api.off('dragEnd', play);
             api.off('select', onSelect);
@@ -1188,8 +1412,6 @@ class ydCarousel {
       this.plugins.push(autoplay);
     }
 
-    // ORIGINAL BASELINE MODULES PRESERVED
-    
     // MOUSEWHEEL NAVIGATION
     if (this.root.classList.contains('wheel')) {
       const wheel = (() => {
@@ -1423,12 +1645,16 @@ InVw:  ${api.slidesInView().join(',')}
                };
                api.on('scroll', onUpdate);
                api.on('select', onUpdate);
+               api.on('activeGroupChange', onUpdate);
+               api.on('activeSlideChange', onUpdate); // FIX #7: Track Slide Change
                onUpdate(api, api.getEventPayload());
             },
             destroy: (api) => {
                if (debugEl) debugEl.remove();
                api.off('scroll', onUpdate);
                api.off('select', onUpdate);
+               api.off('activeGroupChange', onUpdate);
+               api.off('activeSlideChange', onUpdate);
                api.emit('debugClose'); 
             }
          };
