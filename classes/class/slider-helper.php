@@ -7,19 +7,14 @@
   display: flex;
   justify-content: center;
   gap: 10px;
-
   margin-top: 20px;
 }
 
 .yd_dot {
   width: 12px;
   height: 12px;
-
   border: none;
-  border-radius: 999px;
-
   cursor: pointer;
-
   background: #cbd5e1;
 }
 
@@ -31,4 +26,47 @@
   text-align: center;
   margin-top: 12px;
   font-weight: 600;
+}
+
+.yd_progress {
+  height: 10px;
+  margin-top: 12px;
+  background: #ddd;
+  overflow: hidden;
+}
+
+.yd_progress-fill {
+  height: 100%;
+  width: var(--progress, 0%);
+  background: #0066ff;
+}
+
+.yd_autoplay-progress {
+  height: 10px;
+  margin-top: 12px;
+  background: #ddd;
+  overflow: hidden;
+}
+
+.yd_autoplay-progress-fill {
+  height: 100%;
+  width: var(--ap-progress, 0%);
+  background: #ff5500;
+}
+
+.yd_scrollbar {
+  height: 10px;
+  margin-top: 12px;
+  background: #ddd;
+  overflow: hidden;
+}
+
+.yd_scrollbar-track{
+  height: 100%;
+}
+
+.yd_scrollbar-thumb {
+  height: 100%;
+  width: var(--scrollbar-thumb-width, 0%);
+  background: #00cc66;
 }

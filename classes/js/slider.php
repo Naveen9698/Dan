@@ -1,7 +1,7 @@
 /**
  * ydCarousel 2.3 - V2.3 ENTERPRISE RELEASE
  * ROADMAP COMPLETION: Passes 1-10 Integrated
- * Includes: Group Snapping, Exact Right Edge, Custom UI Templates, Scrollbar, Enterprise Registry
+ * Includes: Auto-generating HTML templates & Flattened Scrollbar DOM
  */
 
 class ydCarousel {
@@ -25,7 +25,6 @@ class ydCarousel {
     'pluginRegistered', 'pluginEnabled', 'pluginDisabled'
   ];
 
-  // PASS 10: Enterprise Plugin Registration
   static registerPlugin(pluginDef) {
     if (!pluginDef.name) throw new Error('[ydCarousel] Plugin must have a name');
     this._pluginRegistry.set(pluginDef.name, pluginDef);
@@ -57,11 +56,10 @@ class ydCarousel {
     this.track = this.root.querySelector('.yd_container');
     if (!this.track) return;
     
-    // CONFIGURATION
     this.options = {
       loop: this.root.classList.contains('loop'),
       dragFree: this.root.classList.contains('drag-free'),
-      contain: true, // PASS 2: Enforced for edge stopping
+      contain: true, 
       containKeep: this.root.classList.contains('contain-keep'),
       alignCenter: this.root.classList.contains('align-center'),
       alignEnd: this.root.classList.contains('align-end'),
@@ -74,11 +72,9 @@ class ydCarousel {
       delay: parseInt(this.root.dataset.delay) || 4000
     };
 
-    // PHYSICS & STATE
     this.currentPos = 0;
     this.targetPos = 0;
     
-    // PASS 3: Group Tracking
     this.currentIndex = 0;
     this.prevIndex = 0; 
     this.currentGroup = 0;
@@ -93,7 +89,6 @@ class ydCarousel {
     this.rafId = null;
     this.mutationRaf = null;
 
-    // POINTER TRACKING
     this.dragStartPos = 0;
     this.dragStartCurrentPos = 0;
     this.lastPointerPos = 0;
@@ -103,23 +98,21 @@ class ydCarousel {
     this.slides = []; 
     this.visibleSlides = new Set(); 
 
-    // PASS 1: Measurement Rewrite
     this.metrics = {
       viewportSize: 0,
       trackSize: 0,
       realTrackSize: 0, 
       prependOffset: 0,  
       slideSizes: [],
-      slideSnaps: [], // Exact position of every slide
-      groupSnaps: [], // Valid viewport stops
-      snapPoints: []  // Kept for backwards compatibility testing
+      slideSnaps: [], 
+      groupSnaps: [], 
+      snapPoints: []  
     };
 
     this.listeners = {};
-    this.plugins = []; // Internal standard plugins
-    this.activePlugins = new Map(); // PASS 10: Enterprise mapped plugins
+    this.plugins = []; 
+    this.activePlugins = new Map(); 
 
-    // Bound methods for safe addition/removal
     this.onPointerDown = this.onPointerDown.bind(this);
     this.onPointerMove = this.onPointerMove.bind(this);
     this.onPointerUp = this.onPointerUp.bind(this);
@@ -140,7 +133,7 @@ class ydCarousel {
     this.bindEvents();
     
     this.initPlugins();
-    this.initEnterprisePlugins(); // PASS 10
+    this.initEnterprisePlugins(); 
 
     this.startPhysicsLoop();
     this.root.classList.add('yd_carousel-ready');
@@ -148,7 +141,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // PUBLIC API & DX EXTENSIONS
+  // PUBLIC API
   // ==========================================
 
   version() { return ydCarousel.VERSION; }
@@ -166,7 +159,7 @@ class ydCarousel {
     return Object.freeze({
       version: this.version(),
       index: this.currentIndex,
-      group: this.currentGroup, // PASS 3
+      group: this.currentGroup,
       previousIndex: this.prevIndex,
       position: this.currentPos,
       target: this.targetPos,
@@ -199,7 +192,7 @@ class ydCarousel {
       autoplay: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true,
       debug: true, plugins: true, events: true, diagnostics: true,
-      snapshots: true, observers: true, registry: true // PASS 10
+      snapshots: true, observers: true, registry: true 
     });
   }
 
@@ -238,8 +231,8 @@ class ydCarousel {
     return {
       currentIndex: this.currentIndex,
       previousIndex: this.prevIndex,
-      currentGroup: this.currentGroup, // PASS 3
-      previousGroup: this.prevGroup,   // PASS 3
+      currentGroup: this.currentGroup, 
+      previousGroup: this.prevGroup,   
       slideCount: this.slides.length,
       progress: this.scrollProgress(),
       isDragging: this.isDraggingActive,
@@ -320,7 +313,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // PASS 1 & 2: MEASUREMENTS & RIGHT EDGE FIX
+  // MEASUREMENTS
   // ==========================================
   
   updateMeasurements() {
@@ -357,10 +350,8 @@ class ydCarousel {
 
     this.metrics.trackSize = this.options.vertical ? this.track.scrollHeight : this.track.scrollWidth;
     
-    // PASS 2: Determine Max Scroll natively
     this.maxScroll = Math.max(0, this.metrics.trackSize - this.metrics.viewportSize);
 
-    // PASS 1: Generate slideSnaps & groupSnaps
     let currentOffset = this.metrics.prependOffset;
     let currentGroupStart = currentOffset;
     
@@ -373,7 +364,6 @@ class ydCarousel {
       if (this.options.alignEnd) snap -= this.metrics.viewportSize - size;
       this.metrics.slideSnaps.push(Math.max(0, snap));
 
-      // Group logic: Start a new group if this slide overflows the current group's viewport
       if (idx === 0) {
         this.metrics.groupSnaps.push(Math.max(0, snap));
       } else {
@@ -385,14 +375,12 @@ class ydCarousel {
       currentOffset += size;
     });
 
-    // PASS 2: CLAMPING FOR REAL RIGHT EDGE
     if (!this.options.loop) {
       this.metrics.slideSnaps = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
       let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-      this.metrics.groupSnaps = [...new Set(rawGroups)]; // Remove duplicates caused by clamping
+      this.metrics.groupSnaps = [...new Set(rawGroups)]; 
     }
 
-    // Keep snapPoints referencing groupSnaps for legacy testing compatibility
     this.metrics.snapPoints = this.options.dragFree ? this.metrics.slideSnaps : this.metrics.groupSnaps;
 
     if (this.visibilityObserver) {
@@ -547,7 +535,6 @@ class ydCarousel {
 
     let newTarget = this.dragStartCurrentPos + dragDistance;
 
-    // PASS 2: EXACT CLAMPING
     if (!this.options.loop) {
       if (newTarget < 0) newTarget *= 0.3;
       else if (newTarget > this.maxScroll) newTarget = this.maxScroll + ((newTarget - this.maxScroll) * 0.3);
@@ -643,7 +630,6 @@ class ydCarousel {
       this.inertia *= this.options.friction;
       this.targetPos += this.inertia;
       
-      // PASS 2: EXACT CLAMPING
       if (!this.options.loop) {
         if (this.targetPos < 0) {
           this.targetPos *= 0.8;
@@ -699,7 +685,6 @@ class ydCarousel {
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = []; 
     
-    // PASS 10: Destroy mapped plugins
     this.activePlugins.forEach((active, name) => this.disablePlugin(name));
 
     this.root.classList.remove('yd_carousel-ready');
@@ -716,7 +701,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // PASS 3: SNAP BASED NAVIGATION
+  // SNAP BASED NAVIGATION
   // ==========================================
 
   goToGroup(groupIndex, immediate = false) {
@@ -748,7 +733,6 @@ class ydCarousel {
     this.targetPos = nextTarget;
     if (immediate) this.currentPos = this.targetPos;
 
-    // Sync underlying currentIndex based on physical location
     this.prevIndex = this.currentIndex;
     this.currentIndex = this.metrics.slideSnaps.findIndex(snap => snap >= nextTarget);
     if (this.currentIndex === -1) this.currentIndex = 0;
@@ -841,7 +825,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // PASS 10: ENTERPRISE PLUGIN MANAGEMENT
+  // ENTERPRISE PLUGIN MANAGEMENT
   // ==========================================
 
   enablePlugin(name) {
@@ -867,14 +851,14 @@ class ydCarousel {
   }
 
   // ==========================================
-  // CORE & ROADMAP PLUGINS (Passes 4-8)
+  // CORE & ROADMAP PLUGINS 
   // ==========================================
 
   initPlugins() {
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = [];
 
-    // CONTROLS (Prev/Next) - Pass 3 adapted
+    // CONTROLS (Prev/Next)
     const prevBtn = this.root.querySelector('.yd_prev');
     const nextBtn = this.root.querySelector('.yd_next');
     if (prevBtn || nextBtn) {
@@ -898,7 +882,7 @@ class ydCarousel {
       this.plugins.push(controls);
     }
 
-    // PASS 4: CUSTOM HTML DOTS
+    // CUSTOM HTML DOTS
     const dotsContainer = this.root.querySelector('.yd_dots');
     if (dotsContainer) {
       const dots = (() => {
@@ -906,7 +890,6 @@ class ydCarousel {
         return {
           name: 'dots',
           init: (api) => {
-            // STEP 1 & 2: Clone Template or create fallback
             const template = dotsContainer.querySelector('.yd_dot');
             dotsContainer.innerHTML = '';
             
@@ -936,7 +919,7 @@ class ydCarousel {
       this.plugins.push(dots);
     }
 
-    // PASS 5: CUSTOM HTML COUNTER
+    // CUSTOM HTML COUNTER
     const counterEl = this.root.querySelector('.yd_counter');
     if (counterEl) {
       const counter = (() => {
@@ -965,7 +948,7 @@ class ydCarousel {
       this.plugins.push(counter);
     }
 
-    // PASS 6: SCROLLBAR CONTROL
+    // SCROLLBAR CONTROL (Flattened DOM)
     const scrollbar = this.root.querySelector('.yd_scrollbar');
     if (scrollbar) {
       const sbPlugin = (() => {
@@ -973,9 +956,13 @@ class ydCarousel {
         return {
           name: 'scrollbar',
           init: (api) => {
-            const track = scrollbar.querySelector('.yd_scrollbar-track');
-            const thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
-            if (!track || !thumb) return;
+            let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
+            
+            if (!thumb) {
+              thumb = document.createElement('div');
+              thumb.className = 'yd_scrollbar-thumb';
+              scrollbar.appendChild(thumb);
+            }
 
             updateThumbSize = () => {
               const ratio = api.metrics.viewportSize / (api.metrics.trackSize || 1);
@@ -983,13 +970,13 @@ class ydCarousel {
             };
 
             updateProgress = (api, payload) => {
-              const movableSpace = track.offsetWidth - thumb.offsetWidth;
+              const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
               thumb.style.transform = `translate3d(${payload.progress * movableSpace}px, 0, 0)`;
             };
 
             onClickTrack = (e) => {
-              if (e.target === thumb) return; // Ignore drag for now, implement click first
-              const rect = track.getBoundingClientRect();
+              if (e.target === thumb) return; 
+              const rect = scrollbar.getBoundingClientRect();
               const pct = (e.clientX - rect.left) / rect.width;
               api.targetPos = pct * api.maxScroll;
               api.snapToClosest();
@@ -997,7 +984,7 @@ class ydCarousel {
 
             api.on('resize', updateThumbSize);
             api.on('scroll', updateProgress);
-            track.addEventListener('click', onClickTrack);
+            scrollbar.addEventListener('click', onClickTrack);
             
             updateThumbSize();
             updateProgress(api, api.getEventPayload());
@@ -1005,8 +992,7 @@ class ydCarousel {
           destroy: (api) => {
             api.off('resize', updateThumbSize);
             api.off('scroll', updateProgress);
-            const track = scrollbar.querySelector('.yd_scrollbar-track');
-            if (track) track.removeEventListener('click', onClickTrack);
+            scrollbar.removeEventListener('click', onClickTrack);
           }
         };
       })();
@@ -1014,7 +1000,7 @@ class ydCarousel {
       this.plugins.push(sbPlugin);
     }
 
-    // PASS 7: CAROUSEL PROGRESS
+    // CAROUSEL PROGRESS
     const progressEl = this.root.querySelector('.yd_progress');
     if (progressEl) {
       const progress = (() => {
@@ -1022,6 +1008,13 @@ class ydCarousel {
         return {
           name: 'progress',
           init: (api) => {
+            let fill = progressEl.querySelector('.yd_progress-fill');
+            if (!fill) {
+              fill = document.createElement('div');
+              fill.className = 'yd_progress-fill';
+              progressEl.appendChild(fill);
+            }
+
             updateProgress = (api, payload) => {
               const pct = payload.progress * 100;
               progressEl.style.setProperty('--progress', `${pct}%`);
@@ -1035,7 +1028,7 @@ class ydCarousel {
       this.plugins.push(progress);
     }
 
-    // PASS 8: AUTOPLAY PROGRESS & SYSTEM
+    // AUTOPLAY PROGRESS & SYSTEM
     if (this.options.autoplay) {
       const autoplay = (() => {
         let playTimer, play, stop, loopProgress, onVisChange, onFocusIn, onFocusOut, onSelect;
@@ -1048,6 +1041,15 @@ class ydCarousel {
           name: 'autoplay',
           init: (api) => {
             const apProgressEl = api.root.querySelector('.yd_autoplay-progress');
+            
+            if (apProgressEl) {
+              let fill = apProgressEl.querySelector('.yd_autoplay-progress-fill');
+              if (!fill) {
+                fill = document.createElement('div');
+                fill.className = 'yd_autoplay-progress-fill';
+                apProgressEl.appendChild(fill);
+              }
+            }
             
             loopProgress = () => {
               if (isPaused) return;
@@ -1089,7 +1091,7 @@ class ydCarousel {
             };
 
             onSelect = () => {
-               if (hasStarted && !isPaused) play(); // Reset timer on user interaction
+               if (hasStarted && !isPaused) play(); 
             };
 
             onVisChange = () => document.hidden ? stop() : play();
