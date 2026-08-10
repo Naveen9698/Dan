@@ -1,4 +1,4 @@
-<div class="yd_carousel pn-relative loop keyboard autoplay" data-delay="3000">
+<div class="yd_carousel pn-relative loop keyboard autoplay">
 
   <div class="yd_viewport of-hidden">
     <div class="yd_container slides-3">
