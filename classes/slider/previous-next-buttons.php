@@ -1,7 +1,7 @@
 <div class="yd_carousel pn-relative">
 
   <div class="yd_viewport of-hidden">
-    <div class="yd_container slides-3">
+    <div class="yd_container slides-2">
       <div class="yd_slide px-sm">
         <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
       </div>

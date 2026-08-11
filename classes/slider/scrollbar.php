@@ -24,11 +24,7 @@
   </div>
 
   <div class="yd_controles">
-    <div class="yd_scrollbar bg-g2 mt-sm ra-xl pa-2px">
-      <div class="yd_scrollbar-track h-10px ra-xl">
-        <div class="yd_scrollbar-thumb bg-main h-10px ra-xl"></div>
-      </div>
-    </div>
+    <div class="yd_scrollbar"></div>
   </div>
 
 </div>

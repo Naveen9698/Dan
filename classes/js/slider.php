@@ -1,7 +1,6 @@
 /**
- * ydCarousel 2.3.10 - V2.3.10 ENTERPRISE FINAL
- * ROADMAP COMPLETION: Passes 1-10 + STABILIZATION FINALE
- * Includes: Clone Sequence Fix, 100% Progress Mapping Fix, Real-time Scrollbar Drag Responsiveness
+ * ydCarousel 2.3.18 - V2.3.18 ENTERPRISE FINAL
+ * Includes: Sync Lock, SPA Subtree Init, Immediate Render Updates, Form Element Safety, Wheel Edge Release
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -11,7 +10,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.10'; 
+  static VERSION = '2.3.18'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -55,8 +54,13 @@ class ydCarousel {
     };
     initAll();
     if (!this._autoInitObserver) {
-      this._autoInitObserver = new MutationObserver(initAll);
-      this._autoInitObserver.observe(document.body, { childList: true, subtree: true });
+      let timeout;
+      this._autoInitObserver = new MutationObserver(() => {
+        clearTimeout(timeout);
+        timeout = setTimeout(initAll, 100); 
+      });
+      // FIX #2: Restore subtree to support SPA dynamic routing and nested components
+      this._autoInitObserver.observe(document.body, { childList: true, subtree: true }); 
     }
   }
 
@@ -134,6 +138,7 @@ class ydCarousel {
       realTrackSize: 0, 
       prependOffset: 0,  
       slideSizes: [],
+      slideOffsets: [], 
       slideSnaps: [], 
       groupSnaps: [], 
       snapPoints: []  
@@ -152,6 +157,10 @@ class ydCarousel {
     this.onMutation = this.onMutation.bind(this);
     this.tick = this.tick.bind(this);
     this.onActivate = () => { ydCarousel.activeCarousel = this; }; 
+    this.onDeactivate = (e) => {
+      if (e && e.type === 'focusout' && this.root.contains(e.relatedTarget)) return;
+      if (ydCarousel.activeCarousel === this) ydCarousel.activeCarousel = null;
+    };
 
     this.init();
   }
@@ -320,10 +329,10 @@ class ydCarousel {
 
   canScrollNext() {
     if (this.root.classList.contains('stop-last')) {
-      if (this.options.slideSnap) return this.currentIndex < this.slides.length - 1;
+      if (this.options.slideSnap) return this.currentIndex < this.metrics.slideSnaps.length - 1;
       return this.currentGroup < this.metrics.groupSnaps.length - 1;
     }
-    if (this.options.slideSnap) return this.options.loop || this.currentIndex < this.slides.length - 1;
+    if (this.options.slideSnap) return this.options.loop || this.currentIndex < this.metrics.slideSnaps.length - 1;
     return this.options.loop || this.currentGroup < this.metrics.groupSnaps.length - 1;
   }
 
@@ -332,7 +341,6 @@ class ydCarousel {
     return this.options.loop || this.currentGroup > 0;
   }
 
-  // FIX: 100% Mapping accurately targets the final logical snap position
   scrollProgress() {
     if (this.options.loop) {
       const snaps = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
@@ -349,8 +357,8 @@ class ydCarousel {
   }
 
   slideProgress(index) {
-    const snap = this.metrics.slideSnaps[index] || 0;
-    let distance = this.currentPos - snap;
+    const offset = this.metrics.slideOffsets[index] || 0;
+    let distance = this.currentPos - offset;
     
     if (this.options.loop && this.metrics.realTrackSize > 0) {
       const distFwd = distance - this.metrics.realTrackSize;
@@ -374,6 +382,13 @@ class ydCarousel {
   // ==========================================
   // HELPERS 
   // ==========================================
+
+  _wake() {
+    if (this.isSettled) {
+      this.isSettled = false;
+      this.startPhysicsLoop();
+    }
+  }
   
   findNearestSlide(position) {
     let minDistance = Infinity;
@@ -430,15 +445,19 @@ class ydCarousel {
     this.metrics.realTrackSize = this.metrics.slideSizes.reduce((a, b) => a + b, 0);
     this.metrics.prependOffset = 0;
 
-    if (this.options.loop && this.slides.length > 1) {
+    if (this.options.loop && this.slides.length > 1 && this.metrics.realTrackSize > 0) {
       this.metrics.prependOffset = this.metrics.realTrackSize;
-      const clonesBefore = this.slides.map(s => this.createClone(s));
-      const clonesAfter = this.slides.map(s => this.createClone(s));
       
-      // FIX: Proper Sequential Clone Insertion avoids 3, 2, 1 reversed startup jump
-      const firstOriginal = this.slides[0];
-      clonesBefore.forEach(c => this.track.insertBefore(c, firstOriginal));
-      clonesAfter.forEach(c => this.track.appendChild(c));
+      const setsNeeded = Math.max(1, Math.ceil(this.metrics.viewportSize / this.metrics.realTrackSize));
+      
+      for (let i = 0; i < setsNeeded; i++) {
+        const clonesBefore = this.slides.map(s => this.createClone(s));
+        const clonesAfter = this.slides.map(s => this.createClone(s));
+        
+        const firstOriginal = this.slides[0];
+        clonesBefore.forEach(c => this.track.insertBefore(c, firstOriginal));
+        clonesAfter.forEach(c => this.track.appendChild(c));
+      }
     }
 
     this.metrics.trackSize = this.options.vertical ? this.track.scrollHeight : this.track.scrollWidth;
@@ -446,6 +465,7 @@ class ydCarousel {
     let currentOffset = this.metrics.prependOffset;
     let currentGroupStart = currentOffset;
     
+    this.metrics.slideOffsets = [];
     this.metrics.slideSnaps = [];
     this.metrics.groupSnaps = [];
     
@@ -453,6 +473,8 @@ class ydCarousel {
       let snap = currentOffset;
       if (this.options.alignCenter) snap -= (this.metrics.viewportSize / 2) - (size / 2);
       if (this.options.alignEnd) snap -= this.metrics.viewportSize - size;
+      
+      this.metrics.slideOffsets.push(Math.max(0, snap));
       this.metrics.slideSnaps.push(Math.max(0, snap));
 
       if (idx === 0) {
@@ -466,15 +488,26 @@ class ydCarousel {
       currentOffset += size;
     });
 
-    const lastSnap = this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1] || 0;
-    this.maxScroll = (this.options.contain || this.options.containKeep) 
-      ? Math.max(0, this.metrics.trackSize - this.metrics.viewportSize) 
-      : lastSnap;
+    this.maxScroll = Math.max(0, this.metrics.trackSize - this.metrics.viewportSize);
 
-    if (!this.options.loop && (this.options.contain || this.options.containKeep)) {
-      this.metrics.slideSnaps = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+    if (!this.options.loop) {
+      let rawSlides = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+      let uniqueSlideSnaps = [];
+      rawSlides.forEach(snap => {
+        if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > 0.5) {
+          uniqueSlideSnaps.push(snap);
+        }
+      });
+      this.metrics.slideSnaps = uniqueSlideSnaps;
+      
       let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-      this.metrics.groupSnaps = [...new Set(rawGroups)]; 
+      let uniqueGroupSnaps = [];
+      rawGroups.forEach(snap => {
+        if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > 0.5) {
+          uniqueGroupSnaps.push(snap);
+        }
+      });
+      this.metrics.groupSnaps = uniqueGroupSnaps; 
     }
 
     this.metrics.snapPoints = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
@@ -485,7 +518,7 @@ class ydCarousel {
     }
 
     if (this.mutationObserver) {
-      this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'style', 'class'] });
+      this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
     }
 
     this.emit('resize');
@@ -558,7 +591,12 @@ class ydCarousel {
   onResize() { this.updateMeasurements(); }
 
   onMutation(mutations) {
-    if (mutations.some(m => m.target.classList && m.target.classList.contains('yd_slide-clone'))) return;
+    const isCloneMutation = mutations.some(m => {
+      const nodes = [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)];
+      return nodes.some(n => n.nodeType === 1 && n.classList.contains('yd_slide-clone'));
+    });
+    if (isCloneMutation) return;
+
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.mutationRaf = requestAnimationFrame(() => {
@@ -606,6 +644,8 @@ class ydCarousel {
     
     this.root.addEventListener('mouseenter', this.onActivate);
     this.root.addEventListener('focusin', this.onActivate);
+    this.root.addEventListener('mouseleave', this.onDeactivate);
+    this.root.addEventListener('focusout', this.onDeactivate);
     this.track.addEventListener('pointerdown', this.onActivate);
 
     if (this.options.keyboard) {
@@ -619,9 +659,12 @@ class ydCarousel {
     this.track.removeEventListener('click', this.onClick, { capture: true });
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
     
     this.root.removeEventListener('mouseenter', this.onActivate);
     this.root.removeEventListener('focusin', this.onActivate);
+    this.root.removeEventListener('mouseleave', this.onDeactivate);
+    this.root.removeEventListener('focusout', this.onDeactivate);
     this.track.removeEventListener('pointerdown', this.onActivate);
 
     if (this.options.keyboard) {
@@ -649,7 +692,9 @@ class ydCarousel {
     
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('pointercancel', this.onPointerUp);
     
+    this._wake();
     this.emit('dragStart');
     e.preventDefault(); 
   }
@@ -680,6 +725,7 @@ class ydCarousel {
     }
 
     this.targetPos = newTarget;
+    this._wake();
     this.emit('dragMove');
   }
 
@@ -692,6 +738,7 @@ class ydCarousel {
 
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
     this.emit('dragEnd');
 
     if (this.options.dragFree) {
@@ -715,23 +762,29 @@ class ydCarousel {
   onKeyDown(e) {
     if (ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) return;
 
+    // FIX #3: Ignore Form Element Inputs to prevent hijacking native typing events
+    const activeElement = document.activeElement;
+    const ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
+    if (activeElement && ignoreTags.includes(activeElement.tagName)) {
+      return; 
+    }
+
+    const keys = ['Home', 'End', 'PageDown', 'PageUp', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'];
+    if (keys.includes(e.key)) {
+      e.preventDefault();
+    }
+
     const isRtl = this.options.rtl;
     const isVert = this.options.vertical;
     
     if (e.key === 'Home') this.options.slideSnap ? this.goToSlide(0) : this.goToGroup(0);
-    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.slides.length - 1) : this.goToGroup(this.metrics.groupSnaps.length - 1);
+    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.metrics.slideSnaps.length - 1) : this.goToGroup(this.metrics.groupSnaps.length - 1);
     
     if (e.key === 'PageDown') this.scrollNext();
     if (e.key === 'PageUp') this.scrollPrev();
 
-    if (e.key === 'ArrowRight') {
-      if (isVert) return;
-      isRtl ? this.scrollPrev() : this.scrollNext();
-    }
-    if (e.key === 'ArrowLeft') {
-      if (isVert) return;
-      isRtl ? this.scrollNext() : this.scrollPrev();
-    }
+    if (e.key === 'ArrowRight' && !isVert) isRtl ? this.scrollPrev() : this.scrollNext();
+    if (e.key === 'ArrowLeft' && !isVert) isRtl ? this.scrollNext() : this.scrollPrev();
     if (e.key === 'ArrowDown' && isVert) this.scrollNext();
     if (e.key === 'ArrowUp' && isVert) this.scrollPrev();
   }
@@ -741,6 +794,7 @@ class ydCarousel {
   // ==========================================
 
   startPhysicsLoop() {
+    if (this.rafId) cancelAnimationFrame(this.rafId);
     this.rafId = requestAnimationFrame(this.tick);
   }
 
@@ -749,16 +803,16 @@ class ydCarousel {
 
     if (this.options.loop) {
       const firstSnap = this.metrics.slideSnaps[0];
-      const lastSnap = this.metrics.slideSnaps[this.slides.length - 1];
+      const lastSnap = this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1];
       
-      if (this.currentPos < firstSnap - (this.metrics.realTrackSize / 2)) {
+      if (this.currentPos < firstSnap - (this.metrics.realTrackSize * 0.15)) {
         this.emit('loopEnter', { position: 'start' });
         const from = this.currentPos;
         this.currentPos += this.metrics.realTrackSize;
         this.targetPos += this.metrics.realTrackSize;
         this.emit('loopReposition', { from, to: this.currentPos }); 
         this.emit('loopExit', { position: 'end' });
-      } else if (this.currentPos > lastSnap + (this.metrics.realTrackSize / 2)) {
+      } else if (this.currentPos > lastSnap + (this.metrics.realTrackSize * 0.15)) {
         this.emit('loopEnter', { position: 'end' });
         const from = this.currentPos;
         this.currentPos -= this.metrics.realTrackSize;
@@ -809,7 +863,10 @@ class ydCarousel {
     }
 
     this.emit('scroll');
-    this.rafId = requestAnimationFrame(this.tick);
+    
+    if (!this.isSettled) {
+      this.rafId = requestAnimationFrame(this.tick);
+    }
   }
 
   destroy() {
@@ -886,7 +943,16 @@ class ydCarousel {
     }
 
     this.targetPos = nextTarget;
-    if (immediate) this.currentPos = this.targetPos;
+    // FIX #1: Render update sync for API driven immediate jumps without animation
+    if (immediate) {
+      this.currentPos = this.targetPos;
+      let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
+      this.track.style.transform = this.options.vertical 
+        ? `translate3d(0, ${transformVal}px, 0)` 
+        : `translate3d(${transformVal}px, 0, 0)`;
+    } else {
+      this._wake();
+    }
 
     this.prevIndex = this.currentIndex;
     this.currentIndex = this.findNearestSlide(nextTarget);
@@ -933,7 +999,15 @@ class ydCarousel {
       }
 
       this.targetPos = nextTarget;
-      if (immediate) this.currentPos = this.targetPos;
+      if (immediate) {
+        this.currentPos = this.targetPos;
+        let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
+        this.track.style.transform = this.options.vertical 
+          ? `translate3d(0, ${transformVal}px, 0)` 
+          : `translate3d(${transformVal}px, 0, 0)`;
+      } else {
+        this._wake();
+      }
 
       let targetGroup = 0;
       for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
@@ -983,6 +1057,7 @@ class ydCarousel {
 
     if (this.options.dragFree) {
        this.targetPos = snaps[closestIndex];
+       this._wake();
     } else {
        if (this.options.slideSnap) {
          this.goToSlide(closestIndex);
@@ -995,9 +1070,9 @@ class ydCarousel {
   scrollNext() {
     if (this.options.slideSnap) {
       if (this.options.loop) {
-        this.goToSlide((this.currentIndex + 1) % this.slides.length);
+        this.goToSlide((this.currentIndex + 1) % this.metrics.slideSnaps.length);
       } else {
-        this.goToSlide(Math.min(this.currentIndex + 1, this.slides.length - 1));
+        this.goToSlide(Math.min(this.currentIndex + 1, this.metrics.slideSnaps.length - 1));
       }
       return;
     }
@@ -1012,7 +1087,7 @@ class ydCarousel {
   scrollPrev() {
     if (this.options.slideSnap) {
       if (this.options.loop) {
-        this.goToSlide((this.currentIndex - 1 + this.slides.length) % this.slides.length);
+        this.goToSlide((this.currentIndex - 1 + this.metrics.slideSnaps.length) % this.metrics.slideSnaps.length);
       } else {
         this.goToSlide(Math.max(this.currentIndex - 1, 0));
       }
@@ -1037,10 +1112,15 @@ class ydCarousel {
       if (idx === this.currentIndex) {
         slide.classList.add('active');
         slide.setAttribute('aria-current', 'true');
+        slide.removeAttribute('aria-hidden'); 
       } else if (idx === prevIdx) {
         slide.classList.add('prev');
+        slide.setAttribute('aria-hidden', 'true');
       } else if (idx === nextIdx) {
         slide.classList.add('next');
+        slide.setAttribute('aria-hidden', 'true');
+      } else {
+        slide.setAttribute('aria-hidden', 'true');
       }
     });
 
@@ -1053,10 +1133,15 @@ class ydCarousel {
         if (idx === this.currentIndex) {
           clone.classList.add('active');
           clone.setAttribute('aria-current', 'true');
+          clone.removeAttribute('aria-hidden'); 
         } else if (idx === prevIdx) {
           clone.classList.add('prev');
+          clone.setAttribute('aria-hidden', 'true');
         } else if (idx === nextIdx) {
           clone.classList.add('next');
+          clone.setAttribute('aria-hidden', 'true');
+        } else {
+          clone.setAttribute('aria-hidden', 'true');
         }
       });
     }
@@ -1078,7 +1163,8 @@ class ydCarousel {
     }
     
     this.announceHandler = (api, payload) => {
-      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slides.length}`;
+      const total = api.options.slideSnap ? api.metrics.slideSnaps.length : api.metrics.groupSnaps.length;
+      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${total}`;
     };
     this.on('select', this.announceHandler);
   }
@@ -1209,7 +1295,7 @@ class ydCarousel {
               const current = api.options.slideSnap 
                   ? (payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex) + 1 
                   : (payload.previewGroup !== undefined ? payload.previewGroup : payload.currentGroup) + 1;
-              const total = api.options.slideSnap ? api.slides.length : api.metrics.groupSnaps.length;
+              const total = api.options.slideSnap ? api.metrics.slideSnaps.length : api.metrics.groupSnaps.length;
 
               if (currentEl && totalEl) {
                 currentEl.textContent = current;
@@ -1276,7 +1362,6 @@ class ydCarousel {
               }
             };
 
-            // FIX: Fast Thumb Drag Responsiveness Sync
             updateProgress = (api, payload) => {
               if (isDisabled || isDraggingThumb) return; 
               const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
@@ -1337,7 +1422,6 @@ class ydCarousel {
               const deltaX = e.clientX - startX;
               const progressDelta = deltaX / movableSpace;
               
-              // Direct 1:1 Thumb visual mapping for snappy feel
               const rawProgress = Math.max(0, Math.min(1, startProgress + progressDelta));
               thumb.style.transform = `translate3d(${rawProgress * movableSpace}px, 0, 0)`;
               
@@ -1357,9 +1441,9 @@ class ydCarousel {
                  newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
               }
               
-              // FIX: Instantly lock the carousel track to visual thumb pointer for snappiness
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
+              api._wake(); 
 
               let searchTarget = newTarget;
               if (api.options.loop && api.metrics.realTrackSize > 0) {
@@ -1492,11 +1576,10 @@ class ydCarousel {
     // AUTOPLAY PROGRESS & SYSTEM
     if (this.options.autoplay) {
       const autoplay = (() => {
-        let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, onSelect;
+        let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, pauseTimer, onSettle;
         let isPaused = false;
         let hasStarted = false;
         let permanentlyStopped = false; 
-        let isAutoScrolling = false; 
         let startTime = 0;
         let animRaf = null;
         
@@ -1536,13 +1619,20 @@ class ydCarousel {
             api.resetAutoplay = () => {
                permanentlyStopped = false;
                const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
-               if (!hasStarted && ready) play();
+               if (!hasStarted && ready) {
+                  isPaused = false;
+                  play();
+               }
+            };
+
+            pauseTimer = () => {
+              clearTimeout(playTimer);
+              cancelAnimationFrame(animRaf);
             };
 
             play = () => {
               if (permanentlyStopped) return; 
-              clearTimeout(playTimer);
-              cancelAnimationFrame(animRaf);
+              pauseTimer();
               
               if (!hasStarted) {
                 hasStarted = true;
@@ -1561,35 +1651,38 @@ class ydCarousel {
               startTime = performance.now();
               loopProgress();
               
-              // FIX: isAutoScrolling prevents user interaction resets triggered falsely by engine advancing
               playTimer = setTimeout(() => {
-                isAutoScrolling = true;
                 api.scrollNext(); 
-                isAutoScrolling = false;
-                play(); 
               }, api.options.delay);
             };
             
             stop = () => {
-              clearTimeout(playTimer);
-              cancelAnimationFrame(animRaf);
+              pauseTimer();
               if (hasStarted && !isPaused && !permanentlyStopped) {
                 isPaused = true;
                 api.emit('autoplayPause');
               }
             };
 
-            onSelect = () => {
-               if (hasStarted && !isPaused && !isAutoScrolling) play(); 
+            onSettle = () => {
+               if (hasStarted && !isPaused && !permanentlyStopped) play(); 
             };
 
             onVisChange = () => document.hidden ? stop() : play();
             onFocusIn = () => stop();
             onFocusOut = () => play();
 
+            api.on('beforeSelect', pauseTimer);
             api.on('dragStart', stop);
-            api.on('dragEnd', play);
-            api.on('select', onSelect); 
+            api.on('dragEnd', () => {
+               if (hasStarted && isPaused && !permanentlyStopped) {
+                  isPaused = false;
+                  api.emit('autoplayResume');
+                  if (api.isSettled) play();
+               }
+            });
+            api.on('settle', onSettle);
+            
             if (api.root.classList.contains('pause-hover')) {
               api.root.addEventListener('mouseenter', stop);
               api.root.addEventListener('mouseleave', play);
@@ -1612,9 +1705,11 @@ class ydCarousel {
             }
             delete api.resetAutoplay; 
             
+            api.off('beforeSelect', pauseTimer);
             api.off('dragStart', stop);
-            api.off('dragEnd', play);
-            api.off('select', onSelect);
+            api.off('dragEnd', play); 
+            api.off('settle', onSettle);
+            
             api.root.removeEventListener('mouseenter', stop);
             api.root.removeEventListener('mouseleave', play);
             document.removeEventListener('visibilitychange', onVisChange);
@@ -1638,9 +1733,19 @@ class ydCarousel {
             const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
             onWheel = (e) => {
               if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
-              e.preventDefault();
               
               const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
+              // FIX #4: Smart Scroll/Wheel Edge release for normal page scrolling
+              const isAtStart = (api.options.slideSnap ? api.currentIndex === 0 : api.currentGroup === 0) && delta < 0;
+              const maxEnd = api.options.slideSnap ? api.metrics.slideSnaps.length - 1 : api.metrics.groupSnaps.length - 1;
+              const isAtEnd = (api.options.slideSnap ? api.currentIndex >= maxEnd : api.currentGroup >= maxEnd) && delta > 0;
+              
+              if (!api.options.loop && (isAtStart || isAtEnd)) {
+                return; 
+              }
+              
+              e.preventDefault();
+              
               accumulator += delta;
               
               if (Math.abs(accumulator) >= threshold) {
@@ -1716,10 +1821,12 @@ class ydCarousel {
       const syncPlugin = (() => {
         let onSelect;
         let hasSynced = false;
+        let isSyncing = false; // FIX #5: Recursion Lock 
         return {
           name: 'sync',
           init: (api) => {
             onSelect = (api, payload) => {
+              if (isSyncing) return;
               let targets = [];
               if (syncTarget) {
                  const el = document.querySelector(syncTarget);
@@ -1732,6 +1839,7 @@ class ydCarousel {
               }
               
               if (targets.length) {
+                isSyncing = true;
                 if (!hasSynced) {
                   hasSynced = true;
                   api.emit('syncStart');
@@ -1744,6 +1852,7 @@ class ydCarousel {
                      targetApi.goToSlide(payload.currentIndex);
                   }
                 });
+                setTimeout(() => { isSyncing = false; }, 10);
               }
             };
             api.on('select', onSelect);
@@ -1799,36 +1908,27 @@ class ydCarousel {
     // LAZY LOAD
     if (this.root.classList.contains('lazy-load')) {
       const lazyLoad = (() => {
-        let onSelect;
+        let onSlideEnter;
         return {
           name: 'lazy-load',
           init: (api) => {
-            onSelect = (api, payload) => {
-              const toLoad = [
-                payload.currentIndex - 1, 
-                payload.currentIndex, 
-                payload.currentIndex + 1
-              ];
-              toLoad.forEach(idx => {
-                let targetIdx = idx;
-                if (api.isLoop()) {
-                  targetIdx = (idx + api.slides.length) % api.slides.length;
+            onSlideEnter = (api, payload) => {
+              const slide = api.slides[payload.index];
+              if (slide && !slide.dataset.loaded) {
+                const img = slide.querySelector('img[data-src]');
+                if (img && img.dataset.src) {
+                  img.src = img.dataset.src;
+                  img.removeAttribute('data-src');
                 }
-                const slide = api.slides[targetIdx];
-                if (slide && !slide.dataset.loaded) {
-                  const img = slide.querySelector('img[data-src]');
-                  if (img && img.dataset.src) {
-                    img.src = img.dataset.src;
-                    img.removeAttribute('data-src');
-                  }
-                  slide.dataset.loaded = "true";
-                }
-              });
+                slide.dataset.loaded = "true";
+              }
             };
-            api.on('select', onSelect);
-            onSelect(api, api.getEventPayload());
+            api.on('slideEnter', onSlideEnter);
+            api.slidesInView().forEach(idx => onSlideEnter(api, {index: idx}));
           },
-          destroy: (api) => api.off('select', onSelect)
+          destroy: (api) => {
+            api.off('slideEnter', onSlideEnter);
+          }
         };
       })();
       lazyLoad.init(this);

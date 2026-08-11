@@ -14,17 +14,11 @@
       <div class="yd_slide px-sm">
         <h2 class="bg-acnt clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
       </div>
-      <div class="yd_slide px-sm">
-        <h2 class="bg-acnt clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
-      </div>
-      <div class="yd_slide px-sm">
-        <h2 class="bg-acnt clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
-      </div>
     </div>
   </div>
 
   <div class="yd_controles">
-    <div class="yd_dots"><div class="yd_dot blur-md ac:blur-o"></div></div>
+    <div class="yd_dots"></div>
   </div>
 
 </div>
