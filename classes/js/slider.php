@@ -332,7 +332,7 @@ class ydCarousel {
     return this.options.loop || this.currentGroup > 0;
   }
 
-  // FIX: 100% Mapping for both Scrollbars and Progress Bars exactly mapping to the final valid visual slide
+  // FIX: 100% Mapping accurately targets the final logical snap position
   scrollProgress() {
     if (this.options.loop) {
       const snaps = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
@@ -1026,7 +1026,6 @@ class ydCarousel {
     }
   }
 
-  // FIX: Clone Active State Sync securely maps classes eliminating any boundary visual glitch
   updateSlideStates() {
     const total = this.slides.length;
     const prevIdx = this.options.loop ? (total + this.currentIndex - 1) % total : this.currentIndex - 1;
@@ -1497,7 +1496,7 @@ class ydCarousel {
         let isPaused = false;
         let hasStarted = false;
         let permanentlyStopped = false; 
-        let isAutoScrolling = false; // FIX: Guard to prevent double timer resets on auto advance
+        let isAutoScrolling = false; 
         let startTime = 0;
         let animRaf = null;
         
