@@ -1,6 +1,6 @@
 /**
- * ydCarousel 2.3.22 - V2.3.22 ENTERPRISE FINAL
- * Includes: Kinetic Teleport Prevention, Drag-Safe Mutation Guard, Try/Finally Sync Lock
+ * ydCarousel 2.3.25 - V2.3.25 ENTERPRISE FINAL
+ * Includes: A11y Observer Event Pollution Fix, activeCarousel Fallback UX, Explicit Clone Data, Dead Code Removal
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -10,7 +10,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.22'; 
+  static VERSION = '2.3.25'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -162,9 +162,14 @@ class ydCarousel {
     this.onMutation = this.onMutation.bind(this);
     this.tick = this.tick.bind(this);
     this.onActivate = () => { ydCarousel.activeCarousel = this; }; 
+    
+    // FIX #2: Fallback activeCarousel to another keyboard-enabled carousel if losing focus
     this.onDeactivate = (e) => {
       if (e && e.type === 'focusout' && this.root.contains(e.relatedTarget)) return;
-      if (ydCarousel.activeCarousel === this) ydCarousel.activeCarousel = null;
+      if (ydCarousel.activeCarousel === this) {
+        const fallback = [...ydCarousel._instances].find(api => api !== this && api.options.keyboard);
+        ydCarousel.activeCarousel = fallback || null; 
+      }
     };
 
     this.init();
@@ -539,6 +544,8 @@ class ydCarousel {
 
   createClone(slide) {
     const clone = slide.cloneNode(true);
+    // FIX #3: Explicitly map index data attribute for virtual DOM safety
+    clone.setAttribute('data-slide-index', slide.getAttribute('data-slide-index'));
     clone.classList.add('yd_slide-clone');
     clone.setAttribute('aria-hidden', 'true');
     clone.removeAttribute('aria-current');
@@ -573,22 +580,23 @@ class ydCarousel {
         if (entry.isIntersecting) {
           node.classList.add('in-view');
           node.classList.remove('out-view');
+          // FIX #1: Guard A11y while allowing clone analytics events
           if (!isClone) {
             node.removeAttribute('aria-hidden');
-          }
-          if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
-            this.visibleSlides.add(idx);
-            this.emit('slideEnter', { index: idx });
+            if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
+              this.visibleSlides.add(idx);
+              this.emit('slideEnter', { index: idx });
+            }
           }
         } else {
           node.classList.add('out-view');
           node.classList.remove('in-view');
           if (!isClone) {
             node.setAttribute('aria-hidden', 'true');
-          }
-          if (!isNaN(idx) && this.visibleSlides.has(idx)) {
-            this.visibleSlides.delete(idx);
-            this.emit('slideExit', { index: idx });
+            if (!isNaN(idx) && this.visibleSlides.has(idx)) {
+              this.visibleSlides.delete(idx);
+              this.emit('slideExit', { index: idx });
+            }
           }
         }
       });
@@ -598,7 +606,6 @@ class ydCarousel {
   onResize() { this.updateMeasurements(); }
 
   onMutation(mutations) {
-    // FIX: Never interrupt user swipes mid-drag when lazy loader updates src attributes
     if (this.isDraggingActive) return;
 
     const isCloneMutation = mutations.some(m => {
@@ -687,7 +694,6 @@ class ydCarousel {
     this.isDraggingActive = true;
     this.isClickSuppressed = false;
 
-    // FIX: Halt animation target and grab actual visual location to prevent kinetic teleportation
     this.targetPos = this.currentPos;
     this.dragStartPos = this.getPointerPos(e);
     this.dragStartCurrentPos = this.currentPos;
@@ -963,6 +969,7 @@ class ydCarousel {
     }
 
     this.targetPos = nextTarget;
+    
     if (immediate) {
       this.inertia = 0;
       this._velocity = 0;
@@ -1143,6 +1150,7 @@ class ydCarousel {
     this.slides.forEach((slide, idx) => {
       slide.classList.remove('active', 'prev', 'next');
       slide.removeAttribute('aria-current');
+      
       if (idx === this.currentIndex) {
         slide.classList.add('active');
         slide.setAttribute('aria-current', 'true');
@@ -1150,7 +1158,7 @@ class ydCarousel {
         slide.classList.add('prev');
       } else if (idx === nextIdx) {
         slide.classList.add('next');
-      } 
+      }
     });
 
     if (this.options.loop) {
@@ -1159,18 +1167,14 @@ class ydCarousel {
         const idx = parseInt(clone.getAttribute('data-slide-index'), 10);
         clone.classList.remove('active', 'prev', 'next');
         clone.removeAttribute('aria-current');
+        
         if (idx === this.currentIndex) {
           clone.classList.add('active');
           clone.setAttribute('aria-current', 'true');
-          clone.removeAttribute('aria-hidden'); 
         } else if (idx === prevIdx) {
           clone.classList.add('prev');
-          clone.setAttribute('aria-hidden', 'true');
         } else if (idx === nextIdx) {
           clone.classList.add('next');
-          clone.setAttribute('aria-hidden', 'true');
-        } else {
-          clone.setAttribute('aria-hidden', 'true');
         }
       });
     }
@@ -1192,8 +1196,11 @@ class ydCarousel {
     }
     
     this.announceHandler = (api, payload) => {
-      const total = api.options.slideSnap ? api.metrics.slideSnaps.length : api.metrics.groupSnaps.length;
-      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${total}`;
+      if (api.options.slideSnap) {
+        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.metrics.slideSnaps.length}`;
+      } else {
+        announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.metrics.groupSnaps.length}`;
+      }
     };
     this.on('select', this.announceHandler);
   }
@@ -1365,6 +1372,13 @@ class ydCarousel {
         return {
           name: 'scrollbar',
           init: (api) => {
+            // FIX #4: Remove unreachable dead code - abort immediately for infinite loops
+            if (api.options.loop) {
+              console.warn('[ydCarousel] Scrollbar disabled: Absolute scrollbars cannot be mapped to infinite loops.');
+              scrollbar.style.display = 'none';
+              return;
+            }
+
             let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
             
             if (!thumb) {
@@ -1374,7 +1388,7 @@ class ydCarousel {
             }
 
             updateThumbSize = () => {
-              if (api.metrics.realTrackSize <= api.metrics.viewportSize && !api.options.loop) {
+              if (api.metrics.realTrackSize <= api.metrics.viewportSize) {
                 isDisabled = true;
                 scrollbar.classList.add('disabled');
                 scrollbar.setAttribute('aria-disabled', 'true');
@@ -1397,31 +1411,14 @@ class ydCarousel {
               thumb.style.transform = `translate3d(${payload.progress * movableSpace}px, 0, 0)`;
             };
 
+            // FIX #4: Dead code removed, runs clean logic bounds
             onClickTrack = (e) => {
               if (isDisabled || e.target === thumb) return; 
               const rect = scrollbar.getBoundingClientRect();
               const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
               
-              if (api.options.loop) {
-                 const snaps = api.options.slideSnap ? api.metrics.slideSnaps : api.metrics.groupSnaps;
-                 const relativeMaxSnap = Math.max(1, (snaps[snaps.length - 1] || 0) - api.metrics.prependOffset);
-                 const targetPos = pct * relativeMaxSnap;
-                 const targetSlide = api.findNearestSlide(targetPos + api.metrics.prependOffset);
-                 
-                 if (api.options.slideSnap) {
-                   api.goToSlide(targetSlide);
-                 } else {
-                   let minGroupDist = Infinity, closestGroup = 0;
-                   api.metrics.groupSnaps.forEach((p, i) => {
-                     let dist = Math.abs(p - (targetPos + api.metrics.prependOffset));
-                     if (dist < minGroupDist) { minGroupDist = dist; closestGroup = i; }
-                   });
-                   api.goToGroup(closestGroup);
-                 }
-              } else {
-                 api.targetPos = pct * api.maxScroll;
-                 api.snapToClosest();
-              }
+              api.targetPos = pct * api.maxScroll;
+              api.snapToClosest();
             };
 
             onThumbDown = (e) => {
@@ -1445,6 +1442,7 @@ class ydCarousel {
               api.emit('dragStart');
             };
 
+            // FIX #4: Removed dead infinite-loop code
             onThumbMove = (e) => {
               if (!isDraggingThumb) return;
               const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
@@ -1461,28 +1459,14 @@ class ydCarousel {
                  dragFactor = 1.0; 
               }
               
-              const snaps = api.options.slideSnap ? api.metrics.slideSnaps : api.metrics.groupSnaps;
-              const relativeMaxSnap = Math.max(1, (snaps[snaps.length - 1] || 0) - api.metrics.prependOffset);
-              const dragDistance = api.options.loop ? (relativeMaxSnap * dragFactor) : api.maxScroll;
-              
+              const dragDistance = api.maxScroll;
               let newTarget = (startProgress * dragDistance) + (progressDelta * dragDistance);
-              if (api.options.loop) {
-                 newTarget += api.metrics.prependOffset;
-              } else {
-                 newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
-              }
+              newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
               
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
               api.isSettled = false;
               api._wake(); 
-
-              let searchTarget = newTarget;
-              if (api.options.loop && api.metrics.realTrackSize > 0) {
-                 let rel = newTarget - api.metrics.prependOffset;
-                 rel = ((rel % api.metrics.realTrackSize) + api.metrics.realTrackSize) % api.metrics.realTrackSize;
-                 searchTarget = rel + api.metrics.prependOffset;
-              }
 
               let previewUpdated = false;
 
@@ -1493,21 +1477,11 @@ class ydCarousel {
                 const currentEvalGroup = api.previewGroup !== undefined ? api.previewGroup : api.currentGroup;
                 
                 if (api.metrics.groupSnaps[currentEvalGroup] !== undefined) {
-                   distToCurrent = Math.abs(api.metrics.groupSnaps[currentEvalGroup] - searchTarget);
-                   if (api.options.loop && api.metrics.realTrackSize > 0) {
-                      const dFwd = Math.abs((api.metrics.groupSnaps[currentEvalGroup] + api.metrics.realTrackSize) - searchTarget);
-                      const dBwd = Math.abs((api.metrics.groupSnaps[currentEvalGroup] - api.metrics.realTrackSize) - searchTarget);
-                      distToCurrent = Math.min(distToCurrent, dFwd, dBwd);
-                   }
+                   distToCurrent = Math.abs(api.metrics.groupSnaps[currentEvalGroup] - newTarget);
                 }
 
                 api.metrics.groupSnaps.forEach((p, i) => {
-                   let dist = Math.abs(p - searchTarget);
-                   if (api.options.loop && api.metrics.realTrackSize > 0) {
-                      const distFwd = Math.abs((p + api.metrics.realTrackSize) - searchTarget);
-                      const distBwd = Math.abs((p - api.metrics.realTrackSize) - searchTarget);
-                      dist = Math.min(dist, distFwd, distBwd);
-                   }
+                   let dist = Math.abs(p - newTarget);
                    if (dist < minGroupDist) { minGroupDist = dist; closestGroup = i; }
                 });
                 
@@ -1828,9 +1802,12 @@ class ydCarousel {
               }
               const targetIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
               if (targetIdx > -1 && targetIdx !== api.currentIndex) {
-                isSyncingHash = true;
-                api.goToSlide(targetIdx);
-                setTimeout(() => { isSyncingHash = false; }, 10);
+                try {
+                  isSyncingHash = true;
+                  api.goToSlide(targetIdx);
+                } finally {
+                  isSyncingHash = false;
+                }
               }
             };
             
@@ -1839,9 +1816,12 @@ class ydCarousel {
               const slideHash = api.slides[payload.currentIndex]?.dataset.hash;
               if (slideHash) {
                 const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
-                isSyncingHash = true;
-                history.replaceState(null, null, newHash);
-                setTimeout(() => { isSyncingHash = false; }, 10);
+                try {
+                  isSyncingHash = true;
+                  history.replaceState(null, null, newHash);
+                } finally {
+                  isSyncingHash = false;
+                }
               }
             };
             
@@ -1870,7 +1850,6 @@ class ydCarousel {
         return {
           name: 'sync',
           init: (api) => {
-            // FIX: Bulletproof try/finally state lock for synchronization
             onSelect = (api, payload) => {
               if (isSyncing) return;
               let targets = [];

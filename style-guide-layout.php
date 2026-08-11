@@ -21,7 +21,6 @@
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#progress-indicators">Progress Indicators</a>
 
     <a class="fz-14 clr-g8 px-xs py-xxs ra-xxs cur-auto">Navigation</a>
-    <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#click-to-scroll-api">Click-to-scroll API</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#keyboard-navigation">Keyboard Navigation</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#focus-navigation">Focus Navigation</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#tab-navigation">Tab Navigation</a>
