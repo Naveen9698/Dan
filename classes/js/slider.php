@@ -1,6 +1,6 @@
 /**
- * ydCarousel 2.3.18 - V2.3.18 ENTERPRISE FINAL
- * Includes: Sync Lock, SPA Subtree Init, Immediate Render Updates, Form Element Safety, Wheel Edge Release
+ * ydCarousel 2.3.22 - V2.3.22 ENTERPRISE FINAL
+ * Includes: Kinetic Teleport Prevention, Drag-Safe Mutation Guard, Try/Finally Sync Lock
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -10,7 +10,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.18'; 
+  static VERSION = '2.3.22'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -18,6 +18,7 @@ class ydCarousel {
   static activeCarousel = null; 
   static _keyboardInitialized = false; 
   static _keyboardUsers = 0; 
+  static _instances = new Set(); 
 
   static EVENTS = [
     'init', 'resize', 'destroy',
@@ -57,9 +58,13 @@ class ydCarousel {
       let timeout;
       this._autoInitObserver = new MutationObserver(() => {
         clearTimeout(timeout);
-        timeout = setTimeout(initAll, 100); 
+        timeout = setTimeout(() => {
+          ydCarousel._instances.forEach(api => {
+            if (!document.contains(api.root)) api.destroy();
+          });
+          initAll();
+        }, 100); 
       });
-      // FIX #2: Restore subtree to support SPA dynamic routing and nested components
       this._autoInitObserver.observe(document.body, { childList: true, subtree: true }); 
     }
   }
@@ -167,6 +172,8 @@ class ydCarousel {
 
   init() {
     if (this.destroyed) this.destroyed = false;
+    
+    ydCarousel._instances.add(this); 
     
     if (!ydCarousel.activeCarousel) ydCarousel.activeCarousel = this; 
     
@@ -568,20 +575,20 @@ class ydCarousel {
           node.classList.remove('out-view');
           if (!isClone) {
             node.removeAttribute('aria-hidden');
-            if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
-              this.visibleSlides.add(idx);
-              this.emit('slideEnter', { index: idx });
-            }
+          }
+          if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
+            this.visibleSlides.add(idx);
+            this.emit('slideEnter', { index: idx });
           }
         } else {
           node.classList.add('out-view');
           node.classList.remove('in-view');
           if (!isClone) {
             node.setAttribute('aria-hidden', 'true');
-            if (!isNaN(idx) && this.visibleSlides.has(idx)) {
-              this.visibleSlides.delete(idx);
-              this.emit('slideExit', { index: idx });
-            }
+          }
+          if (!isNaN(idx) && this.visibleSlides.has(idx)) {
+            this.visibleSlides.delete(idx);
+            this.emit('slideExit', { index: idx });
           }
         }
       });
@@ -591,6 +598,9 @@ class ydCarousel {
   onResize() { this.updateMeasurements(); }
 
   onMutation(mutations) {
+    // FIX: Never interrupt user swipes mid-drag when lazy loader updates src attributes
+    if (this.isDraggingActive) return;
+
     const isCloneMutation = mutations.some(m => {
       const nodes = [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)];
       return nodes.some(n => n.nodeType === 1 && n.classList.contains('yd_slide-clone'));
@@ -676,8 +686,11 @@ class ydCarousel {
     if (e.button !== 0) return; 
     this.isDraggingActive = true;
     this.isClickSuppressed = false;
+
+    // FIX: Halt animation target and grab actual visual location to prevent kinetic teleportation
+    this.targetPos = this.currentPos;
     this.dragStartPos = this.getPointerPos(e);
-    this.dragStartCurrentPos = this.targetPos;
+    this.dragStartCurrentPos = this.currentPos;
     
     this.lastPointerPos = this.getPointerPos(e);
     this.lastPointerTime = performance.now();
@@ -733,6 +746,8 @@ class ydCarousel {
     if (!this.isDraggingActive) return;
     this.isDraggingActive = false;
     
+    setTimeout(() => { this.isClickSuppressed = false; }, 50);
+
     try { this.track.releasePointerCapture(e.pointerId); } catch(err) {}
     this.track.style.cursor = '';
 
@@ -762,11 +777,15 @@ class ydCarousel {
   onKeyDown(e) {
     if (ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) return;
 
-    // FIX #3: Ignore Form Element Inputs to prevent hijacking native typing events
     const activeElement = document.activeElement;
     const ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
-    if (activeElement && ignoreTags.includes(activeElement.tagName)) {
-      return; 
+    if (activeElement) {
+      const isInputTag = ignoreTags.includes(activeElement.tagName);
+      const isEditable = activeElement.isContentEditable;
+      
+      if (isInputTag || isEditable) {
+        return; 
+      }
     }
 
     const keys = ['Home', 'End', 'PageDown', 'PageUp', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'];
@@ -907,6 +926,7 @@ class ydCarousel {
       }
     }
 
+    ydCarousel._instances.delete(this); 
     this.emit('destroy');
     this.listeners = {}; 
   }
@@ -943,13 +963,19 @@ class ydCarousel {
     }
 
     this.targetPos = nextTarget;
-    // FIX #1: Render update sync for API driven immediate jumps without animation
     if (immediate) {
+      this.inertia = 0;
+      this._velocity = 0;
       this.currentPos = this.targetPos;
       let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
       this.track.style.transform = this.options.vertical 
         ? `translate3d(0, ${transformVal}px, 0)` 
         : `translate3d(${transformVal}px, 0, 0)`;
+        
+      if (!this.isSettled) {
+        this.isSettled = true;
+        this.emit('settle');
+      }
     } else {
       this._wake();
     }
@@ -964,7 +990,7 @@ class ydCarousel {
     
     this.updateSlideStates();
 
-    if (changed || immediate) {
+    if (changed) {
       this.emit('select');
       this.emit('afterSelect'); 
     }
@@ -999,12 +1025,20 @@ class ydCarousel {
       }
 
       this.targetPos = nextTarget;
+
       if (immediate) {
+        this.inertia = 0;
+        this._velocity = 0;
         this.currentPos = this.targetPos;
         let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
         this.track.style.transform = this.options.vertical 
           ? `translate3d(0, ${transformVal}px, 0)` 
           : `translate3d(${transformVal}px, 0, 0)`;
+          
+        if (!this.isSettled) {
+          this.isSettled = true;
+          this.emit('settle');
+        }
       } else {
         this._wake();
       }
@@ -1023,7 +1057,7 @@ class ydCarousel {
       
       this.updateSlideStates();
 
-      if (changed || immediate) {
+      if (changed) {
         this.emit('select');
         this.emit('afterSelect'); 
       }
@@ -1112,16 +1146,11 @@ class ydCarousel {
       if (idx === this.currentIndex) {
         slide.classList.add('active');
         slide.setAttribute('aria-current', 'true');
-        slide.removeAttribute('aria-hidden'); 
       } else if (idx === prevIdx) {
         slide.classList.add('prev');
-        slide.setAttribute('aria-hidden', 'true');
       } else if (idx === nextIdx) {
         slide.classList.add('next');
-        slide.setAttribute('aria-hidden', 'true');
-      } else {
-        slide.setAttribute('aria-hidden', 'true');
-      }
+      } 
     });
 
     if (this.options.loop) {
@@ -1412,6 +1441,8 @@ class ydCarousel {
               document.addEventListener('pointermove', onThumbMove);
               document.addEventListener('pointerup', onThumbUp);
               document.addEventListener('pointercancel', onThumbUp);
+              
+              api.emit('dragStart');
             };
 
             onThumbMove = (e) => {
@@ -1443,6 +1474,7 @@ class ydCarousel {
               
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
+              api.isSettled = false;
               api._wake(); 
 
               let searchTarget = newTarget;
@@ -1515,6 +1547,7 @@ class ydCarousel {
               api.previewIndex = api.currentIndex;
               api.previewGroup = api.currentGroup;
 
+              api.emit('dragEnd');
               api.snapToClosest();
             };
 
@@ -1730,12 +1763,16 @@ class ydCarousel {
         return {
           name: 'wheel',
           init: (api) => {
+            if (api.options.vertical && api.options.loop) {
+              console.warn('[ydCarousel] Wheel plugin disabled: Vertical loops trap page scrolling.');
+              return;
+            }
+            
             const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
             onWheel = (e) => {
               if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
               
               const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
-              // FIX #4: Smart Scroll/Wheel Edge release for normal page scrolling
               const isAtStart = (api.options.slideSnap ? api.currentIndex === 0 : api.currentGroup === 0) && delta < 0;
               const maxEnd = api.options.slideSnap ? api.metrics.slideSnaps.length - 1 : api.metrics.groupSnaps.length - 1;
               const isAtEnd = (api.options.slideSnap ? api.currentIndex >= maxEnd : api.currentGroup >= maxEnd) && delta > 0;
@@ -1771,6 +1808,7 @@ class ydCarousel {
     if (this.root.classList.contains('hash')) {
       const hashPlugin = (() => {
         let onHash, onSelect;
+        let isSyncingHash = false; 
         return {
           name: 'hash',
           init: (api) => {
@@ -1778,6 +1816,7 @@ class ydCarousel {
             const hashGroup = api.hashGroup(); 
             
             onHash = () => {
+              if (isSyncingHash) return;
               const rawHash = window.location.hash.replace('#', '');
               let slideHash = rawHash;
               if (hashGroup) {
@@ -1788,15 +1827,21 @@ class ydCarousel {
                 }
               }
               const targetIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
-              if (targetIdx > -1 && targetIdx !== api.currentIndex) api.goToSlide(targetIdx);
+              if (targetIdx > -1 && targetIdx !== api.currentIndex) {
+                isSyncingHash = true;
+                api.goToSlide(targetIdx);
+                setTimeout(() => { isSyncingHash = false; }, 10);
+              }
             };
             
             onSelect = (api, payload) => {
-              if (!updateUrl) return;
+              if (!updateUrl || isSyncingHash) return;
               const slideHash = api.slides[payload.currentIndex]?.dataset.hash;
               if (slideHash) {
                 const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
+                isSyncingHash = true;
                 history.replaceState(null, null, newHash);
+                setTimeout(() => { isSyncingHash = false; }, 10);
               }
             };
             
@@ -1821,10 +1866,11 @@ class ydCarousel {
       const syncPlugin = (() => {
         let onSelect;
         let hasSynced = false;
-        let isSyncing = false; // FIX #5: Recursion Lock 
+        let isSyncing = false; 
         return {
           name: 'sync',
           init: (api) => {
+            // FIX: Bulletproof try/finally state lock for synchronization
             onSelect = (api, payload) => {
               if (isSyncing) return;
               let targets = [];
@@ -1839,20 +1885,23 @@ class ydCarousel {
               }
               
               if (targets.length) {
-                isSyncing = true;
-                if (!hasSynced) {
-                  hasSynced = true;
-                  api.emit('syncStart');
-                } else {
-                  api.emit('syncUpdate');
-                }
-                
-                targets.forEach(targetApi => {
-                  if (targetApi.selectedIndex() !== payload.currentIndex) {
-                     targetApi.goToSlide(payload.currentIndex);
+                try {
+                  isSyncing = true;
+                  if (!hasSynced) {
+                    hasSynced = true;
+                    api.emit('syncStart');
+                  } else {
+                    api.emit('syncUpdate');
                   }
-                });
-                setTimeout(() => { isSyncing = false; }, 10);
+                  
+                  targets.forEach(targetApi => {
+                    if (targetApi.selectedIndex() !== payload.currentIndex) {
+                       targetApi.goToSlide(payload.currentIndex);
+                    }
+                  });
+                } finally {
+                  isSyncing = false;
+                }
               }
             };
             api.on('select', onSelect);
