@@ -1,6 +1,16 @@
+.yd_prev, .yd_next {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  margin-top: 20px;
+}
+
 .yd_container { 
   display: flex; 
   will-change: transform; 
+  text-align: center;
 }
 
 .yd_dots {

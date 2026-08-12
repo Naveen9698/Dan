@@ -1,6 +1,6 @@
 /**
  * ydCarousel 2.3.27 - V2.3.27 ENTERPRISE FINAL
- * Includes: Physics Wake Fix, Clone Event Pollution Fix, A11y Clone Readout Fix, Dead Code Cleanup
+ * Includes: Autoplay Progress Visual Drain, Seamless Circular Progress Math
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -353,14 +353,12 @@ class ydCarousel {
 
   scrollProgress() {
     if (this.options.loop) {
-      const snaps = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
-      const relativeMaxSnap = Math.max(1, (snaps[snaps.length - 1] || 0) - this.metrics.prependOffset);
+      if (this.metrics.realTrackSize <= 0) return 0;
       
-      let relativePos = this.currentPos - this.metrics.prependOffset;
-      if (this.metrics.realTrackSize > 0) {
-        relativePos = ((relativePos % this.metrics.realTrackSize) + this.metrics.realTrackSize) % this.metrics.realTrackSize;
-      }
-      return Math.max(0, Math.min(1, relativePos / relativeMaxSnap));
+      let relativePos = (this.currentPos - this.metrics.prependOffset) % this.metrics.realTrackSize;
+      if (relativePos < 0) relativePos += this.metrics.realTrackSize;
+      
+      return Math.max(0, Math.min(1, relativePos / this.metrics.realTrackSize));
     }
     if (!this.maxScroll) return 0;
     return Math.max(0, Math.min(1, this.currentPos / this.maxScroll));
@@ -1446,17 +1444,14 @@ class ydCarousel {
               const rawProgress = Math.max(0, Math.min(1, startProgress + progressDelta));
               thumb.style.transform = `translate3d(${rawProgress * movableSpace}px, 0, 0)`;
               
-              let dragFactor = parseFloat(api.root.dataset.dragFactor);
-              if (!Number.isFinite(dragFactor) || dragFactor <= 0) {
-                 dragFactor = 1.0; 
-              }
-              
               const dragDistance = api.maxScroll;
               let newTarget = (startProgress * dragDistance) + (progressDelta * dragDistance);
               newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
               
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
+              
+              // Waking physics loop correctly to synchronize dragged visual position
               api._wake(); 
 
               let previewUpdated = false;
@@ -1626,6 +1621,7 @@ class ydCarousel {
             pauseTimer = () => {
               clearTimeout(playTimer);
               cancelAnimationFrame(animRaf);
+              if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `0%`); 
             };
 
             play = () => {
