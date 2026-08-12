@@ -57,10 +57,6 @@
 
   <h2>Navigation</h2>
 
-  <h3 id="click-to-scroll-api">Click-to-scroll API</h3>
-  <?php include 'slider/click-to-scroll-api.php'; ?>
-  <!-- <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\click-to-scroll-api.php')) ?></code></pre> -->
-
   <h3 id="keyboard-navigation">Keyboard Navigation</h3>
   <?php include 'slider/keyboard-navigation.php'; ?>
   <!-- <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\keyboard-navigation.php')) ?></code></pre> -->

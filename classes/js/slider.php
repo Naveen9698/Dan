@@ -1,6 +1,6 @@
 /**
- * ydCarousel 2.3.25 - V2.3.25 ENTERPRISE FINAL
- * Includes: A11y Observer Event Pollution Fix, activeCarousel Fallback UX, Explicit Clone Data, Dead Code Removal
+ * ydCarousel 2.3.27 - V2.3.27 ENTERPRISE FINAL
+ * Includes: Physics Wake Fix, Clone Event Pollution Fix, A11y Clone Readout Fix, Dead Code Cleanup
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -10,7 +10,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.25'; 
+  static VERSION = '2.3.27'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -162,8 +162,6 @@ class ydCarousel {
     this.onMutation = this.onMutation.bind(this);
     this.tick = this.tick.bind(this);
     this.onActivate = () => { ydCarousel.activeCarousel = this; }; 
-    
-    // FIX #2: Fallback activeCarousel to another keyboard-enabled carousel if losing focus
     this.onDeactivate = (e) => {
       if (e && e.type === 'focusout' && this.root.contains(e.relatedTarget)) return;
       if (ydCarousel.activeCarousel === this) {
@@ -544,7 +542,6 @@ class ydCarousel {
 
   createClone(slide) {
     const clone = slide.cloneNode(true);
-    // FIX #3: Explicitly map index data attribute for virtual DOM safety
     clone.setAttribute('data-slide-index', slide.getAttribute('data-slide-index'));
     clone.classList.add('yd_slide-clone');
     clone.setAttribute('aria-hidden', 'true');
@@ -580,7 +577,6 @@ class ydCarousel {
         if (entry.isIntersecting) {
           node.classList.add('in-view');
           node.classList.remove('out-view');
-          // FIX #1: Guard A11y while allowing clone analytics events
           if (!isClone) {
             node.removeAttribute('aria-hidden');
             if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
@@ -969,7 +965,6 @@ class ydCarousel {
     }
 
     this.targetPos = nextTarget;
-    
     if (immediate) {
       this.inertia = 0;
       this._velocity = 0;
@@ -1372,7 +1367,6 @@ class ydCarousel {
         return {
           name: 'scrollbar',
           init: (api) => {
-            // FIX #4: Remove unreachable dead code - abort immediately for infinite loops
             if (api.options.loop) {
               console.warn('[ydCarousel] Scrollbar disabled: Absolute scrollbars cannot be mapped to infinite loops.');
               scrollbar.style.display = 'none';
@@ -1411,7 +1405,6 @@ class ydCarousel {
               thumb.style.transform = `translate3d(${payload.progress * movableSpace}px, 0, 0)`;
             };
 
-            // FIX #4: Dead code removed, runs clean logic bounds
             onClickTrack = (e) => {
               if (isDisabled || e.target === thumb) return; 
               const rect = scrollbar.getBoundingClientRect();
@@ -1442,7 +1435,6 @@ class ydCarousel {
               api.emit('dragStart');
             };
 
-            // FIX #4: Removed dead infinite-loop code
             onThumbMove = (e) => {
               if (!isDraggingThumb) return;
               const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
@@ -1465,7 +1457,6 @@ class ydCarousel {
               
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
-              api.isSettled = false;
               api._wake(); 
 
               let previewUpdated = false;
