@@ -49,6 +49,9 @@
 
   <h3 id="scrollbar">Scrollbar</h3>
   <?php include 'slider/scrollbar.php'; ?>
+    <p class="fz-14 clr-g5 lh-16 ml-md">
+    🟢 Disabled in loop mode by design.
+  </p>
   <!-- <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\scrollbar.php')) ?></code></pre> -->
 
   <h3 id="progress-indicators">Progress Indicators</h3>

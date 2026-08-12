@@ -1,6 +1,6 @@
 /**
- * ydCarousel 2.3.28 - V2.3.28 ENTERPRISE FINAL
- * Includes: Decoupled Visual Autoplay Drain (Hover = Freeze, Transition = Reset)
+ * ydCarousel 2.3.30 - V2.3.30 ENTERPRISE FINAL
+ * Includes: DOM-Relative Physical Mapping, Zero-Drift Gap/Margin Math, Snap-Point Clamp Toggle
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -10,7 +10,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.28'; 
+  static VERSION = '2.3.30'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -449,8 +449,27 @@ class ydCarousel {
       const sRect = slide.getBoundingClientRect();
       return this.options.vertical ? sRect.height : sRect.width;
     });
+
+    const firstRect = this.slides[0].getBoundingClientRect();
+    const lastRect = this.slides[this.slides.length - 1].getBoundingClientRect();
     
-    this.metrics.realTrackSize = this.metrics.slideSizes.reduce((a, b) => a + b, 0);
+    let physicalSize = this.options.vertical ? lastRect.bottom - firstRect.top : lastRect.right - firstRect.left;
+    let loopGap = 0;
+    
+    if (this.slides.length > 1) {
+      loopGap = this.options.vertical 
+        ? this.slides[1].getBoundingClientRect().top - this.slides[0].getBoundingClientRect().bottom
+        : this.slides[1].getBoundingClientRect().left - this.slides[0].getBoundingClientRect().right;
+      loopGap = Math.max(0, loopGap);
+    }
+
+    this.metrics.realTrackSize = this.options.loop ? physicalSize + loopGap : physicalSize;
+
+    const relativeOffsets = this.slides.map(slide => {
+      const sRect = slide.getBoundingClientRect();
+      return this.options.vertical ? sRect.top - firstRect.top : sRect.left - firstRect.left;
+    });
+
     this.metrics.prependOffset = 0;
 
     if (this.options.loop && this.slides.length > 1 && this.metrics.realTrackSize > 0) {
@@ -470,15 +489,18 @@ class ydCarousel {
 
     this.metrics.trackSize = this.options.vertical ? this.track.scrollHeight : this.track.scrollWidth;
     
-    let currentOffset = this.metrics.prependOffset;
-    let currentGroupStart = currentOffset;
-    
     this.metrics.slideOffsets = [];
     this.metrics.slideSnaps = [];
     this.metrics.groupSnaps = [];
     
+    let currentGroupStartOffset = 0;
+    let currentGroupStartSnap = 0;
+    
     this.metrics.slideSizes.forEach((size, idx) => {
-      let snap = currentOffset;
+      const relOffset = relativeOffsets[idx];
+      const baseOffset = this.metrics.prependOffset + relOffset;
+      
+      let snap = baseOffset;
       if (this.options.alignCenter) snap -= (this.metrics.viewportSize / 2) - (size / 2);
       if (this.options.alignEnd) snap -= this.metrics.viewportSize - size;
       
@@ -487,35 +509,45 @@ class ydCarousel {
 
       if (idx === 0) {
         this.metrics.groupSnaps.push(Math.max(0, snap));
+        currentGroupStartOffset = relOffset;
+        currentGroupStartSnap = Math.max(0, snap);
       } else {
-        if (currentOffset - currentGroupStart + size > this.metrics.viewportSize) {
-          currentGroupStart = snap;
-          this.metrics.groupSnaps.push(Math.max(0, currentGroupStart));
+        const span = (relOffset - currentGroupStartOffset) + size;
+        if (span > this.metrics.viewportSize) {
+          currentGroupStartOffset = relOffset;
+          currentGroupStartSnap = Math.max(0, snap);
+          this.metrics.groupSnaps.push(currentGroupStartSnap);
         }
       }
-      currentOffset += size;
     });
 
     this.maxScroll = Math.max(0, this.metrics.trackSize - this.metrics.viewportSize);
 
     if (!this.options.loop) {
-      let rawSlides = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-      let uniqueSlideSnaps = [];
-      rawSlides.forEach(snap => {
-        if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > 0.5) {
-          uniqueSlideSnaps.push(snap);
-        }
-      });
-      this.metrics.slideSnaps = uniqueSlideSnaps;
-      
-      let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-      let uniqueGroupSnaps = [];
-      rawGroups.forEach(snap => {
-        if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > 0.5) {
-          uniqueGroupSnaps.push(snap);
-        }
-      });
-      this.metrics.groupSnaps = uniqueGroupSnaps; 
+      if (this.options.contain || this.options.containKeep) {
+        let rawSlides = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+        let uniqueSlideSnaps = [];
+        rawSlides.forEach(snap => {
+          if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > 0.5) {
+            uniqueSlideSnaps.push(snap);
+          }
+        });
+        this.metrics.slideSnaps = uniqueSlideSnaps;
+        
+        let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+        let uniqueGroupSnaps = [];
+        rawGroups.forEach(snap => {
+          if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > 0.5) {
+            uniqueGroupSnaps.push(snap);
+          }
+        });
+        this.metrics.groupSnaps = uniqueGroupSnaps; 
+      } else {
+        const lastSnap = this.options.slideSnap 
+          ? this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1] 
+          : this.metrics.groupSnaps[this.metrics.groupSnaps.length - 1];
+        this.maxScroll = Math.max(this.maxScroll, lastSnap || 0);
+      }
     }
 
     this.metrics.snapPoints = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
@@ -1450,7 +1482,6 @@ class ydCarousel {
               
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
-              
               api._wake(); 
 
               let previewUpdated = false;
