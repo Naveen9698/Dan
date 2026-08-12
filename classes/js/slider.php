@@ -1,6 +1,6 @@
 /**
- * ydCarousel 2.3.27 - V2.3.27 ENTERPRISE FINAL
- * Includes: Autoplay Progress Visual Drain, Seamless Circular Progress Math
+ * ydCarousel 2.3.28 - V2.3.28 ENTERPRISE FINAL
+ * Includes: Decoupled Visual Autoplay Drain (Hover = Freeze, Transition = Reset)
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -10,7 +10,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.27'; 
+  static VERSION = '2.3.28'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -1451,7 +1451,6 @@ class ydCarousel {
               api.targetPos = newTarget;
               api.currentPos = newTarget; 
               
-              // Waking physics loop correctly to synchronize dragged visual position
               api._wake(); 
 
               let previewUpdated = false;
@@ -1569,7 +1568,8 @@ class ydCarousel {
     // AUTOPLAY PROGRESS & SYSTEM
     if (this.options.autoplay) {
       const autoplay = (() => {
-        let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, pauseTimer, onSettle;
+        let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, pauseTimer, onSettle, resetVisual;
+        let onBeforeSelect, onDragStart, onDragEnd; 
         let isPaused = false;
         let hasStarted = false;
         let permanentlyStopped = false; 
@@ -1590,6 +1590,10 @@ class ydCarousel {
               }
               apProgressEl.style.setProperty('--ap-progress', `0%`);
             }
+
+            resetVisual = () => {
+              if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `0%`); 
+            };
             
             loopProgress = () => {
               if (isPaused) return;
@@ -1613,15 +1617,14 @@ class ydCarousel {
                permanentlyStopped = false;
                const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
                if (!hasStarted && ready) {
-                  isPaused = false;
-                  play();
+                 isPaused = false;
+                 play();
                }
             };
 
             pauseTimer = () => {
               clearTimeout(playTimer);
               cancelAnimationFrame(animRaf);
-              if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `0%`); 
             };
 
             play = () => {
@@ -1651,7 +1654,7 @@ class ydCarousel {
             };
             
             stop = () => {
-              pauseTimer();
+              pauseTimer(); 
               if (hasStarted && !isPaused && !permanentlyStopped) {
                 isPaused = true;
                 api.emit('autoplayPause');
@@ -1666,15 +1669,19 @@ class ydCarousel {
             onFocusIn = () => stop();
             onFocusOut = () => play();
 
-            api.on('beforeSelect', pauseTimer);
-            api.on('dragStart', stop);
-            api.on('dragEnd', () => {
+            onBeforeSelect = () => { pauseTimer(); resetVisual(); };
+            onDragStart = () => { stop(); resetVisual(); };
+            onDragEnd = () => {
                if (hasStarted && isPaused && !permanentlyStopped) {
-                  isPaused = false;
-                  api.emit('autoplayResume');
-                  if (api.isSettled) play();
+                 isPaused = false;
+                 api.emit('autoplayResume');
+                 if (api.isSettled) play();
                }
-            });
+            };
+            
+            api.on('beforeSelect', onBeforeSelect);
+            api.on('dragStart', onDragStart);
+            api.on('dragEnd', onDragEnd);
             api.on('settle', onSettle);
             
             if (api.root.classList.contains('pause-hover')) {
@@ -1699,9 +1706,9 @@ class ydCarousel {
             }
             delete api.resetAutoplay; 
             
-            api.off('beforeSelect', pauseTimer);
-            api.off('dragStart', stop);
-            api.off('dragEnd', play); 
+            api.off('beforeSelect', onBeforeSelect);
+            api.off('dragStart', onDragStart);
+            api.off('dragEnd', onDragEnd); 
             api.off('settle', onSettle);
             
             api.root.removeEventListener('mouseenter', stop);
