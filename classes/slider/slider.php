@@ -71,7 +71,7 @@
 
 </div>
 
-<div class="yd_carousel pn-relative autoplay">
+<div class="yd_carousel pn-relative">
 
   <div class="yd_viewport of-hidden">
     <div class="yd_container slides-3 gap-xl">

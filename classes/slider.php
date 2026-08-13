@@ -7,6 +7,12 @@
   <div class="flex-x gap-md f-wrap">
     <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'class/slider-helper.php'; ?></code></pre>
   </div>
+
+  <h3>Slider Engine</h3>
+
+  <div class="flex-x gap-md f-wrap">
+    <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'engine/slider.php'; ?></code></pre>
+  </div>
   <h3>Slider Utility Classes</h3>
 
   <div class="flex-x gap-md f-wrap">
