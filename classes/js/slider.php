@@ -1,4 +1,3 @@
-check and evaluate the fallowing:
 /**
  * ydCarousel 2.3.38 - V2.3.38 ENTERPRISE FINAL
  * Includes: Sub-pixel Exact DOM Math, Restored Snap Deduplication, CSS-delegated Flex Shrink
