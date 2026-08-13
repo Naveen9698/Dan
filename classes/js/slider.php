@@ -1,6 +1,7 @@
+Check and evaluate the fallowing:
 /**
- * ydCarousel 2.3.38 - V2.3.38 ENTERPRISE FINAL
- * Includes: Sub-pixel Exact DOM Math, Restored Snap Deduplication, CSS-delegated Flex Shrink
+ * ydCarousel 2.4.0 - V2.4.0 ENTERPRISE
+ * Includes: Auto Height, Dynamic Slide API, Mutation Optimization, Clone Cap, Gesture Tuning
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -10,7 +11,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.3.38'; 
+  static VERSION = '2.4.0'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static _autoInitObserver = null;
@@ -84,18 +85,19 @@ class ydCarousel {
     this.options = {
       loop: this.root.classList.contains('loop'),
       dragFree: this.root.classList.contains('drag-free'),
-      contain: this.root.classList.contains('contain'), 
-      containKeep: this.root.classList.contains('contain-keep'),
       alignCenter: this.root.classList.contains('align-center'),
       alignEnd: this.root.classList.contains('align-end'),
       keyboard: this.root.classList.contains('keyboard'),
       autoplay: this.root.classList.contains('autoplay'),
       rtl: this.root.classList.contains('rtl'),
       vertical: this.root.classList.contains('vertical'),
+      autoHeight: this.root.classList.contains('auto-height'),
       duration: parseFloat(this.root.dataset.duration) || 0.1,
       friction: parseFloat(this.root.dataset.friction) || 0.92,
       delay: parseInt(this.root.dataset.delay) || 4000,
-      
+      dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
+      velocityThreshold: parseFloat(this.root.dataset.velocityThreshold) || 0.5,
+      dragInertia: parseFloat(this.root.dataset.dragInertia) || 40,
       slideSnap: this.root.classList.contains('slide-snap'),
       groupSnap: this.root.classList.contains('group-snap')
     };
@@ -224,6 +226,7 @@ class ydCarousel {
       looping: this.options.loop,
       rtl: this.options.rtl,
       vertical: this.options.vertical,
+      autoHeight: this.options.autoHeight,
       slideSnap: this.options.slideSnap,
       groupSnap: this.options.groupSnap
     });
@@ -237,14 +240,14 @@ class ydCarousel {
     return Object.freeze({
       engine: ydCarousel.ENGINE,
       version: this.version(),
-      build: 'enterprise-final',
+      build: 'enterprise-feature-pack',
       released: '2026-08'
     });
   }
 
   capabilities() {
     return Object.freeze({
-      loop: true, dragFree: true, rtl: true, vertical: true,
+      loop: true, dragFree: true, rtl: true, vertical: true, autoHeight: true, dynamicApi: true,
       autoplay: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true,
       debug: true, plugins: true, events: true, diagnostics: true,
@@ -257,9 +260,9 @@ class ydCarousel {
       loop: this.options.loop, dragFree: this.options.dragFree,
       rtl: this.options.rtl, vertical: this.options.vertical,
       autoplay: this.options.autoplay, keyboard: this.options.keyboard,
-      contain: this.options.contain, containKeep: this.options.containKeep,
-      alignCenter: this.options.alignCenter, alignEnd: this.options.alignEnd,
-      slideSnap: this.options.slideSnap, groupSnap: this.options.groupSnap
+      autoHeight: this.options.autoHeight, alignCenter: this.options.alignCenter, 
+      alignEnd: this.options.alignEnd, slideSnap: this.options.slideSnap, 
+      groupSnap: this.options.groupSnap
     });
   }
 
@@ -336,6 +339,37 @@ class ydCarousel {
     this.destroy();
     root.__ydCarousel = new ydCarousel(root);
     return root.__ydCarousel;
+  }
+
+  // ==========================================
+  // DYNAMIC SLIDE API
+  // ==========================================
+
+  addSlide(html) {
+    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
+    this.track.insertAdjacentHTML('beforeend', html);
+    this.updateMeasurements();
+    this.initPlugins();
+  }
+
+  removeSlide(index) {
+    const slide = this.slides[index];
+    if (!slide) return;
+    slide.remove();
+    this.updateMeasurements();
+    this.initPlugins();
+  }
+
+  insertSlide(index, html) {
+    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
+    const target = this.slides[index];
+    if (!target) {
+      this.track.insertAdjacentHTML('beforeend', html);
+    } else {
+      target.insertAdjacentHTML('beforebegin', html);
+    }
+    this.updateMeasurements();
+    this.initPlugins();
   }
 
   canScrollNext() {
@@ -440,25 +474,19 @@ class ydCarousel {
 
     this.slides.forEach((slide, idx) => {
       slide.setAttribute('data-slide-index', idx);
-      // Redundant flexShrink injection removed; CSS handles it perfectly now.
+      slide.style.flexShrink = '0'; 
     });
 
     const viewportEl = this.root.querySelector('.yd_viewport') || this.root;
-    const viewportRect = viewportEl.getBoundingClientRect();
-    
-    // FIX 1: Restore getBoundingClientRect() for exact sub-pixel flexbox math
-    this.metrics.viewportSize = this.options.vertical ? viewportRect.height : viewportRect.width;
+    this.metrics.viewportSize = this.options.vertical ? viewportEl.clientHeight : viewportEl.clientWidth;
     
     this.metrics.slideSizes = this.slides.map(slide => {
-      const sRect = slide.getBoundingClientRect();
-      return this.options.vertical ? sRect.height : sRect.width;
+      return this.options.vertical ? slide.offsetHeight : slide.offsetWidth;
     });
 
-    // Sub-pixel accurate relative offsets
-    const firstRect = this.slides[0].getBoundingClientRect();
+    const firstOffset = this.options.vertical ? this.slides[0].offsetTop : this.slides[0].offsetLeft;
     const relativeOffsets = this.slides.map(slide => {
-      const sRect = slide.getBoundingClientRect();
-      return this.options.vertical ? sRect.top - firstRect.top : sRect.left - firstRect.left;
+      return this.options.vertical ? slide.offsetTop - firstOffset : slide.offsetLeft - firstOffset;
     });
 
     let physicalSize = 0;
@@ -469,7 +497,6 @@ class ydCarousel {
       physicalSize = relativeOffsets[lastIdx] + this.metrics.slideSizes[lastIdx];
     }
 
-    // Keep the Loop Math: Measure the literal sub-pixel gap rendered between Slide 0 and 1
     if (this.slides.length > 1) {
       loopGap = relativeOffsets[1] - (relativeOffsets[0] + this.metrics.slideSizes[0]);
       loopGap = Math.max(0, loopGap);
@@ -483,7 +510,13 @@ class ydCarousel {
     if (this.options.loop && this.slides.length > 1 && this.metrics.realTrackSize > 0) {
       this.metrics.prependOffset = this.metrics.realTrackSize;
       
-      const setsNeeded = Math.max(1, Math.ceil(this.metrics.viewportSize / this.metrics.realTrackSize));
+      let clonedSize = 0;
+      let setsNeeded = 0;
+      while (clonedSize < this.metrics.viewportSize * 2 && setsNeeded < 10) {
+        clonedSize += this.metrics.realTrackSize;
+        setsNeeded++;
+      }
+      setsNeeded = Math.max(1, setsNeeded);
       
       for (let i = 0; i < setsNeeded; i++) {
         const clonesBefore = this.slides.map(s => this.createClone(s));
@@ -532,31 +565,23 @@ class ydCarousel {
     this.maxScroll = Math.max(0, this.metrics.realTrackSize - this.metrics.viewportSize);
 
     if (!this.options.loop) {
-      if (this.options.contain || this.options.containKeep) {
-        // FIX 2: Restore Clamp + Intelligent Deduplication
-        let rawSlides = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-        let uniqueSlideSnaps = [];
-        rawSlides.forEach(snap => {
-          if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > 0.5) {
-            uniqueSlideSnaps.push(snap);
-          }
-        });
-        this.metrics.slideSnaps = uniqueSlideSnaps;
-        
-        let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-        let uniqueGroupSnaps = [];
-        rawGroups.forEach(snap => {
-          if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > 0.5) {
-            uniqueGroupSnaps.push(snap);
-          }
-        });
-        this.metrics.groupSnaps = uniqueGroupSnaps; 
-      } else {
-        const lastSnap = this.options.slideSnap 
-          ? this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1] 
-          : this.metrics.groupSnaps[this.metrics.groupSnaps.length - 1];
-        this.maxScroll = Math.max(this.maxScroll, lastSnap || 0);
-      }
+      let rawSlides = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+      let uniqueSlideSnaps = [];
+      rawSlides.forEach(snap => {
+        if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > 0.5) {
+          uniqueSlideSnaps.push(snap);
+        }
+      });
+      this.metrics.slideSnaps = uniqueSlideSnaps;
+      
+      let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
+      let uniqueGroupSnaps = [];
+      rawGroups.forEach(snap => {
+        if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > 0.5) {
+          uniqueGroupSnaps.push(snap);
+        }
+      });
+      this.metrics.groupSnaps = uniqueGroupSnaps; 
     }
 
     this.metrics.snapPoints = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
@@ -652,12 +677,11 @@ class ydCarousel {
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
     
     this.mutationRaf = requestAnimationFrame(() => {
-      const oldLength = this.slides.length;
-      const realNodes = Array.from(this.track.children).filter(el => !el.classList.contains('yd_slide-clone'));
-      const newLength = realNodes.length;
-
+      const structureChanged = mutations.some(m => m.type === 'childList');
       this.updateMeasurements();
-      if (newLength !== oldLength) this.initPlugins(); 
+      if (structureChanged) {
+        this.initPlugins(); 
+      }
     });
   }
 
@@ -759,7 +783,7 @@ class ydCarousel {
     
     let dragDistance = this.dragStartPos - currentPointer;
     if (this.options.rtl && !this.options.vertical) dragDistance *= -1;
-    if (Math.abs(dragDistance) > 5) this.isClickSuppressed = true;
+    if (Math.abs(dragDistance) > this.options.dragThreshold) this.isClickSuppressed = true;
 
     const now = performance.now();
     const dt = now - this.lastPointerTime;
@@ -798,9 +822,9 @@ class ydCarousel {
     this.emit('dragEnd');
 
     if (this.options.dragFree) {
-      this.inertia = -this._velocity * 40; 
+      this.inertia = -this._velocity * this.options.dragInertia; 
     } else {
-      if (Math.abs(this._velocity) > 0.5) {
+      if (Math.abs(this._velocity) > this.options.velocityThreshold) {
         this._velocity > 0 ? this.scrollNext() : this.scrollPrev();
       } else {
         this.snapToClosest();
@@ -1030,6 +1054,7 @@ class ydCarousel {
     }
     
     this.updateSlideStates();
+    this.updateAutoHeight();
 
     if (changed) {
       this.emit('select');
@@ -1097,6 +1122,7 @@ class ydCarousel {
       }
       
       this.updateSlideStates();
+      this.updateAutoHeight();
 
       if (changed) {
         this.emit('select');
@@ -1212,6 +1238,14 @@ class ydCarousel {
         }
       });
     }
+  }
+  
+  updateAutoHeight() {
+    if (!this.options.autoHeight) return;
+    const slide = this.activeSlide();
+    if (!slide) return;
+    const viewport = this.root.querySelector('.yd_viewport') || this.root;
+    viewport.style.height = slide.offsetHeight + 'px';
   }
 
   setupAccessibility() {

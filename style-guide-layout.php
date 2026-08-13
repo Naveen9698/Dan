@@ -45,7 +45,7 @@
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#auto-height-adjustment">Auto Height Adjustment</a>
 
     <a class="fz-14 clr-g8 px-xs py-xxs ra-xxs cur-auto">Behavior</a>
-    <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#looping">Looping (Infinite Scroll)</a>
+    <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#loop">Loop (Infinite Scroll)</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#start-index">Start Index</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#slides-per-scroll">Slides per Scroll</a>
     <a class="fz-12 clr-g8 px-xs py-xxs ra-xxs ml-xs" href="#skip-snaps">Skip Snaps</a>

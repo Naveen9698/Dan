@@ -28,6 +28,556 @@
   </div>
 
   <h3 id="getting-started">Getting Started</h3>
+  slide-snap
+  <div class="yd_carousel slide-snap">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  group-snap
+  <div class="yd_carousel group-snap">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  drag-free
+  <div class="yd_carousel drag-free">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  rtl
+  <div class="yd_carousel rtl">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  vertical
+  <div class="yd_carousel vertical">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+ default (align-start)
+  <div class="yd_carousel align-center">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  align-center
+  <div class="yd_carousel align-center loopvv5]">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  align-end
+  <div class="yd_carousel align-end loop">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide blur-xl ac:blur-0">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  contain
+  <div class="yd_carousel contain">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  contain-keep
+  <div class="yd_carousel contain-keep">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  autoplay pause-hover
+  <div class="yd_carousel autoplay pause-hover">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+  Mousewheel
+  <div class="yd_carousel wheel" data-wheel-threshold="80">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+Single Sync
+  <div class="yd_carousel" data-sync="#thumbs">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+Sync Groups
+  <div class="yd_carousel" data-sync-group="gallery">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+hash
+  <div class="yd_carousel hash">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide" data-hash="slide-1">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide" data-hash="slide-2">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide" data-hash="slide-3">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide" data-hash="slide-4">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide" data-hash="slide-5">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide" data-hash="slide-6">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+Lazy Loading
+  <div class="yd_carousel ">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+auto-height
+  <div class="yd_carousel auto-height">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+fade
+  <div class="yd_carousel fade">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="yd_carousel ">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="yd_carousel ">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="yd_carousel ">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="yd_carousel ">
+    <div class="yd_viewport of-hidden">
+      <div class="yd_container slides-3 gap-sm">
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">2</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">3</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">4</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">5</h2>
+        </div>
+        <div class="yd_slide">
+          <h2 class="bg-g7 clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">6</h2>
+        </div>
+      </div>
+    </div>
+  </div>
   <!--
   <div class="flex-x gap-md f-wrap">
      <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16"><code><?php include 'js/slider.php'; ?></code></pre>
@@ -55,7 +605,7 @@
 
   <h3 id="scrollbar">Scrollbar</h3>
   <?php include 'slider/scrollbar.php'; ?>
-    <p class="fz-14 clr-g5 lh-16 ml-md">
+  <p class="fz-14 clr-g5 lh-16 ml-md">
     🟢 Disabled in loop mode by design.
   </p>
   <!-- <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\scrollbar.php')) ?></code></pre> -->
@@ -144,9 +694,9 @@
 
   <h2>Behavior</h2>
 
-  <h3 id="looping">Looping (Infinite Scroll)</h3>
-  <?php include 'slider/looping.php'; ?>
-  <!-- <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\looping.php')) ?></code></pre> -->
+  <h3 id="loop">Loop (Infinite Scroll)</h3>
+  <?php include 'slider/loop.php'; ?>
+  <!-- <pre class="bg-g9 clr-white ra-sm pa-xs fz-12 lh-16 w-fit"><code><?= htmlspecialchars(file_get_contents('classes\slider\loop.php')) ?></code></pre> -->
 
   <h3 id="start-index">Start Index</h3>
   <?php include 'slider/start-index.php'; ?>
