@@ -154,7 +154,7 @@
     </div>
   </div>
  default (align-start)
-  <div class="yd_carousel align-center">
+  <div class="yd_carousel loop">
     <div class="yd_viewport of-hidden">
       <div class="yd_container slides-3 gap-sm">
         <div class="yd_slide blur-xl ac:blur-0">
@@ -179,7 +179,7 @@
     </div>
   </div>
   align-center
-  <div class="yd_carousel align-center loopvv5]">
+  <div class="yd_carousel align-center loop">
     <div class="yd_viewport of-hidden">
       <div class="yd_container slides-3 gap-sm">
         <div class="yd_slide blur-xl ac:blur-0">

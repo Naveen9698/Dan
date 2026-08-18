@@ -1,6 +1,8 @@
 /**
- * ydCarousel 2.4.5 - V2.4.5 ENTERPRISE PRODUCTION
- * Includes: Nested Batch Overrides, Plugin Error Isolation, Diagnostic Health API, Boot Guards
+ * ydCarousel 2.5.0 - V2.5.0 ENTERPRISE PRODUCTION (STABLE & HARDENED)
+ * Includes: Developer Experience API (once, export/import state), Complete Reduced Motion Mechanics,
+ * Mutation-Safe Event Emitters, SSR Accessibility Guards, Constructor Validation Order Fixes,
+ * Strict Reduced Motion Flick Prevention, and Deep Cleanup during Destruction.
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -15,7 +17,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.4.5'; 
+  static VERSION = '2.5.0'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static SNAP_EPSILON = 0.5; 
@@ -26,7 +28,7 @@ class ydCarousel {
   static _keyboardUsers = 0; 
   static _instances = new Set(); 
 
-  static EVENTS = [
+  static EVENTS = Object.freeze([
     'init', 'resize', 'destroy',
     'dragStart', 'dragMove', 'dragEnd',
     'scroll', 'settle',
@@ -38,14 +40,19 @@ class ydCarousel {
     'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop',
     'syncStart', 'syncUpdate', 'syncStop',
     'debugOpen', 'debugClose',
-    'pluginRegistered', 'pluginEnabled', 'pluginDisabled'
-  ];
+    'pluginEnabled', 'pluginDisabled'
+  ]);
+
+  static _now() {
+    return typeof performance !== 'undefined' ? performance.now() : Date.now();
+  }
+
+  static hasDOM() {
+    return typeof window !== 'undefined' && typeof document !== 'undefined';
+  }
 
   static registerPlugin(pluginDef) {
     if (!pluginDef.name) throw new Error('[ydCarousel] Plugin must have a name');
-    if (this._pluginRegistry.has(pluginDef.name)) {
-      console.warn(`[ydCarousel] Plugin "${pluginDef.name}" overwritten`);
-    }
     this._pluginRegistry.set(pluginDef.name, pluginDef);
   }
 
@@ -56,15 +63,20 @@ class ydCarousel {
   }
 
   static startAutoInit() {
-    if (typeof document === 'undefined') return;
+    if (!ydCarousel.hasDOM()) return;
     const initAll = () => {
       document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
-        if (!el.__ydCarousel) el.__ydCarousel = new ydCarousel(el);
+        if (!el.__ydCarousel) {
+          try {
+            el.__ydCarousel = new ydCarousel(el);
+          } catch (err) {
+            console.error('[ydCarousel] Auto-init failed:', err);
+          }
+        }
       });
     };
     initAll();
     if (!this._autoInitObserver) {
-      if (!document.body) return;
       let timeout;
       this._autoInitObserver = new MutationObserver(() => {
         clearTimeout(timeout);
@@ -88,8 +100,27 @@ class ydCarousel {
 
   constructor(element) {
     this.root = element;
-    this.track = this.root.querySelector('.yd_container');
-    if (!this.track) return;
+    
+    this.track = this.root ? this.root.querySelector('.yd_container') : null;
+    if (!this.track) {
+      throw new Error('[ydCarousel] Missing .yd_container element');
+    }
+    
+    // Register after track validation
+    this.root.__ydCarousel = this;
+
+    const reducedSetting = this.root.dataset.reducedMotion || 'auto';
+    let respectReducedMotion = false;
+    
+    if (reducedSetting === 'true') {
+      respectReducedMotion = true;
+    } else if (reducedSetting === 'false') {
+      respectReducedMotion = false;
+    } else if (ydCarousel.hasDOM() && window.matchMedia) {
+      respectReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    
+    this.reducedMotion = respectReducedMotion;
     
     this.options = {
       loop: this.root.classList.contains('loop'),
@@ -97,16 +128,17 @@ class ydCarousel {
       alignCenter: this.root.classList.contains('align-center'),
       alignEnd: this.root.classList.contains('align-end'),
       keyboard: this.root.classList.contains('keyboard'),
-      autoplay: this.root.classList.contains('autoplay'),
+      autoplay: !this.reducedMotion && this.root.classList.contains('autoplay'),
       rtl: this.root.classList.contains('rtl'),
       vertical: this.root.classList.contains('vertical'),
       autoHeight: this.root.classList.contains('auto-height'),
-      duration: parseFloat(this.root.dataset.duration) || 0.1,
-      friction: parseFloat(this.root.dataset.friction) || 0.92,
+      focusOnChange: this.root.classList.contains('focus-on-change') || this.root.dataset.focusOnChange === 'true',
+      duration: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.duration) || 0.1),
+      friction: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.friction) || 0.92),
       delay: parseInt(this.root.dataset.delay) || 4000,
       dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
       velocityThreshold: parseFloat(this.root.dataset.velocityThreshold) || 0.5,
-      dragInertia: parseFloat(this.root.dataset.dragInertia) || 40,
+      dragInertia: this.reducedMotion ? 0 : (parseFloat(this.root.dataset.dragInertia) || 40),
       slideSnap: this.root.classList.contains('slide-snap'),
       groupSnap: this.root.classList.contains('group-snap')
     };
@@ -146,10 +178,19 @@ class ydCarousel {
     this._keyboardRegistered = false; 
     
     this.ignoreNextMutation = false; 
-    this.batchDepth = 0; 
+    this.batchDepth = 0;
+    this._trackedActiveNode = null;
+    this._isDynamicRefreshing = false;
 
     this.slides = []; 
     this.visibleSlides = new Set(); 
+
+    // Performance tracking state
+    this._stats = {
+      renderTicks: 0,
+      layoutCalcs: 0,
+      lastLayoutTime: 0
+    };
 
     this.metrics = {
       viewportSize: 0,
@@ -193,7 +234,12 @@ class ydCarousel {
     
     ydCarousel._instances.add(this); 
     
-    if (!ydCarousel.activeCarousel) ydCarousel.activeCarousel = this; 
+    if (
+      !ydCarousel.activeCarousel ||
+      (this.options.keyboard && !ydCarousel.activeCarousel.options.keyboard)
+    ) {
+      ydCarousel.activeCarousel = this;
+    }
     
     this.setupAccessibility();
     this.setupObservers();
@@ -209,9 +255,351 @@ class ydCarousel {
   }
 
   // ==========================================
+  // ACCESSIBILITY & FOCUS MANAGEMENT
+  // ==========================================
+
+  setupAccessibility() {
+    if (!ydCarousel.hasDOM()) return;
+    
+    this.root.setAttribute('role', 'region');
+    this.root.setAttribute('aria-roledescription', 'carousel');
+    
+    if (!this.root.id) {
+      this.root.id = `yd_carousel_${Math.random().toString(36).slice(2, 11)}`;
+    }
+    const trackId = this.track.id || `${this.root.id}_track`;
+    this.track.id = trackId;
+    this.track.setAttribute('aria-live', 'polite');
+    
+    let announcer = this.root.querySelector('.yd_carousel-announcer');
+    if (!announcer) {
+      announcer = document.createElement('div');
+      announcer.className = 'yd_carousel-announcer';
+      announcer.setAttribute('aria-live', 'polite');
+      announcer.setAttribute('aria-atomic', 'true');
+      announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+      this.root.appendChild(announcer);
+    }
+    
+    this.announceHandler = (api, payload) => {
+      if (api.options.slideSnap) {
+        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.metrics.slideSnaps.length}`;
+      } else {
+        announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.metrics.groupSnaps.length}`;
+      }
+    };
+    this.on('select', this.announceHandler);
+  }
+
+  focusActiveSlide() {
+    const active = this.activeSlide();
+    if (!active) return;
+
+    if (!active.hasAttribute('tabindex')) {
+      active.setAttribute('tabindex', '0');
+    }
+
+    if (typeof active.focus === 'function') {
+      try {
+        active.focus({ preventScroll: true });
+      } catch (err) {
+        active.focus();
+      }
+    }
+  }
+
+  // ==========================================
+  // DEPENDENCY MANAGEMENT & VALIDATION
+  // ==========================================
+
+  circularDetection() {
+    const registry = ydCarousel._pluginRegistry;
+    const cycles = [];
+    const visited = new Map(); 
+    const path = [];
+
+    const dfs = (node) => {
+      visited.set(node, 1);
+      path.push(node);
+
+      const def = registry.get(node);
+      const deps = def ? (def.dependencies || def.requires || []) : [];
+
+      for (const dep of deps) {
+        if (!registry.has(dep)) continue;
+        const state = visited.get(dep) || 0;
+        if (state === 1) {
+          const cycleStart = path.indexOf(dep);
+          cycles.push([...path.slice(cycleStart), dep]);
+        } else if (state === 0) {
+          dfs(dep);
+        }
+      }
+
+      path.pop();
+      visited.set(node, 2);
+    };
+
+    registry.forEach((_, name) => {
+      if ((visited.get(name) || 0) === 0) {
+        dfs(name);
+      }
+    });
+
+    return Object.freeze(cycles.map(c => Object.freeze([...c])));
+  }
+
+  detectCircularDependencies() {
+    return this.circularDetection();
+  }
+
+  validateDependencies(pluginName = null) {
+    const registry = ydCarousel._pluginRegistry;
+    const activeNames = new Set([
+      ...this.plugins.map(p => p.name).filter(Boolean),
+      ...Array.from(this.activePlugins.keys())
+    ]);
+
+    const missing = [];
+    const targetPlugins = pluginName ? [pluginName] : Array.from(registry.keys());
+
+    targetPlugins.forEach(name => {
+      const def = registry.get(name);
+      if (def) {
+        const deps = def.dependencies || def.requires || [];
+        deps.forEach(dep => {
+          if (!activeNames.has(dep)) {
+            missing.push(
+              Object.freeze({
+                plugin: name,
+                missingDependency: dep
+              })
+            );
+          }
+        });
+      } else if (!activeNames.has(name)) {
+        missing.push(
+          Object.freeze({
+            plugin: name,
+            missingDependency: 'unregistered'
+          })
+        );
+      }
+    });
+
+    const circular = this.circularDetection();
+
+    return Object.freeze({
+      valid: missing.length === 0 && circular.length === 0,
+      missing: Object.freeze(missing),
+      circular
+    });
+  }
+
+  dependencyReport() {
+    const registry = ydCarousel._pluginRegistry;
+    const activeNames = new Set([
+      ...this.plugins.map(p => p.name).filter(Boolean),
+      ...Array.from(this.activePlugins.keys())
+    ]);
+
+    const report = {};
+    const missingDependencies = [];
+
+    const dependentsMap = new Map();
+    registry.forEach((_, name) => dependentsMap.set(name, []));
+
+    registry.forEach((def, name) => {
+      const deps = def.dependencies || def.requires || [];
+      deps.forEach(dep => {
+        if (dependentsMap.has(dep)) {
+          dependentsMap.get(dep).push(name);
+        }
+      });
+    });
+
+    registry.forEach((def, name) => {
+      const deps = def.dependencies || def.requires || [];
+      const missing = deps.filter(dep => !activeNames.has(dep));
+
+      if (missing.length > 0) {
+        missingDependencies.push(
+          Object.freeze({
+            plugin: name,
+            missing: Object.freeze([...missing])
+          })
+        );
+      }
+
+      report[name] = Object.freeze({
+        active: activeNames.has(name),
+        dependencies: Object.freeze([...deps]),
+        satisfied: missing.length === 0,
+        missing: Object.freeze([...missing]),
+        dependents: Object.freeze(dependentsMap.get(name) || [])
+      });
+    });
+
+    const circular = this.circularDetection();
+
+    return Object.freeze({
+      valid: missingDependencies.length === 0 && circular.length === 0,
+      plugins: Object.freeze(report),
+      missingDependencies: Object.freeze(missingDependencies),
+      circularDependencies: circular
+    });
+  }
+
+  // ==========================================
+  // DIAGNOSTICS & TELEMETRY
+  // ==========================================
+
+  pluginInfo() {
+    const registered = Array.from(ydCarousel._pluginRegistry.keys());
+    const enterpriseActive = Array.from(this.activePlugins.keys());
+    const coreActive = this.plugins.map(p => p.name || 'anonymous');
+    
+    return Object.freeze({
+      totalRegistered: registered.length,
+      totalActive: enterpriseActive.length + coreActive.length,
+      registeredPlugins: Object.freeze([...registered]),
+      activeEnterprise: Object.freeze([...enterpriseActive]),
+      activeCore: Object.freeze([...coreActive])
+    });
+  }
+
+  health() {
+    const issues = [];
+    let status = 'healthy';
+
+    if (this.destroyed) {
+      return Object.freeze({ status: 'destroyed', issues: ['Instance is destroyed'], timestamp: Date.now() });
+    }
+
+    if (!this.root) {
+      issues.push('Root element missing');
+    } else if (typeof document !== 'undefined' && !document.contains(this.root)) {
+      issues.push('Root element detached from DOM');
+    }
+
+    if (!this.track) issues.push('Track container missing');
+    if (this.slides.length === 0) issues.push('No slides found in track');
+    if (this.options.loop && this.slides.length <= 1) issues.push('Loop mode is enabled but requires at least 2 slides');
+    if (isNaN(this.currentPos)) issues.push('currentPos computation resulted in NaN');
+    if (isNaN(this.targetPos)) issues.push('targetPos computation resulted in NaN');
+    if (this.batchDepth > 0) issues.push(`Unresolved dynamic batch operations (depth: ${this.batchDepth})`);
+
+    if (this.metrics.slideSnaps.length > 0 && this.currentIndex >= this.metrics.slideSnaps.length) {
+      issues.push('Current index exceeds slide count');
+    }
+    if (this.metrics.groupSnaps.length > 0 && this.currentGroup >= this.metrics.groupSnaps.length) {
+      issues.push('Current group exceeds group count');
+    }
+
+    const depCheck = this.validateDependencies();
+    if (!depCheck.valid) {
+      if (depCheck.missing.length > 0) issues.push(`Missing plugin dependencies detected (${depCheck.missing.length})`);
+      if (depCheck.circular.length > 0) issues.push(`Circular plugin dependencies detected (${depCheck.circular.length})`);
+    }
+
+    if (issues.length > 0) status = 'degraded';
+
+    return Object.freeze({ 
+      status, 
+      issues, 
+      reducedMotion: this.reducedMotion, 
+      timestamp: Date.now() 
+    });
+  }
+
+  performanceStats() {
+    const totalNodes = this.track ? this.track.children.length : 0;
+    const clones = this.track ? this.track.querySelectorAll('.yd_slide-clone').length : 0;
+    
+    return Object.freeze({
+      layoutRecalculations: this._stats.layoutCalcs,
+      lastLayoutDurationMs: parseFloat(this._stats.lastLayoutTime.toFixed(2)),
+      renderTicks: this._stats.renderTicks,
+      domNodeCount: totalNodes,
+      clonedNodes: clones,
+      originalSlides: this.slides.length,
+      activeObservers: (this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0)
+    });
+  }
+
+  xray() {
+    return Object.freeze({
+      core: this.info(),
+      inspection: this.inspect(),
+      health: this.health(),
+      performance: this.performanceStats(),
+      plugins: this.pluginInfo(),
+      dependencies: this.dependencyReport(),
+      metrics: Object.freeze({
+        viewportSize: this.metrics.viewportSize,
+        trackSize: this.metrics.trackSize,
+        realTrackSize: this.metrics.realTrackSize,
+        prependOffset: this.metrics.prependOffset,
+        gap: this.metrics.gap,
+        slideSizes: Object.freeze([...this.metrics.slideSizes]),
+        slideOffsets: Object.freeze([...this.metrics.slideOffsets]),
+        slideSnaps: Object.freeze([...this.metrics.slideSnaps]),
+        groupSnaps: Object.freeze([...this.metrics.groupSnaps]),
+        snapPoints: Object.freeze([...this.metrics.snapPoints])
+      }),
+      config: Object.freeze({
+        loop: this.options.loop,
+        dragFree: this.options.dragFree,
+        alignCenter: this.options.alignCenter,
+        alignEnd: this.options.alignEnd,
+        keyboard: this.options.keyboard,
+        autoplay: this.options.autoplay,
+        rtl: this.options.rtl,
+        vertical: this.options.vertical,
+        autoHeight: this.options.autoHeight,
+        focusOnChange: this.options.focusOnChange,
+        reducedMotion: this.reducedMotion,
+        duration: this.options.duration,
+        friction: this.options.friction,
+        delay: this.options.delay,
+        dragThreshold: this.options.dragThreshold,
+        velocityThreshold: this.options.velocityThreshold,
+        dragInertia: this.options.dragInertia,
+        slideSnap: this.options.slideSnap,
+        groupSnap: this.options.groupSnap
+      })
+    });
+  }
+
+  // ==========================================
   // PUBLIC API
   // ==========================================
 
+  once(event, callback) {
+    const wrapper = (api, payload) => {
+      this.off(event, wrapper);
+      callback(api, payload);
+    };
+    return this.on(event, wrapper);
+  }
+
+  exportState() {
+    return Object.freeze({
+      index: this.currentIndex,
+      group: this.currentGroup
+    });
+  }
+
+  importState(state) {
+    if (!state) return;
+    if (typeof state.index === 'number') {
+      this.goToSlide(state.index, true);
+    } else if (typeof state.group === 'number') {
+      this.goToGroup(state.group, true);
+    }
+  }
+
+  isReducedMotion() { return this.reducedMotion; }
   version() { return ydCarousel.VERSION; }
   isReady() { return this.root.classList.contains('yd_carousel-ready'); }
   isDestroyed() { return this.destroyed; }
@@ -225,7 +613,6 @@ class ydCarousel {
   slideCount() { return this.slides.length; }
   groupCount() { return this.metrics.groupSnaps.length; }
   selectedGroup() { return this.currentGroup; }
-  visibleSlides() { return this.slidesInView(); }
   
   state() {
     return Object.freeze({
@@ -243,6 +630,8 @@ class ydCarousel {
       rtl: this.options.rtl,
       vertical: this.options.vertical,
       autoHeight: this.options.autoHeight,
+      focusOnChange: this.options.focusOnChange,
+      reducedMotion: this.reducedMotion,
       slideSnap: this.options.slideSnap,
       groupSnap: this.options.groupSnap
     });
@@ -264,9 +653,10 @@ class ydCarousel {
   capabilities() {
     return Object.freeze({
       loop: true, dragFree: true, rtl: true, vertical: true, autoHeight: true, dynamicApi: true,
-      autoplay: true, keyboard: true, wheel: true, hash: true,
-      sync: true, creative: true, lazyLoad: true, accessibility: true,
-      debug: true, plugins: true, events: true, diagnostics: true,
+      autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
+      sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
+      once: true, stateExportImport: true, reducedMotion: true,
+      debug: true, plugins: true, events: true, diagnostics: true, dependencies: true,
       snapshots: true, observers: true, registry: true 
     });
   }
@@ -276,9 +666,10 @@ class ydCarousel {
       loop: this.options.loop, dragFree: this.options.dragFree,
       rtl: this.options.rtl, vertical: this.options.vertical,
       autoplay: this.options.autoplay, keyboard: this.options.keyboard,
-      autoHeight: this.options.autoHeight, alignCenter: this.options.alignCenter, 
-      alignEnd: this.options.alignEnd, slideSnap: this.options.slideSnap, 
-      groupSnap: this.options.groupSnap
+      autoHeight: this.options.autoHeight, focusOnChange: this.options.focusOnChange,
+      reducedMotion: this.reducedMotion,
+      alignCenter: this.options.alignCenter, alignEnd: this.options.alignEnd, 
+      slideSnap: this.options.slideSnap, groupSnap: this.options.groupSnap
     });
   }
 
@@ -303,18 +694,6 @@ class ydCarousel {
     });
   }
 
-  health() {
-    return Object.freeze({
-      destroyed: this.destroyed,
-      slides: this.slides.length,
-      groups: this.metrics.groupSnaps.length,
-      plugins: this.pluginsList(),
-      visibleSlides: this.slidesInView(),
-      loop: this.options.loop,
-      settled: this.isSettled
-    });
-  }
-
   getEventPayload() {
     return {
       currentIndex: this.currentIndex,
@@ -335,7 +714,8 @@ class ydCarousel {
   emit(event, customData = {}) {
     if (!this.listeners[event]) return;
     const payload = { ...this.getEventPayload(), ...customData };
-    this.listeners[event].forEach(cb => {
+    const listeners = [...this.listeners[event]];
+    listeners.forEach(cb => {
       try {
         cb(this, payload);
       } catch (err) {
@@ -351,8 +731,9 @@ class ydCarousel {
   }
 
   off(event, callback) {
-    if (!this.listeners[event]) return;
+    if (!this.listeners[event]) return this;
     this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+    return this;
   }
 
   scrollTo(index, immediate = false) { this.goToSlide(index, immediate); }
@@ -369,11 +750,19 @@ class ydCarousel {
     if (full) this.initPlugins();
   }
 
-  reInit() {
+  reInit(config = {}) {
     const root = this.root;
+    let savedState = null;
+    if (config && config.preserveState) {
+      savedState = this.exportState();
+    }
     this.destroy();
-    root.__ydCarousel = new ydCarousel(root);
-    return root.__ydCarousel;
+    const newApi = new ydCarousel(root);
+    if (savedState) {
+      newApi.importState(savedState);
+    }
+    root.__ydCarousel = newApi;
+    return newApi;
   }
 
   rebuildPlugins() {
@@ -382,19 +771,29 @@ class ydCarousel {
   }
 
   // ==========================================
-  // DYNAMIC SLIDE API
+  // DYNAMIC SLIDE API (2.4.9 Architecture)
   // ==========================================
+
+  _purgeClones() {
+    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
+  }
 
   batch(callback) {
     if (this.destroyed) return;
+    if (this.batchDepth === 0) {
+      this._trackedActiveNode = this.slides[this.currentIndex];
+      this._purgeClones(); 
+    }
     this.batchDepth++;
     this.ignoreNextMutation = true;
     try {
-      callback();
+      const result = callback();
+      if (result instanceof Promise) {
+        console.warn('[ydCarousel] batch() callback must be synchronous.');
+      }
     } finally {
       this.batchDepth--;
       if (this.batchDepth === 0) {
-        this.ignoreNextMutation = false;
         this._refreshAfterDynamic();
       }
     }
@@ -402,13 +801,10 @@ class ydCarousel {
 
   _refreshAfterDynamic() {
     if (this.batchDepth > 0) return;
+    this._isDynamicRefreshing = true;
     this.updateMeasurements();
-    this.clampState();
-    if (this.options.slideSnap) {
-      this.goToSlide(this.currentIndex, true);
-    } else {
-      this.goToGroup(this.currentGroup, true);
-    }
+    this._isDynamicRefreshing = false;
+    this._trackedActiveNode = null;
     this.initPlugins();
   }
 
@@ -420,63 +816,69 @@ class ydCarousel {
     }
     this.currentIndex = Math.max(0, Math.min(this.currentIndex, this.metrics.slideSnaps.length - 1));
     this.currentGroup = Math.max(0, Math.min(this.currentGroup, this.metrics.groupSnaps.length - 1));
+    
+    if (this.options.slideSnap) {
+      const targetSnap = this.metrics.slideSnaps[this.currentIndex];
+      let targetGroup = 0;
+      for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
+        if (this.metrics.groupSnaps[i] <= targetSnap) targetGroup = i;
+        else break;
+      }
+      this.currentGroup = targetGroup;
+    } else {
+      const targetSnap = this.metrics.groupSnaps[this.currentGroup];
+      let nearest = 0;
+      let minDistance = Infinity;
+      this.metrics.slideSnaps.forEach((snap, idx) => {
+         const dist = Math.abs(snap - targetSnap);
+         if (dist < minDistance) { minDistance = dist; nearest = idx; }
+      });
+      this.currentIndex = nearest;
+    }
   }
 
   addSlide(html) {
-    if (this.destroyed) return;
-    this.ignoreNextMutation = true;
-    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
-    this.track.insertAdjacentHTML('beforeend', html);
-    if (this.batchDepth === 0) this._refreshAfterDynamic();
+    this.batch(() => {
+      this.track.insertAdjacentHTML('beforeend', html);
+    });
   }
 
   removeSlide(index) {
-    if (this.destroyed) return;
-    const slide = this.slides[index];
-    if (!slide) return;
-    this.ignoreNextMutation = true;
-    slide.remove();
-    if (this.batchDepth === 0) this._refreshAfterDynamic();
+    this.batch(() => {
+      const slide = this.slides[index];
+      if (slide) slide.remove();
+    });
+  }
+
+  removeAllSlides() {
+    this.batch(() => {
+      this.track.innerHTML = '';
+      this._trackedActiveNode = null;
+    });
   }
 
   insertSlide(index, html) {
-    if (this.destroyed) return;
-    this.ignoreNextMutation = true;
-    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
-    const target = this.slides[index];
-    if (!target) {
-      this.track.insertAdjacentHTML('beforeend', html);
-    } else {
-      target.insertAdjacentHTML('beforebegin', html);
-    }
-    if (Number.isInteger(index) && index >= 0 && index <= this.slides.length && this.currentIndex >= index) {
-      this.currentIndex++;
-    }
-    if (this.batchDepth === 0) this._refreshAfterDynamic();
+    this.batch(() => {
+      const target = this.slides[index];
+      if (!target) {
+        this.track.insertAdjacentHTML('beforeend', html);
+      } else {
+        target.insertAdjacentHTML('beforebegin', html);
+      }
+    });
   }
 
   replaceSlide(index, html) {
-    if (this.destroyed) return;
-    const target = this.slides[index];
-    if (!target) return;
-    const replacingActive = index === this.currentIndex;
-    this.ignoreNextMutation = true;
-    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
-    target.insertAdjacentHTML('beforebegin', html);
-    target.remove();
-    
-    if (this.batchDepth === 0) {
-      this._refreshAfterDynamic();
-      if (replacingActive && this.metrics.slideSnaps.length > 0) {
-        this.goToSlide(Math.min(index, this.metrics.slideSnaps.length - 1), true);
+    this.batch(() => {
+      const target = this.slides[index];
+      if (!target) return;
+      target.insertAdjacentHTML('beforebegin', html);
+      
+      if (this._trackedActiveNode === target) {
+        this._trackedActiveNode = null; 
       }
-    }
-  }
-
-  goToHash(hash) {
-    if (this.destroyed) return;
-    const targetIdx = this.slides.findIndex(s => s.dataset.hash === hash);
-    if (targetIdx > -1) this.goToSlide(targetIdx);
+      target.remove();
+    });
   }
 
   // ==========================================
@@ -575,12 +977,19 @@ class ydCarousel {
   // ==========================================
   
   updateMeasurements() {
+    const perfStart = ydCarousel._now();
     this.visibleSlides.clear();
 
     if (this.mutationObserver) this.mutationObserver.disconnect();
-    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
+    this._purgeClones();
     
     this.slides = Array.from(this.track.children);
+
+    if (this._isDynamicRefreshing) {
+      if (this._trackedActiveNode && this.slides.includes(this._trackedActiveNode)) {
+        this.currentIndex = this.slides.indexOf(this._trackedActiveNode);
+      }
+    }
     
     if (!this.slides.length) {
       this.metrics.slideSnaps = [];
@@ -609,6 +1018,9 @@ class ydCarousel {
       if (this.mutationObserver) {
         this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
       }
+      
+      this._stats.layoutCalcs++;
+      this._stats.lastLayoutTime = ydCarousel._now() - perfStart;
       return;
     }
 
@@ -729,6 +1141,8 @@ class ydCarousel {
 
     this.metrics.snapPoints = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
 
+    this.clampState();
+
     if (this.visibilityObserver) {
       this.visibilityObserver.disconnect();
       Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
@@ -747,6 +1161,9 @@ class ydCarousel {
     }
 
     this.updateAutoHeight();
+
+    this._stats.layoutCalcs++;
+    this._stats.lastLayoutTime = ydCarousel._now() - perfStart;
   }
 
   createClone(slide) {
@@ -754,6 +1171,9 @@ class ydCarousel {
     clone.setAttribute('data-slide-index', slide.getAttribute('data-slide-index'));
     clone.classList.add('yd_slide-clone');
     clone.setAttribute('aria-hidden', 'true');
+    if ('inert' in clone) {
+      clone.inert = true;
+    }
     clone.removeAttribute('aria-current');
     clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
     
@@ -764,6 +1184,10 @@ class ydCarousel {
       node.removeAttribute('aria-labelledby');
       node.removeAttribute('aria-describedby');
       node.removeAttribute('aria-controls');
+      
+      if (node.matches && node.matches('a, button, input, select, textarea, [tabindex]')) {
+        node.setAttribute('tabindex', '-1');
+      }
     });
     return clone;
   }
@@ -847,7 +1271,9 @@ class ydCarousel {
       ydCarousel._keyboardUsers++;
       this._keyboardRegistered = true;
       if (!ydCarousel._keyboardInitialized) {
-        document.addEventListener('keydown', ydCarousel._globalKeyDownHandler);
+        if (ydCarousel.hasDOM()) {
+          document.addEventListener('keydown', ydCarousel._globalKeyDownHandler);
+        }
         ydCarousel._keyboardInitialized = true;
       }
     }
@@ -858,7 +1284,9 @@ class ydCarousel {
       ydCarousel._keyboardUsers--;
       this._keyboardRegistered = false;
       if (ydCarousel._keyboardUsers <= 0) {
-        document.removeEventListener('keydown', ydCarousel._globalKeyDownHandler);
+        if (ydCarousel.hasDOM()) {
+          document.removeEventListener('keydown', ydCarousel._globalKeyDownHandler);
+        }
         ydCarousel._keyboardInitialized = false;
         ydCarousel._keyboardUsers = 0;
       }
@@ -884,9 +1312,11 @@ class ydCarousel {
   unbindEvents() {
     this.track.removeEventListener('pointerdown', this.onPointerDown);
     this.track.removeEventListener('click', this.onClick, { capture: true });
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
+    if (ydCarousel.hasDOM()) {
+      window.removeEventListener('pointermove', this.onPointerMove);
+      window.removeEventListener('pointerup', this.onPointerUp);
+      window.removeEventListener('pointercancel', this.onPointerUp);
+    }
     
     this.root.removeEventListener('mouseenter', this.onActivate);
     this.root.removeEventListener('focusin', this.onActivate);
@@ -909,7 +1339,7 @@ class ydCarousel {
     this.dragStartCurrentPos = this.currentPos;
     
     this.lastPointerPos = this.getPointerPos(e);
-    this.lastPointerTime = performance.now();
+    this.lastPointerTime = ydCarousel._now();
     this._velocity = 0;
     this.inertia = 0; 
 
@@ -919,9 +1349,11 @@ class ydCarousel {
     this.track.setPointerCapture(e.pointerId);
     this.track.style.cursor = 'grabbing';
     
-    window.addEventListener('pointermove', this.onPointerMove);
-    window.addEventListener('pointerup', this.onPointerUp);
-    window.addEventListener('pointercancel', this.onPointerUp);
+    if (ydCarousel.hasDOM()) {
+      window.addEventListener('pointermove', this.onPointerMove);
+      window.addEventListener('pointerup', this.onPointerUp);
+      window.addEventListener('pointercancel', this.onPointerUp);
+    }
     
     this._wake();
     this.emit('dragStart');
@@ -936,7 +1368,7 @@ class ydCarousel {
     if (this.options.rtl && !this.options.vertical) dragDistance *= -1;
     if (Math.abs(dragDistance) > this.options.dragThreshold) this.isClickSuppressed = true;
 
-    const now = performance.now();
+    const now = ydCarousel._now();
     const dt = now - this.lastPointerTime;
     if (dt > 0) {
       let rawVel = (this.lastPointerPos - currentPointer) / dt;
@@ -967,10 +1399,18 @@ class ydCarousel {
     try { this.track.releasePointerCapture(e.pointerId); } catch(err) {}
     this.track.style.cursor = '';
 
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
+    if (ydCarousel.hasDOM()) {
+      window.removeEventListener('pointermove', this.onPointerMove);
+      window.removeEventListener('pointerup', this.onPointerUp);
+      window.removeEventListener('pointercancel', this.onPointerUp);
+    }
     this.emit('dragEnd');
+
+    if (this.reducedMotion) {
+      this.inertia = 0;
+      this.snapToClosest();
+      return;
+    }
 
     if (this.options.dragFree) {
       this.inertia = -this._velocity * this.options.dragInertia; 
@@ -993,7 +1433,7 @@ class ydCarousel {
   onKeyDown(e) {
     if (ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) return;
 
-    const activeElement = document.activeElement;
+    const activeElement = ydCarousel.hasDOM() ? document.activeElement : null;
     const ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
     if (activeElement) {
       const isInputTag = ignoreTags.includes(activeElement.tagName);
@@ -1035,6 +1475,7 @@ class ydCarousel {
 
   tick() {
     if (this.destroyed) return;
+    this._stats.renderTicks++;
 
     if (this.options.loop) {
       const firstSnap = this.metrics.slideSnaps[0];
@@ -1116,23 +1557,16 @@ class ydCarousel {
     
     if (this.announceHandler) this.off('select', this.announceHandler);
 
-    this.plugins.forEach(p => {
-      if (p.destroy) {
-        try {
-          p.destroy(this);
-        } catch (err) {
-          console.error(`[ydCarousel] Error destroying plugin "${p.name || 'anonymous'}":`, err);
-        }
-      }
-    });
+    this.emit('destroy');
+
+    this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = []; 
     
     this.activePlugins.forEach((active, name) => this.disablePlugin(name));
 
     this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
-    this.track.querySelectorAll('.yd_slide-clone').forEach(clone => clone.remove());
-    this.visibleSlides.clear();
+    this._purgeClones();
 
     if (this.root.__ydCarousel === this) {
       delete this.root.__ydCarousel;
@@ -1140,19 +1574,297 @@ class ydCarousel {
     
     if (ydCarousel.activeCarousel === this) {
       ydCarousel.activeCarousel = null;
-      const readyCarousels = Array.from(document.querySelectorAll('.yd_carousel-ready'))
-        .map(el => el.__ydCarousel)
-        .filter(api => api && api !== this && !api.destroyed);
-      
-      if (readyCarousels.length > 0) {
-        const withKeyboard = readyCarousels.find(api => api.options.keyboard);
-        ydCarousel.activeCarousel = withKeyboard || readyCarousels[0];
+      if (ydCarousel.hasDOM()) {
+        const readyCarousels = Array.from(document.querySelectorAll('.yd_carousel-ready'))
+          .map(el => el.__ydCarousel)
+          .filter(api => api && api !== this && !api.destroyed);
+        
+        if (readyCarousels.length > 0) {
+          const withKeyboard = readyCarousels.find(api => api.options.keyboard);
+          ydCarousel.activeCarousel = withKeyboard || readyCarousels[0];
+        }
       }
     }
 
     ydCarousel._instances.delete(this); 
-    this.emit('destroy');
     this.listeners = {}; 
+    
+    this.slides = [];
+    this.visibleSlides.clear();
+    this.activePlugins.clear();
+    this.metrics.slideSizes = [];
+    this.metrics.slideOffsets = [];
+    this.metrics.slideSnaps = [];
+    this.metrics.groupSnaps = [];
+    this.metrics.snapPoints = [];
+  }
+
+  // ==========================================
+  // SNAP BASED NAVIGATION
+  // ==========================================
+
+  goToGroup(groupIndex, immediate = false) {
+    if (!this.metrics.groupSnaps.length) return;
+    const maxGroup = this.metrics.groupSnaps.length - 1;
+    const targetGroup = Math.max(0, Math.min(groupIndex, maxGroup));
+    
+    const changed = (this.currentGroup !== targetGroup);
+
+    if (changed) {
+      this.emit('beforeSelect', { currentGroup: this.currentGroup, targetGroup });
+      this.prevGroup = this.currentGroup;
+      this.currentGroup = targetGroup;
+      this.previewGroup = this.currentGroup;
+      this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
+    }
+    
+    let nextTarget = this.metrics.groupSnaps[this.currentGroup];
+    this.inertia = 0; 
+
+    if (this.options.loop && !immediate) {
+      const distNormal = nextTarget - this.targetPos;
+      const distForward = (nextTarget + this.metrics.realTrackSize) - this.targetPos;
+      const distBackward = (nextTarget - this.metrics.realTrackSize) - this.targetPos;
+      const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
+      
+      if (minDist === Math.abs(distForward)) nextTarget += this.metrics.realTrackSize;
+      else if (minDist === Math.abs(distBackward)) nextTarget -= this.metrics.realTrackSize;
+    }
+
+    this.targetPos = nextTarget;
+    if (immediate) {
+      this.inertia = 0;
+      this._velocity = 0;
+      this.currentPos = this.targetPos;
+      let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
+      this.track.style.transform = this.options.vertical 
+        ? `translate3d(0, ${transformVal}px, 0)` 
+        : `translate3d(${transformVal}px, 0, 0)`;
+        
+      if (!this.isSettled) {
+        this.isSettled = true;
+        this.emit('settle');
+      }
+    } else {
+      this._wake();
+    }
+
+    this.prevIndex = this.currentIndex;
+    this.currentIndex = this.findNearestSlide(nextTarget);
+    this.previewIndex = this.currentIndex;
+    
+    if (this.currentIndex !== this.prevIndex) {
+      this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
+    }
+    
+    this.updateSlideStates();
+    this.updateAutoHeight();
+
+    if (changed) {
+      this.emit('select');
+      this.emit('afterSelect'); 
+    }
+  }
+
+  goToSlide(slideIndex, immediate = false) {
+    if (!this.metrics.slideSnaps.length) return;
+    const maxSlide = this.metrics.slideSnaps.length - 1;
+    const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
+
+    if (this.options.slideSnap) {
+      const changed = (this.currentIndex !== targetSlide);
+
+      if (changed) {
+        this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex: targetSlide });
+        this.prevIndex = this.currentIndex;
+        this.currentIndex = targetSlide;
+        this.previewIndex = this.currentIndex;
+        this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
+      }
+      
+      let nextTarget = this.metrics.slideSnaps[this.currentIndex];
+      this.inertia = 0; 
+
+      if (this.options.loop && !immediate) {
+        const distNormal = nextTarget - this.targetPos;
+        const distForward = (nextTarget + this.metrics.realTrackSize) - this.targetPos;
+        const distBackward = (nextTarget - this.metrics.realTrackSize) - this.targetPos;
+        const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
+        
+        if (minDist === Math.abs(distForward)) nextTarget += this.metrics.realTrackSize;
+        else if (minDist === Math.abs(distBackward)) nextTarget -= this.metrics.realTrackSize;
+      }
+
+      this.targetPos = nextTarget;
+
+      if (immediate) {
+        this.inertia = 0;
+        this._velocity = 0;
+        this.currentPos = this.targetPos;
+        let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
+        this.track.style.transform = this.options.vertical 
+          ? `translate3d(0, ${transformVal}px, 0)` 
+          : `translate3d(${transformVal}px, 0, 0)`;
+          
+        if (!this.isSettled) {
+          this.isSettled = true;
+          this.emit('settle');
+        }
+      } else {
+        this._wake();
+      }
+
+      let targetGroup = 0;
+      for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
+        if (this.metrics.groupSnaps[i] <= nextTarget) targetGroup = i;
+        else break;
+      }
+      if (this.currentGroup !== targetGroup) {
+         this.prevGroup = this.currentGroup;
+         this.currentGroup = targetGroup;
+         this.previewGroup = this.currentGroup;
+         this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
+      }
+      
+      this.updateSlideStates();
+      this.updateAutoHeight();
+
+      if (changed) {
+        this.emit('select');
+        this.emit('afterSelect'); 
+      }
+      return;
+    }
+
+    const targetSnap = this.metrics.slideSnaps[targetSlide];
+    let targetGroup = 0;
+    for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
+      if (this.metrics.groupSnaps[i] <= targetSnap) targetGroup = i;
+      else break;
+    }
+    this.goToGroup(targetGroup, immediate);
+  }
+
+  snapToClosest() {
+    let closestIndex = 0;
+    let minDistance = Infinity;
+    const snaps = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
+    
+    snaps.forEach((point, index) => {
+      const d1 = Math.abs(point - this.targetPos);
+      const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - this.targetPos) : Infinity;
+      const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - this.targetPos) : Infinity;
+      const distance = Math.min(d1, d2, d3);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (this.options.dragFree) {
+       this.targetPos = snaps[closestIndex];
+       this._wake();
+    } else {
+       if (this.options.slideSnap) {
+         this.goToSlide(closestIndex);
+       } else {
+         this.goToGroup(closestIndex);
+       }
+    }
+  }
+
+  scrollNext() {
+    if (this.options.slideSnap) {
+      if (this.options.loop) {
+        this.goToSlide((this.currentIndex + 1) % this.metrics.slideSnaps.length);
+      } else {
+        this.goToSlide(Math.min(this.currentIndex + 1, this.metrics.slideSnaps.length - 1));
+      }
+      return;
+    }
+    
+    if (this.currentGroup < this.metrics.groupSnaps.length - 1) {
+      this.goToGroup(this.currentGroup + 1);
+    } else if (this.options.loop && this.canScrollNext()) {
+      this.goToGroup(0);
+    }
+  }
+
+  scrollPrev() {
+    if (this.options.slideSnap) {
+      if (this.options.loop) {
+        this.goToSlide((this.currentIndex - 1 + this.metrics.slideSnaps.length) % this.metrics.slideSnaps.length);
+      } else {
+        this.goToSlide(Math.max(this.currentIndex - 1, 0));
+      }
+      return;
+    }
+    
+    if (this.currentGroup > 0) {
+      this.goToGroup(this.currentGroup - 1);
+    } else if (this.options.loop && this.canScrollPrev()) {
+      this.goToGroup(this.metrics.groupSnaps.length - 1);
+    }
+  }
+
+  updateSlideStates() {
+    const total = this.slides.length;
+    const prevIdx = this.options.loop ? (total + this.currentIndex - 1) % total : this.currentIndex - 1;
+    const nextIdx = this.options.loop ? (this.currentIndex + 1) % total : this.currentIndex + 1;
+
+    this.slides.forEach((slide, idx) => {
+      slide.classList.remove('active', 'prev', 'next');
+      slide.removeAttribute('aria-current');
+      
+      slide.setAttribute('role', 'group');
+      slide.setAttribute('aria-roledescription', 'slide');
+      slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
+
+      if (idx === this.currentIndex) {
+        slide.classList.add('active');
+        slide.setAttribute('aria-current', 'true');
+        slide.setAttribute('tabindex', '0');
+      } else {
+        if (idx === prevIdx) slide.classList.add('prev');
+        else if (idx === nextIdx) slide.classList.add('next');
+        slide.setAttribute('tabindex', '-1');
+      }
+    });
+
+    if (this.options.loop) {
+      const clones = this.track.querySelectorAll('.yd_slide-clone');
+      clones.forEach(clone => {
+        const idx = parseInt(clone.getAttribute('data-slide-index'), 10);
+        clone.classList.remove('active', 'prev', 'next');
+        clone.removeAttribute('aria-current');
+        clone.setAttribute('aria-hidden', 'true');
+        if ('inert' in clone) clone.inert = true;
+        
+        if (idx === this.currentIndex) {
+          clone.classList.add('active');
+        } else if (idx === prevIdx) {
+          clone.classList.add('prev');
+        } else if (idx === nextIdx) {
+          clone.classList.add('next');
+        }
+      });
+    }
+
+    if (this.options.focusOnChange && ydCarousel.hasDOM() && this.root.contains(document.activeElement)) {
+      this.focusActiveSlide();
+    }
+  }
+  
+  updateAutoHeight() {
+    if (!this.options.autoHeight) return;
+    const slide = this.slides[this.currentIndex];
+    if (!slide) return;
+    
+    const height = slide.offsetHeight;
+    if (height <= 0) return;
+    
+    const viewport = this.root.querySelector('.yd_viewport') || this.root;
+    viewport.style.height = height + 'px';
   }
 
   // ==========================================
@@ -1163,32 +1875,63 @@ class ydCarousel {
     if (this.activePlugins.has(name)) return;
     const pluginDef = ydCarousel._pluginRegistry.get(name);
     if (!pluginDef) return;
-    try {
-      const instance = pluginDef.init(this);
-      this.activePlugins.set(name, { def: pluginDef, instance });
-      this.emit('pluginEnabled', { name });
-    } catch (err) {
-      console.error(`[ydCarousel] Error initializing plugin "${name}":`, err);
+
+    const deps = pluginDef.dependencies || pluginDef.requires || [];
+    const activeNames = new Set([
+      ...this.plugins.map(p => p.name).filter(Boolean),
+      ...Array.from(this.activePlugins.keys())
+    ]);
+
+    const missing = deps.filter(d => !activeNames.has(d));
+    if (missing.length > 0) {
+      console.warn(`[ydCarousel] Cannot enable plugin "${name}": missing dependencies [${missing.join(', ')}]`);
+      return; 
     }
+
+    const instance = pluginDef.init(this);
+    this.activePlugins.set(name, { def: pluginDef, instance });
+    this.emit('pluginEnabled', { name });
   }
 
   disablePlugin(name) {
     const active = this.activePlugins.get(name);
     if (active) {
-      if (active.def.destroy) {
-        try {
-          active.def.destroy(this, active.instance);
-        } catch (err) {
-          console.error(`[ydCarousel] Error disabling plugin "${name}":`, err);
-        }
-      }
+      if (active.def.destroy) active.def.destroy(this, active.instance);
       this.activePlugins.delete(name);
       this.emit('pluginDisabled', { name });
     }
   }
 
   initEnterprisePlugins() {
-    ydCarousel._pluginRegistry.forEach((_, name) => this.enablePlugin(name));
+    const circular = this.circularDetection();
+    if (circular.length > 0) {
+      console.error('[ydCarousel] Circular plugin dependencies detected:', circular);
+      return;
+    }
+
+    const registry = ydCarousel._pluginRegistry;
+    const order = [];
+    const visited = new Set();
+    const visiting = new Set();
+
+    const visit = (name) => {
+      if (visiting.has(name)) return; 
+      if (visited.has(name)) return;
+      
+      visiting.add(name);
+      const def = registry.get(name);
+      if (def) {
+        const deps = def.dependencies || def.requires || [];
+        deps.forEach(dep => visit(dep));
+      }
+      
+      visiting.delete(name);
+      visited.add(name);
+      order.push(name);
+    };
+
+    registry.forEach((_, name) => visit(name));
+    order.forEach(name => this.enablePlugin(name));
   }
 
   // ==========================================
@@ -1196,15 +1939,7 @@ class ydCarousel {
   // ==========================================
 
   initPlugins() {
-    this.plugins.forEach(p => {
-      if (p.destroy) {
-        try {
-          p.destroy(this);
-        } catch (err) {
-          console.error(`[ydCarousel] Error destroying plugin "${p.name || 'anonymous'}":`, err);
-        }
-      }
-    });
+    this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = [];
 
     // CONTROLS (Prev/Next)
@@ -1218,8 +1953,14 @@ class ydCarousel {
           init: (api) => {
             hPrev = () => api.scrollPrev();
             hNext = () => api.scrollNext();
-            if (prevBtn) prevBtn.addEventListener('click', hPrev);
-            if (nextBtn) nextBtn.addEventListener('click', hNext);
+            if (prevBtn) {
+              prevBtn.addEventListener('click', hPrev);
+              prevBtn.setAttribute('aria-controls', api.track.id);
+            }
+            if (nextBtn) {
+              nextBtn.addEventListener('click', hNext);
+              nextBtn.setAttribute('aria-controls', api.track.id);
+            }
           },
           destroy: () => {
             if (prevBtn) prevBtn.removeEventListener('click', hPrev);
@@ -1241,16 +1982,58 @@ class ydCarousel {
           init: (api) => {
             const template = dotsContainer.querySelector('.yd_dot');
             dotsContainer.innerHTML = '';
+            dotsContainer.setAttribute('role', 'tablist');
+            dotsContainer.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
             
             const snaps = api.options.slideSnap ? api.metrics.slideSnaps : api.metrics.groupSnaps;
             snaps.forEach((_, idx) => {
               let dot = template ? template.cloneNode(true) : document.createElement('button');
               if (!template) dot.className = 'yd_dot';
+              dot.setAttribute('role', 'tab');
+              dot.setAttribute('aria-controls', api.track.id);
               dot.setAttribute('aria-label', `Go to ${api.options.slideSnap ? 'slide' : 'group'} ${idx + 1}`);
+              
               dot.addEventListener('click', () => {
                 if (api.options.slideSnap) api.goToSlide(idx);
                 else api.goToGroup(idx);
               });
+              
+              dot.addEventListener('keydown', (e) => {
+                const nextKey = api.options.rtl ? 'ArrowLeft' : 'ArrowRight';
+                const prevKey = api.options.rtl ? 'ArrowRight' : 'ArrowLeft';
+
+                if (e.key === nextKey || e.key === prevKey) {
+                  e.preventDefault();
+                  let targetIdx = idx;
+                  if (e.key === nextKey) {
+                    targetIdx = (idx + 1) % snaps.length;
+                  } else if (e.key === prevKey) {
+                    targetIdx = (idx - 1 + snaps.length) % snaps.length;
+                  }
+                  const targetDot = dotsContainer.children[targetIdx];
+                  if (targetDot) targetDot.focus();
+                  if (api.options.slideSnap) api.goToSlide(targetIdx);
+                  else api.goToGroup(targetIdx);
+                }
+
+                if (e.key === 'Home') {
+                  e.preventDefault();
+                  const targetDot = dotsContainer.children[0];
+                  if (targetDot) targetDot.focus();
+                  if (api.options.slideSnap) api.goToSlide(0);
+                  else api.goToGroup(0);
+                }
+
+                if (e.key === 'End') {
+                  e.preventDefault();
+                  const lastIdx = snaps.length - 1;
+                  const targetDot = dotsContainer.children[lastIdx];
+                  if (targetDot) targetDot.focus();
+                  if (api.options.slideSnap) api.goToSlide(lastIdx);
+                  else api.goToGroup(lastIdx);
+                }
+              });
+              
               dotsContainer.appendChild(dot);
             });
             
@@ -1262,8 +2045,9 @@ class ydCarousel {
               Array.from(dotsContainer.children).forEach((dot, idx) => {
                 const isActive = idx === activeIdx;
                 dot.classList.toggle('active', isActive);
-                if (isActive) dot.setAttribute('aria-current', 'true');
-                else dot.removeAttribute('aria-current');
+                dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                dot.setAttribute('tabindex', isActive ? '0' : '-1');
+                dot.removeAttribute('aria-current');
               });
             };
             api.on('select', updateDots);
@@ -1354,6 +2138,9 @@ class ydCarousel {
               scrollbar.appendChild(thumb);
             }
 
+            scrollbar.setAttribute('role', 'scrollbar');
+            scrollbar.setAttribute('aria-controls', api.track.id);
+
             updateThumbSize = () => {
               if (api.metrics.realTrackSize <= api.metrics.viewportSize) {
                 isDisabled = true;
@@ -1373,6 +2160,11 @@ class ydCarousel {
             };
 
             updateProgress = (api, payload) => {
+              const valNum = Math.round(payload.progress * 100);
+              scrollbar.setAttribute('aria-valuenow', valNum);
+              scrollbar.setAttribute('aria-valuemin', '0');
+              scrollbar.setAttribute('aria-valuemax', '100');
+
               if (isDisabled || isDraggingThumb) return; 
               const movableSpace = scrollbar.offsetWidth - thumb.offsetWidth;
               thumb.style.transform = `translate3d(${payload.progress * movableSpace}px, 0, 0)`;
@@ -1401,9 +2193,11 @@ class ydCarousel {
               thumb.setPointerCapture(e.pointerId);
               thumb.style.cursor = 'grabbing';
               
-              document.addEventListener('pointermove', onThumbMove);
-              document.addEventListener('pointerup', onThumbUp);
-              document.addEventListener('pointercancel', onThumbUp);
+              if (ydCarousel.hasDOM()) {
+                document.addEventListener('pointermove', onThumbMove);
+                document.addEventListener('pointerup', onThumbUp);
+                document.addEventListener('pointercancel', onThumbUp);
+              }
               
               api.emit('dragStart');
             };
@@ -1474,9 +2268,11 @@ class ydCarousel {
               try { thumb.releasePointerCapture(e.pointerId); } catch(err) {}
               thumb.style.cursor = '';
               
-              document.removeEventListener('pointermove', onThumbMove);
-              document.removeEventListener('pointerup', onThumbUp);
-              document.removeEventListener('pointercancel', onThumbUp);
+              if (ydCarousel.hasDOM()) {
+                document.removeEventListener('pointermove', onThumbMove);
+                document.removeEventListener('pointerup', onThumbUp);
+                document.removeEventListener('pointercancel', onThumbUp);
+              }
               
               api.previewIndex = api.currentIndex;
               api.previewGroup = api.currentGroup;
@@ -1501,9 +2297,11 @@ class ydCarousel {
             if (thumb) {
               thumb.removeEventListener('pointerdown', onThumbDown);
             }
-            document.removeEventListener('pointermove', onThumbMove);
-            document.removeEventListener('pointerup', onThumbUp);
-            document.removeEventListener('pointercancel', onThumbUp);
+            if (ydCarousel.hasDOM()) {
+              document.removeEventListener('pointermove', onThumbMove);
+              document.removeEventListener('pointerup', onThumbUp);
+              document.removeEventListener('pointercancel', onThumbUp);
+            }
           }
         };
       })();
@@ -1550,12 +2348,14 @@ class ydCarousel {
         let permanentlyStopped = false; 
         let startTime = 0;
         let animRaf = null;
+        let direction = 1;
         
         return {
           name: 'autoplay',
           init: (api) => {
+            direction = api.root.dataset.autoplayDirection === 'backward' ? -1 : 1;
+
             const apProgressEl = api.root.querySelector('.yd_autoplay-progress');
-            
             if (apProgressEl) {
               let fill = apProgressEl.querySelector('.yd_autoplay-progress-fill');
               if (!fill) {
@@ -1572,7 +2372,7 @@ class ydCarousel {
             
             loopProgress = () => {
               if (isPaused) return;
-              const elapsed = performance.now() - startTime;
+              const elapsed = ydCarousel._now() - startTime;
               const pct = Math.min(100, (elapsed / api.options.delay) * 100);
               if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `${pct}%`);
               if (pct < 100) animRaf = requestAnimationFrame(loopProgress);
@@ -1588,22 +2388,57 @@ class ydCarousel {
               api.emit('autoplayStop');
             };
 
-            api.resetAutoplay = () => {
-               permanentlyStopped = false;
-               const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
-               if (!hasStarted && ready) {
-                  isPaused = false;
-                  play();
-               }
-            };
-            
-            api.pauseAutoplay = () => { stop(); };
-            api.resumeAutoplay = () => { permanentlyStopped = false; play(); };
-
             pauseTimer = () => {
               clearTimeout(playTimer);
               cancelAnimationFrame(animRaf);
             };
+
+            api.autoplayApi = {
+              play: () => {
+                permanentlyStopped = false;
+                isPaused = false;
+                play();
+              },
+              pause: () => {
+                if (hasStarted && !isPaused && !permanentlyStopped) {
+                  isPaused = true;
+                  pauseTimer();
+                  api.emit('autoplayPause');
+                }
+              },
+              stop: () => stopPermanent(),
+              reset: () => {
+                 permanentlyStopped = false;
+                 const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
+                 if (!hasStarted && ready) {
+                    isPaused = false;
+                    play();
+                 }
+              },
+              setDirection: (dir) => {
+                direction = (dir === 'backward' || dir === -1) ? -1 : 1;
+                resetVisual();
+                if (permanentlyStopped) {
+                  permanentlyStopped = false;
+                  const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
+                  if (ready) {
+                     isPaused = false;
+                     play();
+                  }
+                } else if (hasStarted && !isPaused) {
+                  play(); 
+                }
+              },
+              getDirection: () => direction === 1 ? 'forward' : 'backward',
+              getState: () => Object.freeze({
+                started: hasStarted,
+                paused: isPaused,
+                stopped: permanentlyStopped,
+                direction: direction === 1 ? 'forward' : 'backward'
+              })
+            };
+
+            api.resetAutoplay = api.autoplayApi.reset;
 
             play = () => {
               if (permanentlyStopped) return; 
@@ -1617,17 +2452,18 @@ class ydCarousel {
                 api.emit('autoplayResume'); 
               }
               
-              if (!api.canScrollNext()) {
+              const canContinue = direction === 1 ? api.canScrollNext() : api.canScrollPrev();
+              if (!canContinue) {
                 if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `100%`);
                 stopPermanent();
                 return;
               }
 
-              startTime = performance.now();
+              startTime = ydCarousel._now();
               loopProgress();
               
               playTimer = setTimeout(() => {
-                api.scrollNext(); 
+                direction === 1 ? api.scrollNext() : api.scrollPrev(); 
               }, api.options.delay);
             };
             
@@ -1666,7 +2502,9 @@ class ydCarousel {
               api.root.addEventListener('mouseenter', stop);
               api.root.addEventListener('mouseleave', play);
             }
-            document.addEventListener('visibilitychange', onVisChange);
+            if (ydCarousel.hasDOM()) {
+              document.addEventListener('visibilitychange', onVisChange);
+            }
             api.root.addEventListener('focusin', onFocusIn);
             api.root.addEventListener('focusout', onFocusOut);
             
@@ -1682,9 +2520,9 @@ class ydCarousel {
             if (!permanentlyStopped) {
                api.emit('autoplayStop');
             }
+            
+            delete api.autoplayApi;
             delete api.resetAutoplay; 
-            delete api.pauseAutoplay;
-            delete api.resumeAutoplay;
             
             api.off('beforeSelect', onBeforeSelect);
             api.off('dragStart', onDragStart);
@@ -1693,7 +2531,9 @@ class ydCarousel {
             
             api.root.removeEventListener('mouseenter', stop);
             api.root.removeEventListener('mouseleave', play);
-            document.removeEventListener('visibilitychange', onVisChange);
+            if (ydCarousel.hasDOM()) {
+              document.removeEventListener('visibilitychange', onVisChange);
+            }
             api.root.removeEventListener('focusin', onFocusIn);
             api.root.removeEventListener('focusout', onFocusOut);
           }
@@ -1765,7 +2605,7 @@ class ydCarousel {
             
             onHash = () => {
               if (isSyncingHash) return;
-              const rawHash = window.location.hash.replace('#', '');
+              const rawHash = ydCarousel.hasDOM() ? window.location.hash.replace('#', '') : '';
               let slideHash = rawHash;
               if (hashGroup) {
                 if (rawHash.startsWith(`${hashGroup}:`)) {
@@ -1788,7 +2628,7 @@ class ydCarousel {
             onSelect = (api, payload) => {
               if (!updateUrl || isSyncingHash) return;
               const slideHash = api.slides[payload.currentIndex]?.dataset.hash;
-              if (slideHash) {
+              if (slideHash && typeof history !== 'undefined') {
                 const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
                 try {
                   isSyncingHash = true;
@@ -1799,12 +2639,16 @@ class ydCarousel {
               }
             };
             
-            window.addEventListener('hashchange', onHash);
+            if (ydCarousel.hasDOM()) {
+              window.addEventListener('hashchange', onHash);
+            }
             api.on('select', onSelect);
             setTimeout(onHash, 0);
           },
           destroy: (api) => {
-            window.removeEventListener('hashchange', onHash);
+            if (ydCarousel.hasDOM()) {
+              window.removeEventListener('hashchange', onHash);
+            }
             api.off('select', onSelect);
           }
         };
@@ -1826,6 +2670,8 @@ class ydCarousel {
           init: (api) => {
             onSelect = (api, payload) => {
               if (isSyncing) return;
+              if (!ydCarousel.hasDOM()) return;
+
               let targets = [];
               if (syncTarget) {
                  const el = document.querySelector(syncTarget);
@@ -1944,10 +2790,14 @@ class ydCarousel {
     if (this.root.classList.contains('debug')) {
       const debugPlugin = (() => {
          let debugEl, onUpdate, lastUpdate = 0;
+         let opened = false;
          return {
             name: 'debug',
             init: (api) => {
+               if (!ydCarousel.hasDOM()) return;
+
                const delay = parseInt(api.root.dataset.debugDelay) || 150; 
+               opened = true;
                api.emit('debugOpen'); 
                debugEl = document.createElement('div');
                debugEl.className = 'yd_carousel-debug-panel';
@@ -1955,7 +2805,7 @@ class ydCarousel {
                api.root.appendChild(debugEl);
                
                onUpdate = (api, payload) => {
-                  const now = performance.now();
+                  const now = ydCarousel._now();
                   if (now - lastUpdate < delay) return; 
                   lastUpdate = now;
                   
@@ -1984,7 +2834,9 @@ Mode:  ${state.slideSnap ? 'slide-snap' : 'group-snap'}
                api.off('select', onUpdate);
                api.off('activeGroupChange', onUpdate);
                api.off('activeSlideChange', onUpdate);
-               api.emit('debugClose'); 
+               if (opened) {
+                 api.emit('debugClose');
+               }
             }
          };
       })();
@@ -1997,6 +2849,6 @@ Mode:  ${state.slideSnap ? 'slide-snap' : 'group-snap'}
 // ==========================================
 // AUTO-INIT SYSTEM
 // ==========================================
-if (typeof document !== 'undefined') {
+if (ydCarousel.hasDOM()) {
   document.addEventListener('DOMContentLoaded', () => ydCarousel.startAutoInit());
 }

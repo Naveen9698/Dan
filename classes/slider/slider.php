@@ -74,7 +74,7 @@
 <div class="yd_carousel pn-relative debug">
 
   <div class="yd_viewport of-hidden">
-    <div class="yd_container slides-3 gap-xl">
+    <div class="yd_container slides-3 gap-sm">
       <div class="yd_slide">
         <h2 class="bg-sub clr-white fz-60 dis-flex f-center f-middle w-100p h-200px">1</h2>
       </div>

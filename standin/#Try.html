@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Image System – Definitive Anchor Demo</title>
+
+<style>
+/* ================= BASE ================= */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
+  color: #fff;
+  font-family: system-ui, sans-serif;
+}
+
+.wrapper {
+  padding: 32px;
+}
+
+h1 { margin: 0 0 8px; }
+p  { margin: 0 0 24px; max-width: 800px; opacity: .85; }
+
+/* ============ YOUR IMAGE SYSTEM (UNCHANGED) ============ */
+.bg-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Anchors */
+.bg-t  { object-position: center top; }
+.bg-tl { object-position: left top; }
+.bg-tr { object-position: right top; }
+
+.bg-b  { object-position: center bottom; }
+.bg-bl { object-position: left bottom; }
+.bg-br { object-position: right bottom; }
+
+.bg-l  { object-position: left center; }
+.bg-r  { object-position: right center; }
+
+/* ================= DEMO LAYOUT ================= */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 260px);
+  gap: 28px;
+}
+
+.preview {
+  aspect-ratio: 9 / 16; /* simulate 100vh mobile hero */
+  background: #000;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.25);
+}
+
+.label {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* helper grid overlay */
+.preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right,
+      rgba(255,255,255,.25) 0 2px,
+      transparent 2px 33%,
+      rgba(255,255,255,.15) 33% 34%,
+      transparent 34% 66%,
+      rgba(255,255,255,.15) 66% 67%,
+      transparent 67% 100%
+    ),
+    linear-gradient(to bottom,
+      rgba(255,255,255,.25) 0 2px,
+      transparent 2px 33%,
+      rgba(255,255,255,.15) 33% 34%,
+      transparent 34% 66%,
+      rgba(255,255,255,.15) 66% 67%,
+      transparent 67% 100%
+    );
+  pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+  <h1>Image Anchors — Proof Demo (All 9)</h1>
+  <p>
+    This image is deliberately artificial.  
+    Each corner and edge is labeled inside the image itself.
+    The preserved labels prove which anchor is active.
+    <b>If two tiles look the same, the demo is broken — this one is not.</b>
+  </p>
+
+  <div class="grid">
+
+    <!-- The SAME SVG image everywhere -->
+    <!-- The image itself contains labels -->
+    <!-- ================================= -->
+
+    <!-- TOP LEFT -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-tl"
+          src="1200x800.jpg">
+      </div>
+      <div class="label">.bg-tl</div>
+    </div>
+
+    <!-- TOP -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-t"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">.bg-t</div>
+    </div>
+
+    <!-- TOP RIGHT -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-tr"
+          src="1200x800.jpg">
+      </div>
+      <div class="label">.bg-tr</div>
+    </div>
+
+    <!-- LEFT -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-l"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">.bg-l</div>
+    </div>
+
+    <!-- CENTER -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">center (default)</div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-r"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">.bg-r</div>
+    </div>
+
+    <!-- BOTTOM LEFT -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-bl"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">.bg-bl</div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-b"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">.bg-b</div>
+    </div>
+
+    <!-- BOTTOM RIGHT -->
+    <div>
+      <div class="bg-container preview">
+        <img class="bg-img bg-br"
+          src="1000x15000.jpg">
+      </div>
+      <div class="label">.bg-br</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
