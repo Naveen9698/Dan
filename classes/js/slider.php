@@ -1,8 +1,8 @@
 /**
- * ydCarousel 2.6.0 - V2.6.0 RUNTIME LIFECYCLE RELEASE (FINAL HARDENED REVISION)
- * Includes: pause(), resume(), isPaused(), Complete Runtime Interaction Freezing,
- * Drag/Scrollbar Cancellation on Pause, Developer Experience API, Mutation-Safe Emitters,
- * SSR Accessibility Guards, Deep Cleanup during Destruction, and Strict Diagnostic Consistency.
+ * ydCarousel 2.6.1 - V2.6.1 RUNTIME LIFECYCLE RELEASE (FINAL HARDENED REVISION)
+ * Includes: freeze(), unfreeze(), isFrozen(), pause(), resume(), isPaused(), 
+ * Complete Runtime Interaction & Observer Freezing, SSR Accessibility Guards,
+ * Deep Cleanup, and Diagnostic Consistency.
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -17,7 +17,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.6.0'; 
+  static VERSION = '2.6.1'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static SNAP_EPSILON = 0.5; 
@@ -30,7 +30,7 @@ class ydCarousel {
 
   static EVENTS = Object.freeze([
     'init', 'resize', 'destroy',
-    'pause', 'resume',
+    'pause', 'resume', 'freeze', 'unfreeze',
     'dragStart', 'dragMove', 'dragEnd',
     'scroll', 'settle',
     'beforeSelect', 'select', 'afterSelect',
@@ -165,6 +165,7 @@ class ydCarousel {
     this._velocity = 0; 
     this.inertia = 0;
     this._isPaused = false;
+    this._isFrozen = false;
     
     this.isDraggingActive = false;
     this.isSettled = true;
@@ -238,6 +239,7 @@ class ydCarousel {
   init() {
     if (this.destroyed) this.destroyed = false;
     this._isPaused = false;
+    this._isFrozen = false;
     
     ydCarousel._instances.add(this); 
     
@@ -262,7 +264,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // RUNTIME LIFECYCLE (2.6.0)
+  // RUNTIME LIFECYCLE (2.6.1)
   // ==========================================
 
   pause() {
@@ -293,13 +295,65 @@ class ydCarousel {
   resume() {
     if (this.destroyed || !this._isPaused) return;
     this._isPaused = false;
-    this._wake(); 
+    if (!this._isFrozen) this._wake(); 
     this.emit('resume');
   }
 
-  isPaused() {
-    return this._isPaused;
+  isPaused() { return this._isPaused; }
+
+  freeze() {
+    if (this.destroyed || this._isFrozen) return;
+    this._isFrozen = true;
+
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+
+    if (this.mutationRaf) {
+      cancelAnimationFrame(this.mutationRaf);
+      this.mutationRaf = null;
+    }
+
+    if (this.isDraggingActive) {
+      this.isDraggingActive = false;
+      this.isClickSuppressed = false;
+      this.track.style.cursor = '';
+      if (ydCarousel.hasDOM()) {
+        window.removeEventListener('pointermove', this.onPointerMove);
+        window.removeEventListener('pointerup', this.onPointerUp);
+        window.removeEventListener('pointercancel', this.onPointerUp);
+      }
+      this.emit('dragEnd');
+      this.snapToClosest(true, true);
+    }
+
+    if (this.resizeObserver) this.resizeObserver.disconnect();
+    if (this.mutationObserver) this.mutationObserver.disconnect();
+    if (this.visibilityObserver) this.visibilityObserver.disconnect();
+
+    this.emit('freeze');
   }
+
+  unfreeze() {
+    if (this.destroyed || !this._isFrozen) return;
+    this._isFrozen = false;
+
+    if (this.resizeObserver && this.root) {
+      this.resizeObserver.observe(this.root);
+    }
+    if (this.mutationObserver && this.track) {
+      this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+    }
+    if (this.visibilityObserver && this.track) {
+      Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
+    }
+
+    this.updateMeasurements();
+    this.emit('unfreeze');
+  }
+
+  isFrozen() { return this._isFrozen; }
 
   // ==========================================
   // ACCESSIBILITY & FOCUS MANAGEMENT
@@ -678,7 +732,7 @@ class ydCarousel {
       domNodeCount: totalNodes,
       clonedNodes: clones,
       originalSlides: this.slides.length,
-      activeObservers: (this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0)
+      activeObservers: this._isFrozen ? 0 : ((this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0))
     });
   }
 
@@ -808,6 +862,7 @@ class ydCarousel {
       focusOnChange: this.options.focusOnChange,
       reducedMotion: this.reducedMotion,
       paused: this._isPaused,
+      frozen: this._isFrozen,
       slideSnap: this.options.slideSnap,
       groupSnap: this.options.groupSnap
     });
@@ -832,7 +887,7 @@ class ydCarousel {
       autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
       once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true,
-      pauseResume: true,
+      pauseResume: true, freezeUnfreeze: true,
       warnings: true, compatibilityReport: true, pluginHealth: true,
       debug: true, plugins: true, events: true, diagnostics: true, dependencies: true,
       snapshots: true, observers: true, registry: true 
@@ -886,7 +941,8 @@ class ydCarousel {
       isSettled: this.isSettled,
       looping: this.options.loop,
       direction: this._velocity > 0 ? 1 : (this._velocity < 0 ? -1 : 0),
-      paused: this._isPaused
+      paused: this._isPaused,
+      frozen: this._isFrozen
     };
   }
 
@@ -1215,7 +1271,7 @@ class ydCarousel {
         viewportEl.style.height = '';
       }
 
-      if (this.mutationObserver) {
+      if (this.mutationObserver && !this._isFrozen) {
         this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
       }
       
@@ -1341,14 +1397,20 @@ class ydCarousel {
 
     this.metrics.snapPoints = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
 
+    if (this.options.loop && this.metrics.slideSnaps.length === 0) {
+       this.options.loop = false; // Emergency fallback if loop setup failed physically
+    }
+
     this.clampState();
 
     if (this.visibilityObserver) {
       this.visibilityObserver.disconnect();
-      Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
+      if (!this._isFrozen) {
+        Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
+      }
     }
 
-    if (this.mutationObserver) {
+    if (this.mutationObserver && !this._isFrozen) {
       this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
     }
 
@@ -1530,7 +1592,7 @@ class ydCarousel {
   }
 
   onPointerDown(e) {
-    if (e.button !== 0 || this._isPaused) return; 
+    if (e.button !== 0 || this._isPaused || this._isFrozen) return; 
     this.isDraggingActive = true;
     this.isClickSuppressed = false;
 
@@ -1631,7 +1693,7 @@ class ydCarousel {
   }
 
   onKeyDown(e) {
-    if ((ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) || this._isPaused) return;
+    if ((ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) || this._isPaused || this._isFrozen) return;
 
     const activeElement = ydCarousel.hasDOM() ? document.activeElement : null;
     const ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
@@ -1674,7 +1736,7 @@ class ydCarousel {
   }
 
   tick() {
-    if (this.destroyed || this._isPaused) {
+    if (this.destroyed || this._isPaused || this._isFrozen) {
       this.rafId = null;
       return;
     }
@@ -1834,7 +1896,7 @@ class ydCarousel {
   // ==========================================
 
   goToGroup(groupIndex, immediate = false, force = false) {
-    if (!this.metrics.groupSnaps.length || (this._isPaused && !force)) return;
+    if (!this.metrics.groupSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
     const maxGroup = this.metrics.groupSnaps.length - 1;
     const targetGroup = Math.max(0, Math.min(groupIndex, maxGroup));
     
@@ -1897,7 +1959,7 @@ class ydCarousel {
   }
 
   goToSlide(slideIndex, immediate = false, force = false) {
-    if (!this.metrics.slideSnaps.length || (this._isPaused && !force)) return;
+    if (!this.metrics.slideSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
     const maxSlide = this.metrics.slideSnaps.length - 1;
     const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
 
@@ -2016,7 +2078,7 @@ class ydCarousel {
   }
 
   scrollNext() {
-    if (this._isPaused) return;
+    if (this._isPaused || this._isFrozen) return;
     if (this.options.slideSnap) {
       if (this.options.loop) {
         this.goToSlide((this.currentIndex + 1) % this.metrics.slideSnaps.length);
@@ -2034,7 +2096,7 @@ class ydCarousel {
   }
 
   scrollPrev() {
-    if (this._isPaused) return;
+    if (this._isPaused || this._isFrozen) return;
     if (this.options.slideSnap) {
       if (this.options.loop) {
         this.goToSlide((this.currentIndex - 1 + this.metrics.slideSnaps.length) % this.metrics.slideSnaps.length);
@@ -2220,8 +2282,8 @@ class ydCarousel {
         return {
           name: 'controls',
           init: (api) => {
-            hPrev = () => { if (!api.isPaused()) api.scrollPrev(); };
-            hNext = () => { if (!api.isPaused()) api.scrollNext(); };
+            hPrev = () => { if (!api.isPaused() && !api.isFrozen()) api.scrollPrev(); };
+            hNext = () => { if (!api.isPaused() && !api.isFrozen()) api.scrollNext(); };
             if (prevBtn) {
               prevBtn.addEventListener('click', hPrev);
               prevBtn.setAttribute('aria-controls', api.track.id);
@@ -2262,13 +2324,13 @@ class ydCarousel {
               dot.setAttribute('aria-label', `Go to ${api.options.slideSnap ? 'slide' : 'group'} ${idx + 1}`);
               
               dot.addEventListener('click', () => {
-                if (api.isPaused()) return;
+                if (api.isPaused() || api.isFrozen()) return;
                 if (api.options.slideSnap) api.goToSlide(idx);
                 else api.goToGroup(idx);
               });
               
               dot.addEventListener('keydown', (e) => {
-                if (api.isPaused()) return;
+                if (api.isPaused() || api.isFrozen()) return;
                 const nextKey = api.options.rtl ? 'ArrowLeft' : 'ArrowRight';
                 const prevKey = api.options.rtl ? 'ArrowRight' : 'ArrowLeft';
 
@@ -2439,7 +2501,7 @@ class ydCarousel {
             };
 
             onClickTrack = (e) => {
-              if (isDisabled || e.target === thumb || api.isPaused()) return; 
+              if (isDisabled || e.target === thumb || api.isPaused() || api.isFrozen()) return; 
               const rect = scrollbar.getBoundingClientRect();
               const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
               
@@ -2448,7 +2510,7 @@ class ydCarousel {
             };
 
             onThumbDown = (e) => {
-              if (isDisabled || e.button !== 0 || api.isPaused()) return;
+              if (isDisabled || e.button !== 0 || api.isPaused() || api.isFrozen()) return;
               e.preventDefault();
               e.stopPropagation();
               isDraggingThumb = true;
@@ -2566,6 +2628,7 @@ class ydCarousel {
             api.on('resize', updateThumbSize);
             api.on('scroll', updateProgress);
             api.on('pause', onApiPause);
+            api.on('freeze', onApiPause); // Freeze should also interrupt dragging
             scrollbar.addEventListener('click', onClickTrack);
             thumb.addEventListener('pointerdown', onThumbDown);
             
@@ -2576,6 +2639,7 @@ class ydCarousel {
             api.off('resize', updateThumbSize);
             api.off('scroll', updateProgress);
             api.off('pause', onApiPause);
+            api.off('freeze', onApiPause);
             scrollbar.removeEventListener('click', onClickTrack);
             let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
             if (thumb) {
@@ -2653,7 +2717,7 @@ class ydCarousel {
             };
             
             loopProgress = () => {
-              if (isPaused || api.isPaused()) return;
+              if (isPaused || api.isPaused() || api.isFrozen()) return;
               const elapsed = ydCarousel._now() - startTime;
               const pct = Math.min(100, (elapsed / api.options.delay) * 100);
               if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `${pct}%`);
@@ -2723,7 +2787,7 @@ class ydCarousel {
             api.resetAutoplay = api.autoplayApi.reset;
 
             play = () => {
-              if (permanentlyStopped || api.isPaused()) return; 
+              if (permanentlyStopped || api.isPaused() || api.isFrozen()) return; 
               pauseTimer();
               
               if (!hasStarted) {
@@ -2789,6 +2853,8 @@ class ydCarousel {
             api.on('settle', onSettle);
             api.on('pause', onApiPause);
             api.on('resume', onApiResume);
+            api.on('freeze', onApiPause); // Freeze should halt autoplay too
+            api.on('unfreeze', onApiResume);
             
             if (api.root.classList.contains('pause-hover')) {
               api.root.addEventListener('mouseenter', stop);
@@ -2822,6 +2888,8 @@ class ydCarousel {
             api.off('settle', onSettle);
             api.off('pause', onApiPause);
             api.off('resume', onApiResume);
+            api.off('freeze', onApiPause);
+            api.off('unfreeze', onApiResume);
             
             api.root.removeEventListener('mouseenter', stop);
             api.root.removeEventListener('mouseleave', play);
@@ -2851,7 +2919,7 @@ class ydCarousel {
             
             const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
             onWheel = (e) => {
-              if (api.isPaused()) return;
+              if (api.isPaused() || api.isFrozen()) return;
               if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
               
               const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
