@@ -1,7 +1,8 @@
 /**
- * ydCarousel 2.5.2 - V2.5.2 ENTERPRISE PRODUCTION (FINAL HARDENED REVISION)
- * Includes: Core Plugin Error Isolation, Accurate Telemetry Layout Rates, 
- * Divided Compatibility Reports, Duplicate Logic Removal, and Deep Teardown.
+ * ydCarousel 2.6.0 - V2.6.0 RUNTIME LIFECYCLE RELEASE (FINAL HARDENED REVISION)
+ * Includes: pause(), resume(), isPaused(), Complete Runtime Interaction Freezing,
+ * Drag/Scrollbar Cancellation on Pause, Developer Experience API, Mutation-Safe Emitters,
+ * SSR Accessibility Guards, Deep Cleanup during Destruction, and Strict Diagnostic Consistency.
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -16,7 +17,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.5.2'; 
+  static VERSION = '2.6.0'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static SNAP_EPSILON = 0.5; 
@@ -29,6 +30,7 @@ class ydCarousel {
 
   static EVENTS = Object.freeze([
     'init', 'resize', 'destroy',
+    'pause', 'resume',
     'dragStart', 'dragMove', 'dragEnd',
     'scroll', 'settle',
     'beforeSelect', 'select', 'afterSelect',
@@ -162,6 +164,7 @@ class ydCarousel {
 
     this._velocity = 0; 
     this.inertia = 0;
+    this._isPaused = false;
     
     this.isDraggingActive = false;
     this.isSettled = true;
@@ -234,6 +237,7 @@ class ydCarousel {
 
   init() {
     if (this.destroyed) this.destroyed = false;
+    this._isPaused = false;
     
     ydCarousel._instances.add(this); 
     
@@ -255,6 +259,46 @@ class ydCarousel {
     this.startPhysicsLoop();
     this.root.classList.add('yd_carousel-ready');
     this.emit('init');
+  }
+
+  // ==========================================
+  // RUNTIME LIFECYCLE (2.6.0)
+  // ==========================================
+
+  pause() {
+    if (this.destroyed || this._isPaused) return;
+    this._isPaused = true;
+    
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+
+    if (this.isDraggingActive) {
+      this.isDraggingActive = false;
+      this.isClickSuppressed = false;
+      this.track.style.cursor = '';
+      if (ydCarousel.hasDOM()) {
+        window.removeEventListener('pointermove', this.onPointerMove);
+        window.removeEventListener('pointerup', this.onPointerUp);
+        window.removeEventListener('pointercancel', this.onPointerUp);
+      }
+      this.emit('dragEnd');
+      this.snapToClosest(true, true);
+    }
+    
+    this.emit('pause');
+  }
+
+  resume() {
+    if (this.destroyed || !this._isPaused) return;
+    this._isPaused = false;
+    this._wake(); 
+    this.emit('resume');
+  }
+
+  isPaused() {
+    return this._isPaused;
   }
 
   // ==========================================
@@ -565,6 +609,17 @@ class ydCarousel {
       }
     });
 
+    this._pluginErrorTracker.forEach((errInfo, name) => {
+      if (!health[name]) {
+        health[name] = Object.freeze({
+          type: 'core',
+          active: false,
+          errors: errInfo.count,
+          lastError: errInfo.lastError
+        });
+      }
+    });
+
     return Object.freeze(health);
   }
 
@@ -752,6 +807,7 @@ class ydCarousel {
       autoHeight: this.options.autoHeight,
       focusOnChange: this.options.focusOnChange,
       reducedMotion: this.reducedMotion,
+      paused: this._isPaused,
       slideSnap: this.options.slideSnap,
       groupSnap: this.options.groupSnap
     });
@@ -776,6 +832,7 @@ class ydCarousel {
       autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
       once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true,
+      pauseResume: true,
       warnings: true, compatibilityReport: true, pluginHealth: true,
       debug: true, plugins: true, events: true, diagnostics: true, dependencies: true,
       snapshots: true, observers: true, registry: true 
@@ -828,7 +885,8 @@ class ydCarousel {
       isDragging: this.isDraggingActive,
       isSettled: this.isSettled,
       looping: this.options.loop,
-      direction: this._velocity > 0 ? 1 : (this._velocity < 0 ? -1 : 0)
+      direction: this._velocity > 0 ? 1 : (this._velocity < 0 ? -1 : 0),
+      paused: this._isPaused
     };
   }
 
@@ -869,6 +927,9 @@ class ydCarousel {
   off(event, callback) {
     if (!this.listeners[event]) return this;
     this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+    if (this.listeners[event].length === 0) {
+      delete this.listeners[event];
+    }
     return this;
   }
 
@@ -1469,7 +1530,7 @@ class ydCarousel {
   }
 
   onPointerDown(e) {
-    if (e.button !== 0) return; 
+    if (e.button !== 0 || this._isPaused) return; 
     this.isDraggingActive = true;
     this.isClickSuppressed = false;
 
@@ -1570,7 +1631,7 @@ class ydCarousel {
   }
 
   onKeyDown(e) {
-    if (ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) return;
+    if ((ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) || this._isPaused) return;
 
     const activeElement = ydCarousel.hasDOM() ? document.activeElement : null;
     const ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
@@ -1613,10 +1674,16 @@ class ydCarousel {
   }
 
   tick() {
-    if (this.destroyed) return;
+    if (this.destroyed || this._isPaused) {
+      this.rafId = null;
+      return;
+    }
+    
     this._stats.renderTicks++;
 
-    if (this.options.loop && this.metrics.slideSnaps.length > 0) {
+    const isLoopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
+
+    if (isLoopActive) {
       const firstSnap = this.metrics.slideSnaps[0];
       const lastSnap = this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1];
       
@@ -1766,8 +1833,8 @@ class ydCarousel {
   // SNAP BASED NAVIGATION
   // ==========================================
 
-  goToGroup(groupIndex, immediate = false) {
-    if (!this.metrics.groupSnaps.length) return;
+  goToGroup(groupIndex, immediate = false, force = false) {
+    if (!this.metrics.groupSnaps.length || (this._isPaused && !force)) return;
     const maxGroup = this.metrics.groupSnaps.length - 1;
     const targetGroup = Math.max(0, Math.min(groupIndex, maxGroup));
     
@@ -1829,8 +1896,8 @@ class ydCarousel {
     }
   }
 
-  goToSlide(slideIndex, immediate = false) {
-    if (!this.metrics.slideSnaps.length) return;
+  goToSlide(slideIndex, immediate = false, force = false) {
+    if (!this.metrics.slideSnaps.length || (this._isPaused && !force)) return;
     const maxSlide = this.metrics.slideSnaps.length - 1;
     const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
 
@@ -1905,10 +1972,10 @@ class ydCarousel {
       if (this.metrics.groupSnaps[i] <= targetSnap) targetGroup = i;
       else break;
     }
-    this.goToGroup(targetGroup, immediate);
+    this.goToGroup(targetGroup, immediate, force);
   }
 
-  snapToClosest() {
+  snapToClosest(immediate = false, force = false) {
     let closestIndex = 0;
     let minDistance = Infinity;
     const snaps = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
@@ -1926,17 +1993,30 @@ class ydCarousel {
 
     if (this.options.dragFree) {
        this.targetPos = snaps[closestIndex];
-       this._wake();
+       if (immediate) {
+         this.currentPos = this.targetPos;
+         let transformVal = this.options.rtl && !this.options.vertical ? Math.abs(this.currentPos) : -this.currentPos;
+         this.track.style.transform = this.options.vertical 
+           ? `translate3d(0, ${transformVal}px, 0)` 
+           : `translate3d(${transformVal}px, 0, 0)`;
+         if (!this.isSettled) {
+           this.isSettled = true;
+           this.emit('settle');
+         }
+       } else {
+         this._wake();
+       }
     } else {
        if (this.options.slideSnap) {
-         this.goToSlide(closestIndex);
+         this.goToSlide(closestIndex, immediate, force);
        } else {
-         this.goToGroup(closestIndex);
+         this.goToGroup(closestIndex, immediate, force);
        }
     }
   }
 
   scrollNext() {
+    if (this._isPaused) return;
     if (this.options.slideSnap) {
       if (this.options.loop) {
         this.goToSlide((this.currentIndex + 1) % this.metrics.slideSnaps.length);
@@ -1954,6 +2034,7 @@ class ydCarousel {
   }
 
   scrollPrev() {
+    if (this._isPaused) return;
     if (this.options.slideSnap) {
       if (this.options.loop) {
         this.goToSlide((this.currentIndex - 1 + this.metrics.slideSnaps.length) % this.metrics.slideSnaps.length);
@@ -2139,8 +2220,8 @@ class ydCarousel {
         return {
           name: 'controls',
           init: (api) => {
-            hPrev = () => api.scrollPrev();
-            hNext = () => api.scrollNext();
+            hPrev = () => { if (!api.isPaused()) api.scrollPrev(); };
+            hNext = () => { if (!api.isPaused()) api.scrollNext(); };
             if (prevBtn) {
               prevBtn.addEventListener('click', hPrev);
               prevBtn.setAttribute('aria-controls', api.track.id);
@@ -2181,11 +2262,13 @@ class ydCarousel {
               dot.setAttribute('aria-label', `Go to ${api.options.slideSnap ? 'slide' : 'group'} ${idx + 1}`);
               
               dot.addEventListener('click', () => {
+                if (api.isPaused()) return;
                 if (api.options.slideSnap) api.goToSlide(idx);
                 else api.goToGroup(idx);
               });
               
               dot.addEventListener('keydown', (e) => {
+                if (api.isPaused()) return;
                 const nextKey = api.options.rtl ? 'ArrowLeft' : 'ArrowRight';
                 const prevKey = api.options.rtl ? 'ArrowRight' : 'ArrowLeft';
 
@@ -2300,7 +2383,7 @@ class ydCarousel {
     if (scrollbar) {
       const sbPlugin = (() => {
         let updateThumbSize, updateProgress, onClickTrack;
-        let onThumbDown, onThumbMove, onThumbUp;
+        let onThumbDown, onThumbMove, onThumbUp, onApiPause;
         let isDraggingThumb = false;
         let isDisabled = false;
         let startX = 0;
@@ -2356,7 +2439,7 @@ class ydCarousel {
             };
 
             onClickTrack = (e) => {
-              if (isDisabled || e.target === thumb) return; 
+              if (isDisabled || e.target === thumb || api.isPaused()) return; 
               const rect = scrollbar.getBoundingClientRect();
               const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
               
@@ -2365,7 +2448,7 @@ class ydCarousel {
             };
 
             onThumbDown = (e) => {
-              if (isDisabled || e.button !== 0) return;
+              if (isDisabled || e.button !== 0 || api.isPaused()) return;
               e.preventDefault();
               e.stopPropagation();
               isDraggingThumb = true;
@@ -2466,8 +2549,23 @@ class ydCarousel {
               api.snapToClosest();
             };
 
+            onApiPause = () => {
+              if (isDraggingThumb) {
+                isDraggingThumb = false;
+                thumb.style.cursor = '';
+                if (ydCarousel.hasDOM()) {
+                  document.removeEventListener('pointermove', onThumbMove);
+                  document.removeEventListener('pointerup', onThumbUp);
+                  document.removeEventListener('pointercancel', onThumbUp);
+                }
+                api.emit('dragEnd');
+                api.snapToClosest(true, true);
+              }
+            };
+
             api.on('resize', updateThumbSize);
             api.on('scroll', updateProgress);
+            api.on('pause', onApiPause);
             scrollbar.addEventListener('click', onClickTrack);
             thumb.addEventListener('pointerdown', onThumbDown);
             
@@ -2477,6 +2575,7 @@ class ydCarousel {
           destroy: (api) => {
             api.off('resize', updateThumbSize);
             api.off('scroll', updateProgress);
+            api.off('pause', onApiPause);
             scrollbar.removeEventListener('click', onClickTrack);
             let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
             if (thumb) {
@@ -2525,7 +2624,7 @@ class ydCarousel {
     if (this.options.autoplay) {
       const autoplay = (() => {
         let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, pauseTimer, onSettle, resetVisual;
-        let onBeforeSelect, onDragStart, onDragEnd; 
+        let onBeforeSelect, onDragStart, onDragEnd, onApiPause, onApiResume; 
         let isPaused = false;
         let hasStarted = false;
         let permanentlyStopped = false; 
@@ -2554,7 +2653,7 @@ class ydCarousel {
             };
             
             loopProgress = () => {
-              if (isPaused) return;
+              if (isPaused || api.isPaused()) return;
               const elapsed = ydCarousel._now() - startTime;
               const pct = Math.min(100, (elapsed / api.options.delay) * 100);
               if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `${pct}%`);
@@ -2624,7 +2723,7 @@ class ydCarousel {
             api.resetAutoplay = api.autoplayApi.reset;
 
             play = () => {
-              if (permanentlyStopped) return; 
+              if (permanentlyStopped || api.isPaused()) return; 
               pauseTimer();
               
               if (!hasStarted) {
@@ -2675,11 +2774,21 @@ class ydCarousel {
                  if (api.isSettled) play();
                }
             };
+
+            onApiPause = () => { stop(); };
+            onApiResume = () => { 
+              if (!permanentlyStopped && hasStarted) {
+                isPaused = false; 
+                if (api.isSettled) play(); 
+              }
+            };
             
             api.on('beforeSelect', onBeforeSelect);
             api.on('dragStart', onDragStart);
             api.on('dragEnd', onDragEnd);
             api.on('settle', onSettle);
+            api.on('pause', onApiPause);
+            api.on('resume', onApiResume);
             
             if (api.root.classList.contains('pause-hover')) {
               api.root.addEventListener('mouseenter', stop);
@@ -2711,6 +2820,8 @@ class ydCarousel {
             api.off('dragStart', onDragStart);
             api.off('dragEnd', onDragEnd); 
             api.off('settle', onSettle);
+            api.off('pause', onApiPause);
+            api.off('resume', onApiResume);
             
             api.root.removeEventListener('mouseenter', stop);
             api.root.removeEventListener('mouseleave', play);
@@ -2740,6 +2851,7 @@ class ydCarousel {
             
             const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
             onWheel = (e) => {
+              if (api.isPaused()) return;
               if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
               
               const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
