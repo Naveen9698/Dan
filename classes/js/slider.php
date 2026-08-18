@@ -1,8 +1,9 @@
 /**
- * ydCarousel 2.5.0 - V2.5.0 ENTERPRISE PRODUCTION (FINAL HARDENED REVISION)
- * Includes: Developer Experience API (once, export/import state), Complete Reduced Motion Mechanics,
- * Mutation-Safe Event Emitters, SSR Accessibility Guards, Constructor Validation Order Fixes,
- * Strict Reduced Motion Flick Prevention, and Deep Cleanup during Destruction.
+ * ydCarousel 2.5.1 - V2.5.1 ENTERPRISE PRODUCTION (FINAL HARDENED REVISION)
+ * Includes: Developer Experience API (once, export/import state), Event System Polish (Wildcards, 
+ * Event Stats, Listener Counts), Complete Reduced Motion Mechanics, Mutation-Safe Emitters, 
+ * SSR Accessibility Guards, Constructor Validation Order Fixes, Strict Reduced Motion Flick Prevention, 
+ * Deep Cleanup during Destruction, and Loop Configuration Immutability.
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -17,7 +18,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.5.0'; 
+  static VERSION = '2.5.1'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static SNAP_EPSILON = 0.5; 
@@ -186,12 +187,13 @@ class ydCarousel {
     this.slides = []; 
     this.visibleSlides = new Set(); 
 
-    // Performance tracking state
+    // Performance & Event tracking state
     this._stats = {
       renderTicks: 0,
       layoutCalcs: 0,
       lastLayoutTime: 0
     };
+    this._eventStats = {};
 
     this.metrics = {
       viewportSize: 0,
@@ -538,6 +540,10 @@ class ydCarousel {
       performance: this.performanceStats(),
       plugins: this.pluginInfo(),
       dependencies: this.dependencyReport(),
+      events: Object.freeze({
+        stats: this.eventStats(),
+        totalListeners: this.listenerCount()
+      }),
       metrics: Object.freeze({
         viewportSize: this.metrics.viewportSize,
         trackSize: this.metrics.trackSize,
@@ -579,11 +585,24 @@ class ydCarousel {
   // ==========================================
 
   once(event, callback) {
-    const wrapper = (api, payload) => {
+    const wrapper = (...args) => {
       this.off(event, wrapper);
-      callback(api, payload);
+      callback(...args);
     };
     return this.on(event, wrapper);
+  }
+
+  eventStats(clear = false) {
+    const stats = Object.freeze({ ...this._eventStats });
+    if (clear) this._eventStats = {};
+    return stats;
+  }
+
+  listenerCount(eventName) {
+    if (eventName) {
+      return this.listeners[eventName] ? this.listeners[eventName].length : 0;
+    }
+    return Object.keys(this.listeners).reduce((acc, key) => acc + this.listeners[key].length, 0);
   }
 
   exportState() {
@@ -606,7 +625,7 @@ class ydCarousel {
   version() { return ydCarousel.VERSION; }
   isReady() { return this.root.classList.contains('yd_carousel-ready'); }
   isDestroyed() { return this.destroyed; }
-  events() { return [...ydCarousel.EVENTS]; }
+  events() { return [...ydCarousel.EVENTS, '*']; }
   
   hashGroup() { return this.root.dataset.hashGroup; }
   syncGroup() { return this.root.dataset.syncGroup; }
@@ -658,7 +677,7 @@ class ydCarousel {
       loop: true, dragFree: true, rtl: true, vertical: true, autoHeight: true, dynamicApi: true,
       autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
-      once: true, stateExportImport: true, reducedMotion: true,
+      once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true,
       debug: true, plugins: true, events: true, diagnostics: true, dependencies: true,
       snapshots: true, observers: true, registry: true 
     });
@@ -715,16 +734,31 @@ class ydCarousel {
   }
 
   emit(event, customData = {}) {
-    if (!this.listeners[event]) return;
+    this._eventStats[event] = (this._eventStats[event] || 0) + 1;
+
     const payload = { ...this.getEventPayload(), ...customData };
-    const listeners = [...this.listeners[event]];
-    listeners.forEach(cb => {
-      try {
-        cb(this, payload);
-      } catch (err) {
-        console.error(`[ydCarousel] Error executing listener for event "${event}":`, err);
-      }
-    });
+    
+    if (this.listeners[event]) {
+      const listeners = [...this.listeners[event]];
+      listeners.forEach(cb => {
+        try {
+          cb(this, payload);
+        } catch (err) {
+          console.error(`[ydCarousel] Error executing listener for event "${event}":`, err);
+        }
+      });
+    }
+
+    if (this.listeners['*']) {
+      const wildcards = [...this.listeners['*']];
+      wildcards.forEach(cb => {
+        try {
+          cb(event, this, payload);
+        } catch (err) {
+          console.error(`[ydCarousel] Error executing wildcard listener for event "${event}":`, err);
+        }
+      });
+    }
   }
 
   on(event, callback) {
@@ -793,6 +827,8 @@ class ydCarousel {
       const result = callback();
       if (result instanceof Promise) {
         batchValid = false;
+        this.ignoreNextMutation = false;
+        this._trackedActiveNode = null;
         throw new Error('[ydCarousel] batch() callback must be synchronous.');
       }
     } finally {
@@ -1551,8 +1587,10 @@ class ydCarousel {
 
   destroy() {
     this.destroyed = true; 
-    cancelAnimationFrame(this.rafId);
+    if (this.rafId) cancelAnimationFrame(this.rafId);
     if (this.mutationRaf) cancelAnimationFrame(this.mutationRaf);
+    this.rafId = null;
+    this.mutationRaf = null;
     
     this.unbindEvents();
     if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
@@ -1572,7 +1610,7 @@ class ydCarousel {
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = []; 
     
-    this.activePlugins.forEach((active, name) => this.disablePlugin(name));
+    [...this.activePlugins.keys()].forEach(name => this.disablePlugin(name));
 
     this.root.classList.remove('yd_carousel-ready');
     this.track.style.transform = '';
@@ -1598,6 +1636,7 @@ class ydCarousel {
 
     ydCarousel._instances.delete(this); 
     this.listeners = {}; 
+    this._eventStats = {};
     
     this.slides = [];
     this.visibleSlides.clear();
