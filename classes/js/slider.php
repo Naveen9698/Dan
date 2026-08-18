@@ -1,5 +1,5 @@
 /**
- * ydCarousel 2.5.0 - V2.5.0 ENTERPRISE PRODUCTION (STABLE & HARDENED)
+ * ydCarousel 2.5.0 - V2.5.0 ENTERPRISE PRODUCTION (FINAL HARDENED REVISION)
  * Includes: Developer Experience API (once, export/import state), Complete Reduced Motion Mechanics,
  * Mutation-Safe Event Emitters, SSR Accessibility Guards, Constructor Validation Order Fixes,
  * Strict Reduced Motion Flick Prevention, and Deep Cleanup during Destruction.
@@ -68,7 +68,7 @@ class ydCarousel {
       document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
         if (!el.__ydCarousel) {
           try {
-            el.__ydCarousel = new ydCarousel(el);
+            new ydCarousel(el);
           } catch (err) {
             console.error('[ydCarousel] Auto-init failed:', err);
           }
@@ -169,6 +169,7 @@ class ydCarousel {
     this.destroyed = false;        
     this.rafId = null;
     this.mutationRaf = null;
+    this.maxScroll = 0;
 
     this.dragStartPos = 0;
     this.dragStartCurrentPos = 0;
@@ -492,9 +493,12 @@ class ydCarousel {
     if (this.metrics.slideSnaps.length > 0 && this.currentIndex >= this.metrics.slideSnaps.length) {
       issues.push('Current index exceeds slide count');
     }
+    if (this.currentIndex < 0) issues.push('Current index below zero');
+
     if (this.metrics.groupSnaps.length > 0 && this.currentGroup >= this.metrics.groupSnaps.length) {
       issues.push('Current group exceeds group count');
     }
+    if (this.currentGroup < 0) issues.push('Current group below zero');
 
     const depCheck = this.validateDependencies();
     if (!depCheck.valid) {
@@ -504,15 +508,14 @@ class ydCarousel {
 
     if (issues.length > 0) status = 'degraded';
 
-    return Object.freeze({ 
-      status, 
-      issues, 
-      reducedMotion: this.reducedMotion, 
-      timestamp: Date.now() 
-    });
+    return Object.freeze({ status, issues, reducedMotion: this.reducedMotion, timestamp: Date.now() });
   }
 
   performanceStats() {
+    if (this.destroyed) {
+      return Object.freeze({ destroyed: true });
+    }
+    
     const totalNodes = this.track ? this.track.children.length : 0;
     const clones = this.track ? this.track.querySelectorAll('.yd_slide-clone').length : 0;
     
@@ -761,7 +764,6 @@ class ydCarousel {
     if (savedState) {
       newApi.importState(savedState);
     }
-    root.__ydCarousel = newApi;
     return newApi;
   }
 
@@ -786,14 +788,16 @@ class ydCarousel {
     }
     this.batchDepth++;
     this.ignoreNextMutation = true;
+    let batchValid = true;
     try {
       const result = callback();
       if (result instanceof Promise) {
-        console.warn('[ydCarousel] batch() callback must be synchronous.');
+        batchValid = false;
+        throw new Error('[ydCarousel] batch() callback must be synchronous.');
       }
     } finally {
       this.batchDepth--;
-      if (this.batchDepth === 0) {
+      if (batchValid && this.batchDepth === 0) {
         this._refreshAfterDynamic();
       }
     }
@@ -1477,7 +1481,7 @@ class ydCarousel {
     if (this.destroyed) return;
     this._stats.renderTicks++;
 
-    if (this.options.loop) {
+    if (this.options.loop && this.metrics.slideSnaps.length > 0) {
       const firstSnap = this.metrics.slideSnaps[0];
       const lastSnap = this.metrics.slideSnaps[this.metrics.slideSnaps.length - 1];
       
@@ -1559,6 +1563,12 @@ class ydCarousel {
 
     this.emit('destroy');
 
+    /**
+     * Plugin destroy handlers execute before:
+     * - slides cleanup
+     * - metrics cleanup
+     * - activePlugins.clear()
+     */
     this.plugins.forEach(p => p.destroy && p.destroy(this));
     this.plugins = []; 
     
@@ -1592,6 +1602,20 @@ class ydCarousel {
     this.slides = [];
     this.visibleSlides.clear();
     this.activePlugins.clear();
+    
+    this.currentPos = 0;
+    this.targetPos = 0;
+    this._velocity = 0;
+    this.inertia = 0;
+    this.previewIndex = 0;
+    this.previewGroup = 0;
+    this.maxScroll = 0;
+    
+    this.metrics.viewportSize = 0;
+    this.metrics.trackSize = 0;
+    this.metrics.realTrackSize = 0;
+    this.metrics.prependOffset = 0;
+    this.metrics.gap = 0;
     this.metrics.slideSizes = [];
     this.metrics.slideOffsets = [];
     this.metrics.slideSnaps = [];
