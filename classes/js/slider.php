@@ -1,8 +1,8 @@
 /**
- * ydCarousel 2.6.1 - V2.6.1 RUNTIME LIFECYCLE RELEASE (FINAL HARDENED REVISION)
- * Includes: freeze(), unfreeze(), isFrozen(), pause(), resume(), isPaused(), 
- * Complete Runtime Interaction & Observer Freezing, SSR Accessibility Guards,
- * Deep Cleanup, and Diagnostic Consistency.
+ * ydCarousel 2.6.2 - V2.6.2 RUNTIME LIFECYCLE RELEASE (FINAL HARDENED REVISION)
+ * Includes: Automatic Visibility Management (Smart Freezing), freeze(), unfreeze(), 
+ * pause(), resume(), Complete Runtime Interaction & Observer Freezing, SSR Guards,
+ * Deep Cleanup, Diagnostic Consistency, and Manual/Auto Freeze Isolation.
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -17,7 +17,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.6.1'; 
+  static VERSION = '2.6.2'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static SNAP_EPSILON = 0.5; 
@@ -133,6 +133,7 @@ class ydCarousel {
       rtl: this.root.classList.contains('rtl'),
       vertical: this.root.classList.contains('vertical'),
       autoHeight: this.root.classList.contains('auto-height'),
+      autoVisibility: this.root.dataset.autoVisibility !== 'false', // Default true
       focusOnChange: this.root.classList.contains('focus-on-change') || this.root.dataset.focusOnChange === 'true',
       duration: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.duration) || 0.1),
       friction: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.friction) || 0.92),
@@ -166,6 +167,9 @@ class ydCarousel {
     this.inertia = 0;
     this._isPaused = false;
     this._isFrozen = false;
+    this._isAutoFrozen = false;
+    this._manualFrozen = false;
+    this._lastIntersectionState = true;
     
     this.isDraggingActive = false;
     this.isSettled = true;
@@ -224,6 +228,7 @@ class ydCarousel {
     this.onResize = this.onResize.bind(this);
     this.onMutation = this.onMutation.bind(this);
     this.tick = this.tick.bind(this);
+    this._docVisHandler = this._onDocVisibilityChange.bind(this);
     this.onActivate = () => { ydCarousel.activeCarousel = this; }; 
     this.onDeactivate = (e) => {
       if (e && e.type === 'focusout' && this.root.contains(e.relatedTarget)) return;
@@ -240,6 +245,8 @@ class ydCarousel {
     if (this.destroyed) this.destroyed = false;
     this._isPaused = false;
     this._isFrozen = false;
+    this._isAutoFrozen = false;
+    this._manualFrozen = false;
     
     ydCarousel._instances.add(this); 
     
@@ -264,7 +271,7 @@ class ydCarousel {
   }
 
   // ==========================================
-  // RUNTIME LIFECYCLE (2.6.1)
+  // RUNTIME LIFECYCLE (2.6.2)
   // ==========================================
 
   pause() {
@@ -301,8 +308,14 @@ class ydCarousel {
 
   isPaused() { return this._isPaused; }
 
-  freeze() {
-    if (this.destroyed || this._isFrozen) return;
+  freeze(isManual = true) {
+    if (this.destroyed) return;
+    
+    if (isManual) {
+      this._manualFrozen = true;
+    }
+    
+    if (this._isFrozen) return;
     this._isFrozen = true;
 
     if (this.rafId) {
@@ -332,11 +345,20 @@ class ydCarousel {
     if (this.mutationObserver) this.mutationObserver.disconnect();
     if (this.visibilityObserver) this.visibilityObserver.disconnect();
 
-    this.emit('freeze');
+    this.emit('freeze', { reason: isManual ? 'manual' : 'visibility' });
   }
 
-  unfreeze() {
-    if (this.destroyed || !this._isFrozen) return;
+  unfreeze(isManual = true) {
+    if (this.destroyed) return;
+    
+    if (isManual) {
+      this._manualFrozen = false;
+    } else if (this._manualFrozen) {
+      // Auto-unfreeze cannot override a manual freeze
+      return;
+    }
+
+    if (!this._isFrozen) return;
     this._isFrozen = false;
 
     if (this.resizeObserver && this.root) {
@@ -350,10 +372,27 @@ class ydCarousel {
     }
 
     this.updateMeasurements();
-    this.emit('unfreeze');
+    this.emit('unfreeze', { reason: isManual ? 'manual' : 'visibility' });
   }
 
   isFrozen() { return this._isFrozen; }
+
+  _onDocVisibilityChange() {
+    this._handleAutoVisibility(this._lastIntersectionState, !document.hidden);
+  }
+
+  _handleAutoVisibility(intersecting, docVisible) {
+    this._lastIntersectionState = intersecting;
+    const shouldBeActive = intersecting && docVisible;
+    
+    if (!shouldBeActive && !this._isFrozen) {
+      this._isAutoFrozen = true;
+      this.freeze(false);
+    } else if (shouldBeActive && this._isAutoFrozen) {
+      this._isAutoFrozen = false;
+      this.unfreeze(false);
+    }
+  }
 
   // ==========================================
   // ACCESSIBILITY & FOCUS MANAGEMENT
@@ -697,6 +736,10 @@ class ydCarousel {
     if (isNaN(this.targetPos)) issues.push('targetPos computation resulted in NaN');
     if (this.batchDepth > 0) issues.push(`Unresolved dynamic batch operations (depth: ${this.batchDepth})`);
 
+    if (ydCarousel.hasDOM() && this.options.autoVisibility && typeof IntersectionObserver === 'undefined') {
+      issues.push('autoVisibility is enabled but IntersectionObserver is not supported in this environment.');
+    }
+
     if (this.metrics.slideSnaps.length > 0 && this.currentIndex >= this.metrics.slideSnaps.length) {
       issues.push('Current index exceeds slide count');
     }
@@ -773,6 +816,7 @@ class ydCarousel {
         rtl: this.options.rtl,
         vertical: this.options.vertical,
         autoHeight: this.options.autoHeight,
+        autoVisibility: this.options.autoVisibility,
         focusOnChange: this.options.focusOnChange,
         reducedMotion: this.reducedMotion,
         duration: this.options.duration,
@@ -859,10 +903,13 @@ class ydCarousel {
       rtl: this.options.rtl,
       vertical: this.options.vertical,
       autoHeight: this.options.autoHeight,
+      autoVisibility: this.options.autoVisibility,
       focusOnChange: this.options.focusOnChange,
       reducedMotion: this.reducedMotion,
       paused: this._isPaused,
       frozen: this._isFrozen,
+      autoFrozen: this._isAutoFrozen,
+      manualFrozen: this._manualFrozen,
       slideSnap: this.options.slideSnap,
       groupSnap: this.options.groupSnap
     });
@@ -883,7 +930,7 @@ class ydCarousel {
 
   capabilities() {
     return Object.freeze({
-      loop: true, dragFree: true, rtl: true, vertical: true, autoHeight: true, dynamicApi: true,
+      loop: true, dragFree: true, rtl: true, vertical: true, autoHeight: true, autoVisibility: true, dynamicApi: true,
       autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
       once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true,
@@ -899,7 +946,7 @@ class ydCarousel {
       loop: this.options.loop, dragFree: this.options.dragFree,
       rtl: this.options.rtl, vertical: this.options.vertical,
       autoplay: this.options.autoplay, keyboard: this.options.keyboard,
-      autoHeight: this.options.autoHeight, focusOnChange: this.options.focusOnChange,
+      autoHeight: this.options.autoHeight, autoVisibility: this.options.autoVisibility, focusOnChange: this.options.focusOnChange,
       reducedMotion: this.reducedMotion,
       alignCenter: this.options.alignCenter, alignEnd: this.options.alignEnd, 
       slideSnap: this.options.slideSnap, groupSnap: this.options.groupSnap
@@ -1196,6 +1243,7 @@ class ydCarousel {
   // ==========================================
 
   _wake() {
+    if (this._isPaused || this._isFrozen) return;
     if (this.isSettled) {
       this.isSettled = false;
       this.startPhysicsLoop();
@@ -1492,6 +1540,17 @@ class ydCarousel {
         }
       });
     }, { root: this.root, threshold: 0.01 });
+
+    if (this.options.autoVisibility && typeof IntersectionObserver !== 'undefined') {
+      this.rootVisibilityObserver = new IntersectionObserver((entries) => {
+        this._handleAutoVisibility(entries[0].isIntersecting, !document.hidden);
+      }, { rootMargin: '150px' });
+      this.rootVisibilityObserver.observe(this.root);
+      
+      if (ydCarousel.hasDOM()) {
+        document.addEventListener('visibilitychange', this._docVisHandler);
+      }
+    }
   }
 
   onResize() { this.updateMeasurements(); }
@@ -1825,6 +1884,14 @@ class ydCarousel {
     if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
     if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
     
+    if (this.rootVisibilityObserver) { 
+      this.rootVisibilityObserver.disconnect(); 
+      this.rootVisibilityObserver = null; 
+    }
+    if (ydCarousel.hasDOM()) {
+      document.removeEventListener('visibilitychange', this._docVisHandler);
+    }
+
     if (this.announceHandler) this.off('select', this.announceHandler);
 
     this.emit('destroy');
@@ -1878,6 +1945,7 @@ class ydCarousel {
     this.previewIndex = 0;
     this.previewGroup = 0;
     this.maxScroll = 0;
+    this._manualFrozen = false;
     
     this.metrics.viewportSize = 0;
     this.metrics.trackSize = 0;
