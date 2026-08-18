@@ -1,9 +1,7 @@
 /**
- * ydCarousel 2.5.1 - V2.5.1 ENTERPRISE PRODUCTION (FINAL HARDENED REVISION)
- * Includes: Developer Experience API (once, export/import state), Event System Polish (Wildcards, 
- * Event Stats, Listener Counts), Complete Reduced Motion Mechanics, Mutation-Safe Emitters, 
- * SSR Accessibility Guards, Constructor Validation Order Fixes, Strict Reduced Motion Flick Prevention, 
- * Deep Cleanup during Destruction, and Loop Configuration Immutability.
+ * ydCarousel 2.5.2 - V2.5.2 ENTERPRISE PRODUCTION (FINAL HARDENED REVISION)
+ * Includes: Core Plugin Error Isolation, Accurate Telemetry Layout Rates, 
+ * Divided Compatibility Reports, Duplicate Logic Removal, and Deep Teardown.
  * 
  * DEVELOPER RULES:
  * 1. CSS REQUIREMENT: The scrollbar plugin requires external CSS for disabled states:
@@ -18,7 +16,7 @@
  */
 
 class ydCarousel {
-  static VERSION = '2.5.1'; 
+  static VERSION = '2.5.2'; 
   static ENGINE = 'ydCarousel-Enterprise';
   static DEBUG = false; 
   static SNAP_EPSILON = 0.5; 
@@ -191,9 +189,11 @@ class ydCarousel {
     this._stats = {
       renderTicks: 0,
       layoutCalcs: 0,
-      lastLayoutTime: 0
+      lastLayoutTime: 0,
+      initTime: ydCarousel._now()
     };
     this._eventStats = {};
+    this._pluginErrorTracker = new Map();
 
     this.metrics = {
       viewportSize: 0,
@@ -457,6 +457,14 @@ class ydCarousel {
   // DIAGNOSTICS & TELEMETRY
   // ==========================================
 
+  _recordPluginError(pluginName, err) {
+    const current = this._pluginErrorTracker.get(pluginName) || { count: 0, lastError: null };
+    this._pluginErrorTracker.set(pluginName, {
+      count: current.count + 1,
+      lastError: err ? (err.message || String(err)) : 'Unknown error'
+    });
+  }
+
   pluginInfo() {
     const registered = Array.from(ydCarousel._pluginRegistry.keys());
     const enterpriseActive = Array.from(this.activePlugins.keys());
@@ -469,6 +477,95 @@ class ydCarousel {
       activeEnterprise: Object.freeze([...enterpriseActive]),
       activeCore: Object.freeze([...coreActive])
     });
+  }
+
+  warnings() {
+    const list = [];
+    if (this.destroyed) {
+      list.push('Instance is destroyed.');
+      return Object.freeze(list);
+    }
+    
+    if (this.options.loop && this.slides.length <= 1) {
+      list.push('Loop mode is enabled but requires at least 2 slides.');
+    }
+    if (this.options.vertical && this.options.loop && this.root.classList.contains('wheel')) {
+      list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
+    }
+    if (this.slides.length === 0) {
+      list.push('Carousel track contains no slides.');
+    }
+    
+    const uptimeSecs = Math.max(1, (ydCarousel._now() - this._stats.initTime) / 1000);
+    if (this._stats.layoutCalcs > 50 && (this._stats.layoutCalcs / uptimeSecs) > 10) {
+      list.push(`High layout recalculation rate (${(this._stats.layoutCalcs / uptimeSecs).toFixed(1)}/sec). Check for frequent DOM mutations.`);
+    }
+
+    const depCheck = this.validateDependencies();
+    if (!depCheck.valid) {
+      depCheck.missing.forEach(m => list.push(`Missing plugin dependency: "${m.missingDependency}" required by "${m.plugin}".`));
+      depCheck.circular.forEach(c => list.push(`Circular plugin dependency cycle: ${c.join(' -> ')}.`));
+    }
+
+    return Object.freeze(list);
+  }
+
+  compatibilityReport() {
+    const hasDOM = ydCarousel.hasDOM();
+    const requiredFeatures = {
+      ResizeObserver: hasDOM && typeof window.ResizeObserver !== 'undefined',
+      IntersectionObserver: hasDOM && typeof window.IntersectionObserver !== 'undefined',
+      MutationObserver: hasDOM && typeof window.MutationObserver !== 'undefined',
+      PointerEvents: hasDOM && typeof window.PointerEvent !== 'undefined',
+      requestAnimationFrame: hasDOM && typeof window.requestAnimationFrame !== 'undefined',
+      performanceNow: typeof performance !== 'undefined' && typeof performance.now === 'function'
+    };
+    
+    const optionalFeatures = {
+      matchMedia: hasDOM && typeof window.matchMedia !== 'undefined',
+      inert: hasDOM && ('inert' in document.createElement('div'))
+    };
+
+    const fullyCompatible = Object.values(requiredFeatures).every(Boolean);
+
+    return Object.freeze({
+      engine: ydCarousel.ENGINE,
+      version: ydCarousel.VERSION,
+      environment: hasDOM ? 'browser' : 'non-browser/ssr',
+      fullyCompatible,
+      requiredFeatures: Object.freeze(requiredFeatures),
+      optionalFeatures: Object.freeze(optionalFeatures)
+    });
+  }
+
+  pluginHealth() {
+    const registry = ydCarousel._pluginRegistry;
+    const activeNames = new Set(Array.from(this.activePlugins.keys()));
+    const health = {};
+
+    registry.forEach((def, name) => {
+      const errInfo = this._pluginErrorTracker.get(name) || { count: 0, lastError: null };
+      health[name] = Object.freeze({
+        type: 'enterprise',
+        active: activeNames.has(name),
+        errors: errInfo.count,
+        lastError: errInfo.lastError
+      });
+    });
+
+    this.plugins.forEach(p => {
+      if (p.name && !health[p.name]) {
+        const errInfo = this._pluginErrorTracker.get(p.name) || { count: 0, lastError: null };
+        health[p.name] = Object.freeze({
+          type: 'core',
+          active: true,
+          errors: errInfo.count,
+          lastError: errInfo.lastError
+        });
+      }
+    });
+
+    return Object.freeze(health);
   }
 
   health() {
@@ -486,8 +583,7 @@ class ydCarousel {
     }
 
     if (!this.track) issues.push('Track container missing');
-    if (this.slides.length === 0) issues.push('No slides found in track');
-    if (this.options.loop && this.slides.length <= 1) issues.push('Loop mode is enabled but requires at least 2 slides');
+    
     if (isNaN(this.currentPos)) issues.push('currentPos computation resulted in NaN');
     if (isNaN(this.targetPos)) issues.push('targetPos computation resulted in NaN');
     if (this.batchDepth > 0) issues.push(`Unresolved dynamic batch operations (depth: ${this.batchDepth})`);
@@ -502,11 +598,10 @@ class ydCarousel {
     }
     if (this.currentGroup < 0) issues.push('Current group below zero');
 
-    const depCheck = this.validateDependencies();
-    if (!depCheck.valid) {
-      if (depCheck.missing.length > 0) issues.push(`Missing plugin dependencies detected (${depCheck.missing.length})`);
-      if (depCheck.circular.length > 0) issues.push(`Circular plugin dependencies detected (${depCheck.circular.length})`);
-    }
+    const warns = this.warnings();
+    warns.forEach(w => {
+      if (!issues.includes(w)) issues.push(w);
+    });
 
     if (issues.length > 0) status = 'degraded';
 
@@ -538,7 +633,10 @@ class ydCarousel {
       inspection: this.inspect(),
       health: this.health(),
       performance: this.performanceStats(),
+      warnings: this.warnings(),
+      compatibility: this.compatibilityReport(),
       plugins: this.pluginInfo(),
+      pluginHealth: this.pluginHealth(),
       dependencies: this.dependencyReport(),
       events: Object.freeze({
         stats: this.eventStats(),
@@ -678,6 +776,7 @@ class ydCarousel {
       autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
       sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
       once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true,
+      warnings: true, compatibilityReport: true, pluginHealth: true,
       debug: true, plugins: true, events: true, diagnostics: true, dependencies: true,
       snapshots: true, observers: true, registry: true 
     });
@@ -1637,6 +1736,7 @@ class ydCarousel {
     ydCarousel._instances.delete(this); 
     this.listeners = {}; 
     this._eventStats = {};
+    this._pluginErrorTracker.clear();
     
     this.slides = [];
     this.visibleSlides.clear();
@@ -1934,6 +2034,18 @@ class ydCarousel {
   // ENTERPRISE PLUGIN MANAGEMENT
   // ==========================================
 
+  _initCorePlugin(plugin) {
+    if (!plugin || !plugin.name) return;
+    try {
+      plugin.init(this);
+      this.plugins.push(plugin);
+      this._pluginErrorTracker.delete(plugin.name);
+    } catch (err) {
+      this._recordPluginError(plugin.name, err);
+      console.error(`[ydCarousel] Error initializing core plugin "${plugin.name}":`, err);
+    }
+  }
+
   enablePlugin(name) {
     if (this.activePlugins.has(name)) return;
     const pluginDef = ydCarousel._pluginRegistry.get(name);
@@ -1951,15 +2063,28 @@ class ydCarousel {
       return; 
     }
 
-    const instance = pluginDef.init(this);
-    this.activePlugins.set(name, { def: pluginDef, instance });
-    this.emit('pluginEnabled', { name });
+    try {
+      const instance = pluginDef.init(this);
+      this.activePlugins.set(name, { def: pluginDef, instance });
+      this._pluginErrorTracker.delete(name);
+      this.emit('pluginEnabled', { name });
+    } catch (err) {
+      this._recordPluginError(name, err);
+      console.error(`[ydCarousel] Error enabling plugin "${name}":`, err);
+    }
   }
 
   disablePlugin(name) {
     const active = this.activePlugins.get(name);
     if (active) {
-      if (active.def.destroy) active.def.destroy(this, active.instance);
+      if (active.def.destroy) {
+        try {
+          active.def.destroy(this, active.instance);
+        } catch (err) {
+          this._recordPluginError(name, err);
+          console.error(`[ydCarousel] Error disabling plugin "${name}":`, err);
+        }
+      }
       this.activePlugins.delete(name);
       this.emit('pluginDisabled', { name });
     }
@@ -2031,8 +2156,7 @@ class ydCarousel {
           }
         };
       })();
-      controls.init(this);
-      this.plugins.push(controls);
+      this._initCorePlugin(controls);
     }
 
     // CUSTOM HTML DOTS
@@ -2127,8 +2251,7 @@ class ydCarousel {
           }
         };
       })();
-      dots.init(this);
-      this.plugins.push(dots);
+      this._initCorePlugin(dots);
     }
 
     // CUSTOM HTML COUNTER
@@ -2169,8 +2292,7 @@ class ydCarousel {
           }
         };
       })();
-      counter.init(this);
-      this.plugins.push(counter);
+      this._initCorePlugin(counter);
     }
 
     // SCROLLBAR CONTROL 
@@ -2368,8 +2490,7 @@ class ydCarousel {
           }
         };
       })();
-      sbPlugin.init(this);
-      this.plugins.push(sbPlugin);
+      this._initCorePlugin(sbPlugin);
     }
 
     // CAROUSEL PROGRESS
@@ -2397,8 +2518,7 @@ class ydCarousel {
           destroy: (api) => api.off('scroll', updateProgress)
         };
       })();
-      progress.init(this);
-      this.plugins.push(progress);
+      this._initCorePlugin(progress);
     }
 
     // AUTOPLAY PROGRESS & SYSTEM
@@ -2602,8 +2722,7 @@ class ydCarousel {
           }
         };
       })();
-      autoplay.init(this);
-      this.plugins.push(autoplay);
+      this._initCorePlugin(autoplay);
     }
 
     // MOUSEWHEEL NAVIGATION
@@ -2651,8 +2770,7 @@ class ydCarousel {
           }
         };
       })();
-      wheel.init(this);
-      this.plugins.push(wheel);
+      this._initCorePlugin(wheel);
     }
 
     // HASH NAVIGATION
@@ -2716,8 +2834,7 @@ class ydCarousel {
           }
         };
       })();
-      hashPlugin.init(this);
-      this.plugins.push(hashPlugin);
+      this._initCorePlugin(hashPlugin);
     }
 
     // THUMBNAIL SYNCING & SYNC GROUPS
@@ -2774,8 +2891,7 @@ class ydCarousel {
           }
         };
       })();
-      syncPlugin.init(this);
-      this.plugins.push(syncPlugin);
+      this._initCorePlugin(syncPlugin);
     }
 
     // CREATIVE EFFECTS
@@ -2812,8 +2928,7 @@ class ydCarousel {
           }
         };
       })();
-      creative.init(this);
-      this.plugins.push(creative);
+      this._initCorePlugin(creative);
     }
 
     // LAZY LOAD
@@ -2845,8 +2960,7 @@ class ydCarousel {
           }
         };
       })();
-      lazyLoad.init(this);
-      this.plugins.push(lazyLoad);
+      this._initCorePlugin(lazyLoad);
     }
 
     // DEBUG PLUGIN 
@@ -2903,8 +3017,7 @@ Mode:  ${state.slideSnap ? 'slide-snap' : 'group-snap'}
             }
          };
       })();
-      debugPlugin.init(this);
-      this.plugins.push(debugPlugin);
+      this._initCorePlugin(debugPlugin);
     }
   }
 }
