@@ -1,3 +1,27 @@
+.slide{
+  font-size: 3.75rem;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background-color: #4a4a4a;
+}
+
+.yd_viewport {
+  overflow: hidden;
+  position: relative;
+}
+
+.yd_carousel[data-direction="rtl"] {
+  direction: rtl;
+}
+
+.yd_carousel.debug {
+  position: relative;
+}
+
 .yd_prev,
 .yd_next,
 .yd_dots,
@@ -30,6 +54,9 @@
 .yd_container {
   display: flex;
   will-change: transform;
+}
+.yd_carousel.vertical .yd_container {
+    flex-direction: column;
 }
 .yd_dots {
   display: flex;
