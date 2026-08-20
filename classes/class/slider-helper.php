@@ -9,13 +9,34 @@
   background-color: #4a4a4a;
 }
 
+.yd_slide { flex-shrink:0 }
+
 .yd_viewport {
   overflow: hidden;
   position: relative;
+  transition: height 0.3s ease;
+}
+
+.yd_scrollbar.disabled { 
+  pointer-events: none; 
+  opacity: 0.5; 
+}
+
+.yd_carousel.vertical .yd_scrollbar {
+  width: 10px;
+  height: 100%;
+  position: absolute;
+  right: 0;
+  top: 0;
+  margin-top: 0;
 }
 
 .yd_carousel[data-direction="rtl"] {
   direction: rtl;
+}
+
+.yd_scrollbar {
+  direction: ltr;
 }
 
 .yd_carousel.debug {
