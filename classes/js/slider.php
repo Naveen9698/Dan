@@ -231,7 +231,9 @@ class ydCarousel {
       renderedSlides: [],
       windowStart: 0,
       windowEnd: 0,
+      slidesPerView: 0,
       buffer: 0,
+      windowSize: 0,
       renderIndex: 0,
       pendingRebalance: false
     };
@@ -824,9 +826,11 @@ class ydCarousel {
         enabled: this.virtual.enabled,
         logicalSlides: this.logicalSlideCount(),
         renderedSlides: this.virtual.renderedSlides.length,
+        slidesPerView: this.virtual.slidesPerView,
+        buffer: this.virtual.buffer,
+        windowSize: this.virtual.windowSize,
         windowStart: this.virtual.windowStart,
         windowEnd: this.virtual.windowEnd,
-        buffer: this.virtual.buffer,
         renderIndex: this.virtual.renderIndex,
         pendingRebalance: this.virtual.pendingRebalance
       }),
@@ -947,6 +951,24 @@ class ydCarousel {
   getLogicalSlide(index) { return this.virtual.logicalSlides[index] || null; }
   getRenderedSlide(index) { return this.slides[index] || null; }
 
+  getSlidesPerView() {
+    const avg = this.metrics.averageSlideSize;
+    if (avg <= 0) {
+      return 1;
+    }
+    return Math.max(1, Math.ceil(this.metrics.viewportSize / avg));
+  }
+
+  getVirtualBuffer() {
+    return Math.max(this.getSlidesPerView() * 3, 6);
+  }
+
+  getWindowSize() {
+    const visible = this.getSlidesPerView();
+    const buffer = this.getVirtualBuffer();
+    return buffer + visible + buffer;
+  }
+
   slideCount() {
     // LOGICAL COUNT
     return this.logicalSlideCount();
@@ -1049,12 +1071,24 @@ class ydCarousel {
       enabled: this.virtual.enabled,
       logicalSlides: this.logicalSlideCount(),
       renderedSlides: this.virtual.renderedSlides.length,
+      slidesPerView: this.virtual.slidesPerView,
+      buffer: this.virtual.buffer,
+      windowSize: this.virtual.windowSize,
       windowStart: this.virtual.windowStart,
       windowEnd: this.virtual.windowEnd,
-      buffer: this.virtual.buffer,
       renderIndex: this.virtual.renderIndex,
       pendingRebalance: this.virtual.pendingRebalance
     });
+  }
+
+  virtualMathReport() {
+    return {
+      viewport: this.metrics.viewportSize,
+      averageSlide: this.metrics.averageSlideSize,
+      slidesPerView: this.getSlidesPerView(),
+      buffer: this.getVirtualBuffer(),
+      windowSize: this.getWindowSize()
+    };
   }
 
   getEventPayload() {
@@ -1396,6 +1430,10 @@ class ydCarousel {
       this.metrics.slideSizes = [];
       this.metrics.averageSlideSize = 0;
 
+      this.virtual.slidesPerView = 0;
+      this.virtual.buffer = 0;
+      this.virtual.windowSize = 0;
+
       this.maxScroll = 0;
       this.currentIndex = 0;
       this.currentGroup = 0;
@@ -1442,6 +1480,10 @@ class ydCarousel {
     } else {
       this.metrics.averageSlideSize = 0;
     }
+
+    this.virtual.slidesPerView = this.getSlidesPerView();
+    this.virtual.buffer = this.getVirtualBuffer();
+    this.virtual.windowSize = this.getWindowSize();
 
     // RENDERED LOOKUP
     const firstRect = this.getRenderedSlide(0).getBoundingClientRect();
@@ -2106,7 +2148,9 @@ class ydCarousel {
     this.virtual.renderedSlides = [];
     this.virtual.windowStart = 0;
     this.virtual.windowEnd = 0;
+    this.virtual.slidesPerView = 0;
     this.virtual.buffer = 0;
+    this.virtual.windowSize = 0;
     this.virtual.renderIndex = 0;
     this.virtual.pendingRebalance = false;
   }
