@@ -16,6 +16,8 @@
  * 5. BATCH API: The callback passed to `api.batch(() => {...})` MUST be synchronous.
  * 6. RTL SEMANTICS: RTL modifies visual layout and translation direction. Logical 
  *    slide index (0 to n) remains strictly LTR. Autoplay "forward" means next logical slide.
+ * 7. VIRTUALIZATION: Logical = data model, Rendered = DOM model. `virtual.logicalSlides` 
+ *    is the real dataset. `slides` is the rendered dataset.
  */
 
 class ydCarousel {
@@ -647,13 +649,16 @@ class ydCarousel {
       return Object.freeze(list);
     }
     
-    if (this.options.loop && this.slides.length <= 1) {
+    // LOGICAL COUNT
+    if (this.options.loop && this.logicalSlideCount() <= 1) {
       list.push('Loop mode is enabled but requires at least 2 slides.');
     }
     if (this.options.vertical && this.options.loop && this.root.classList.contains('wheel')) {
       list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
     }
-    if (this.slides.length === 0) {
+    
+    // LOGICAL COUNT
+    if (this.logicalSlideCount() === 0) {
       list.push('Carousel track contains no slides.');
     }
     
@@ -805,6 +810,7 @@ class ydCarousel {
       renderTicks: this._stats.renderTicks,
       domNodeCount: totalNodes,
       clonedNodes: clones,
+      // LOGICAL COUNT
       originalSlides: this.logicalSlideCount(),
       activeObservers: this._isFrozen ? 0 : ((this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0))
     });
@@ -816,7 +822,7 @@ class ydCarousel {
       inspection: this.inspect(),
       virtual: Object.freeze({
         enabled: this.virtual.enabled,
-        logicalSlides: this.virtual.logicalSlides.length,
+        logicalSlides: this.logicalSlideCount(),
         renderedSlides: this.virtual.renderedSlides.length,
         windowStart: this.virtual.windowStart,
         windowEnd: this.virtual.windowEnd,
@@ -926,15 +932,24 @@ class ydCarousel {
   currentPosition() { return this.currentPos; }
   targetPosition() { return this.targetPos; }
 
-  slideCount() {
-    return this.logicalSlideCount();
-  }
-  
+  logicalSlides() { return this.virtual.logicalSlides; }
+  renderedSlides() { return this.slides; }
+
   logicalSlideCount() {
     if (this.virtual.logicalSlides.length > 0) {
       return this.virtual.logicalSlides.length;
     }
     return this.slides.length;
+  }
+
+  renderedSlideCount() { return this.slides.length; }
+
+  getLogicalSlide(index) { return this.virtual.logicalSlides[index] || null; }
+  getRenderedSlide(index) { return this.slides[index] || null; }
+
+  slideCount() {
+    // LOGICAL COUNT
+    return this.logicalSlideCount();
   }
   
   groupCount() { return this.metrics.groupSnaps.length; }
@@ -1032,7 +1047,7 @@ class ydCarousel {
   virtualInfo() {
     return Object.freeze({
       enabled: this.virtual.enabled,
-      logicalSlides: this.virtual.logicalSlides.length,
+      logicalSlides: this.logicalSlideCount(),
       renderedSlides: this.virtual.renderedSlides.length,
       windowStart: this.virtual.windowStart,
       windowEnd: this.virtual.windowEnd,
@@ -1050,6 +1065,7 @@ class ydCarousel {
       previousGroup: this.prevGroup,
       previewIndex: this.previewIndex !== undefined ? this.previewIndex : this.currentIndex, 
       previewGroup: this.previewGroup !== undefined ? this.previewGroup : this.currentGroup,    
+      // LOGICAL COUNT
       slideCount: this.logicalSlideCount(),
       progress: this.scrollProgress(),
       visualProgress: this.getVisualProgress(),
@@ -1112,8 +1128,17 @@ class ydCarousel {
   scrollTo(index, immediate = false) { this.goToSlide(index, immediate); }
   selectedIndex() { return this.currentIndex; }
   previousIndex() { return this.prevIndex; }
-  activeSlide() { return this.slides[this.currentIndex] || null; }
-  slideNodes() { return this.slides; }
+  
+  activeSlide() { 
+    // RENDERED LOOKUP
+    return this.getRenderedSlide(this.currentIndex); 
+  }
+  
+  slideNodes() { 
+    // RENDERED DOM COUNT
+    return this.renderedSlides(); 
+  }
+  
   isDragging() { return this.isDraggingActive; } 
   isLoop() { return this.options.loop; }        
 
@@ -1149,7 +1174,8 @@ class ydCarousel {
   batch(callback) {
     if (this.destroyed) return;
     if (this.batchDepth === 0) {
-      this._trackedActiveNode = this.slides[this.currentIndex];
+      // RENDERED LOOKUP
+      this._trackedActiveNode = this.getRenderedSlide(this.currentIndex);
       this._purgeClones(); 
     }
     this.batchDepth++;
@@ -1217,7 +1243,8 @@ class ydCarousel {
 
   removeSlide(index) {
     this.batch(() => {
-      const slide = this.slides[index];
+      // RENDERED LOOKUP
+      const slide = this.getRenderedSlide(index);
       if (slide) slide.remove();
     });
   }
@@ -1231,7 +1258,8 @@ class ydCarousel {
 
   insertSlide(index, html) {
     this.batch(() => {
-      const target = this.slides[index];
+      // RENDERED LOOKUP
+      const target = this.getRenderedSlide(index);
       if (!target) {
         this.track.insertAdjacentHTML('beforeend', html);
       } else {
@@ -1242,7 +1270,8 @@ class ydCarousel {
 
   replaceSlide(index, html) {
     this.batch(() => {
-      const target = this.slides[index];
+      // RENDERED LOOKUP
+      const target = this.getRenderedSlide(index);
       if (!target) return;
       target.insertAdjacentHTML('beforebegin', html);
       
@@ -1353,11 +1382,13 @@ class ydCarousel {
 
     if (this._isDynamicRefreshing) {
       if (this._trackedActiveNode && this.slides.includes(this._trackedActiveNode)) {
+        // RENDERED LOOKUP
         this.currentIndex = this.slides.indexOf(this._trackedActiveNode);
       }
     }
     
-    if (!this.slides.length) {
+    // RENDERED DOM COUNT
+    if (!this.renderedSlideCount()) {
       this.metrics.slideSnaps = [];
       this.metrics.groupSnaps = [];
       this.metrics.snapPoints = [];
@@ -1400,6 +1431,7 @@ class ydCarousel {
     
     this.metrics.viewportSize = this.options.vertical ? viewportRect.height : viewportRect.width;
     
+    // RENDERED DOM COUNT
     this.metrics.slideSizes = this.slides.map(slide => {
       const sRect = slide.getBoundingClientRect();
       return this.options.vertical ? sRect.height : sRect.width;
@@ -1411,8 +1443,10 @@ class ydCarousel {
       this.metrics.averageSlideSize = 0;
     }
 
-    const firstRect = this.slides[0].getBoundingClientRect();
+    // RENDERED LOOKUP
+    const firstRect = this.getRenderedSlide(0).getBoundingClientRect();
     
+    // RENDERED DOM COUNT
     const relativeOffsets = this.slides.map(slide => {
       const sRect = slide.getBoundingClientRect();
       if (this.options.vertical) {
@@ -1424,12 +1458,15 @@ class ydCarousel {
     let physicalSize = 0;
     let loopGap = 0;
 
-    if (this.slides.length > 0) {
-      const lastIdx = this.slides.length - 1;
+    // RENDERED DOM COUNT
+    if (this.renderedSlideCount() > 0) {
+      // RENDERED DOM COUNT
+      const lastIdx = this.renderedSlideCount() - 1;
       physicalSize = relativeOffsets[lastIdx] + this.metrics.slideSizes[lastIdx];
     }
 
-    if (this.slides.length > 1) {
+    // LOGICAL COUNT
+    if (this.logicalSlideCount() > 1) {
       loopGap = relativeOffsets[1] - (relativeOffsets[0] + this.metrics.slideSizes[0]);
       loopGap = Math.max(0, loopGap);
     }
@@ -1439,23 +1476,28 @@ class ydCarousel {
 
     this.metrics.prependOffset = 0;
 
-    if (this.options.loop && this.slides.length > 1 && this.metrics.realTrackSize > 0) {
+    // LOGICAL COUNT
+    if (this.options.loop && this.logicalSlideCount() > 1 && this.metrics.realTrackSize > 0) {
       this.metrics.prependOffset = this.metrics.realTrackSize;
       
       let clonedSize = 0;
       let setsNeeded = 0;
       const MAX_CLONES = 120; // Clone count cap to prevent node explosion
-      while (clonedSize < (this.metrics.viewportSize * 3) && setsNeeded < 4 && (this.slides.length * setsNeeded * 2) < MAX_CLONES) {
+      
+      // RENDERED DOM COUNT
+      while (clonedSize < (this.metrics.viewportSize * 3) && setsNeeded < 4 && (this.renderedSlideCount() * setsNeeded * 2) < MAX_CLONES) {
         clonedSize += this.metrics.realTrackSize;
         setsNeeded++;
       }
       setsNeeded = Math.max(1, setsNeeded);
       
       for (let i = 0; i < setsNeeded; i++) {
+        // RENDERED DOM COUNT
         const clonesBefore = this.slides.map(s => this.createClone(s));
         const clonesAfter = this.slides.map(s => this.createClone(s));
         
-        const firstOriginal = this.slides[0];
+        // RENDERED LOOKUP
+        const firstOriginal = this.getRenderedSlide(0);
         clonesBefore.forEach(c => this.track.insertBefore(c, firstOriginal));
         clonesAfter.forEach(c => this.track.appendChild(c));
       }
@@ -2294,9 +2336,11 @@ class ydCarousel {
   }
 
   updateSlideStates() {
-    if (!this.slides.length) return;
+    // RENDERED DOM COUNT
+    if (!this.renderedSlideCount()) return;
 
-    const total = this.slides.length;
+    // LOGICAL COUNT
+    const total = this.logicalSlideCount();
     const prevIdx = this.options.loop ? (total + this.currentIndex - 1) % total : this.currentIndex - 1;
     const nextIdx = this.options.loop ? (this.currentIndex + 1) % total : this.currentIndex + 1;
 
@@ -2307,12 +2351,14 @@ class ydCarousel {
       visualNext = prevIdx;
     }
 
+    // RENDERED DOM COUNT
     this.slides.forEach((slide, idx) => {
       slide.classList.remove('active', 'prev', 'next');
       slide.removeAttribute('aria-current');
       
       slide.setAttribute('role', 'group');
       slide.setAttribute('aria-roledescription', 'slide');
+      // LOGICAL COUNT usage
       slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
 
       if (idx === this.currentIndex) {
@@ -2352,7 +2398,8 @@ class ydCarousel {
   
   updateAutoHeight() {
     if (!this.options.autoHeight) return;
-    const slide = this.slides[this.currentIndex];
+    // RENDERED LOOKUP
+    const slide = this.getRenderedSlide(this.currentIndex);
     if (!slide) return;
     
     const height = slide.offsetHeight;
@@ -3220,7 +3267,8 @@ class ydCarousel {
                   return; 
                 }
               }
-              const targetIdx = api.slides.findIndex(s => s.dataset.hash === slideHash);
+              // LOGICAL LOOKUP
+              const targetIdx = api.logicalSlides().findIndex(s => s.dataset.hash === slideHash);
               if (targetIdx > -1 && targetIdx !== api.currentIndex) {
                 try {
                   isSyncingHash = true;
@@ -3233,7 +3281,8 @@ class ydCarousel {
             
             onSelect = (api, payload) => {
               if (!updateUrl || isSyncingHash) return;
-              const slideHash = api.slides[payload.currentIndex]?.dataset.hash;
+              // LOGICAL LOOKUP
+              const slideHash = api.getLogicalSlide(payload.currentIndex)?.dataset.hash;
               if (slideHash && typeof history !== 'undefined') {
                 const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
                 try {
@@ -3332,6 +3381,7 @@ class ydCarousel {
                 slide.style.setProperty('--slide-progress', progress.toFixed(4));
                 slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
               };
+              // RENDERED DOM COUNT
               api.slides.forEach((slide, idx) => updateNode(slide, idx));
               
               if (api.options.loop) {
@@ -3364,7 +3414,8 @@ class ydCarousel {
           name: 'lazy-load',
           init: (api) => {
             onSlideEnter = (api, payload) => {
-              const slide = api.slides[payload.index];
+              // RENDERED LOOKUP
+              const slide = api.getRenderedSlide(payload.index);
               if (slide && !slide.dataset.loaded) {
                 const img = slide.querySelector('img[data-src]');
                 if (img && img.dataset.src) {
