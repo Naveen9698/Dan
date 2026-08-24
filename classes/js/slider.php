@@ -23,7 +23,7 @@
 class ydCarousel {
   static VERSION = '2.6.2'; 
   static ENGINE = 'ydCarousel-Enterprise';
-  static DEBUG = false; 
+  static DEBUG = true; // Enabled for Milestone 10 diagnostics
   static SNAP_EPSILON = 0.5; 
   static _autoInitObserver = null;
   static _pluginRegistry = new Map();
@@ -666,6 +666,7 @@ class ydCarousel {
       return Object.freeze(list);
     }
     
+    // LOGICAL COUNT
     if (this.options.loop && this.logicalSlideCount() <= 1) {
       list.push('Loop mode is enabled but requires at least 2 slides.');
     }
@@ -673,6 +674,7 @@ class ydCarousel {
       list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
     }
     
+    // LOGICAL COUNT
     if (this.logicalSlideCount() === 0) {
       list.push('Carousel track contains no slides.');
     }
@@ -825,6 +827,7 @@ class ydCarousel {
       renderTicks: this._stats.renderTicks,
       domNodeCount: totalNodes,
       clonedNodes: clones,
+      // LOGICAL COUNT
       originalSlides: this.logicalSlideCount(),
       activeObservers: this._isFrozen ? 0 : ((this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0))
     });
@@ -1249,6 +1252,7 @@ class ydCarousel {
   }
 
   slideCount() {
+    // LOGICAL COUNT
     return this.logicalSlideCount();
   }
   
@@ -1403,6 +1407,7 @@ class ydCarousel {
       previousGroup: this.prevGroup,
       previewIndex: this.previewIndex !== undefined ? this.previewIndex : this.currentIndex, 
       previewGroup: this.previewGroup !== undefined ? this.previewGroup : this.currentGroup,    
+      // LOGICAL COUNT
       slideCount: this.logicalSlideCount(),
       progress: this.scrollProgress(),
       visualProgress: this.getVisualProgress(),
@@ -1690,6 +1695,14 @@ class ydCarousel {
         nearest = idx;
       }
     });
+    
+    if (this.virtual.enabled) {
+      const slide = this.getRenderedSlide(nearest);
+      if (slide) {
+        return parseInt(slide.getAttribute('data-slide-index'), 10);
+      }
+    }
+    
     return nearest;
   }
 
@@ -1761,7 +1774,8 @@ class ydCarousel {
     }
 
     this.slides.forEach((slide, idx) => {
-      slide.setAttribute('data-slide-index', idx);
+      // In non-virtual mode, assign DOM index. In virtual mode, the actual DOM manipulation step will handle setting this correctly
+      if (!this.virtual.enabled) slide.setAttribute('data-slide-index', idx);
     });
 
     const viewportEl = this.root.querySelector('.yd_viewport') || this.root;
@@ -2605,6 +2619,13 @@ class ydCarousel {
          this._wake();
        }
     } else {
+       if (this.virtual.enabled) {
+         const slide = this.getRenderedSlide(closestIndex);
+         if (slide) {
+           closestIndex = parseInt(slide.getAttribute('data-slide-index'), 10);
+         }
+       }
+
        if (this.options.slideSnap) {
          this.goToSlide(closestIndex, immediate, force);
        } else {
