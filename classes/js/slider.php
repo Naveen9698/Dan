@@ -193,6 +193,14 @@ class ydCarousel {
     this.lastPointerTime = 0;
     this.isClickSuppressed = false;
     this._keyboardRegistered = false; 
+
+    this.dragState = {
+      active: false,
+      startLogicalIndex: 0,
+      currentLogicalIndex: 0,
+      startPointer: 0,
+      startTargetPos: 0
+    };
     
     this.ignoreNextMutation = false; 
     this.batchDepth = 0;
@@ -237,7 +245,8 @@ class ydCarousel {
       buffer: 0,
       windowSize: 0,
       renderIndex: 0,
-      pendingRebalance: null
+      pendingRebalance: null,
+      lastRebalanceIndex: -1
     };
 
     this.listeners = {};
@@ -320,6 +329,7 @@ class ydCarousel {
 
     if (this.isDraggingActive) {
       this.isDraggingActive = false;
+      this.dragState.active = false;
       this.isClickSuppressed = false;
       this.track.style.cursor = '';
       if (ydCarousel.hasDOM()) {
@@ -369,6 +379,7 @@ class ydCarousel {
 
     if (this.isDraggingActive) {
       this.isDraggingActive = false;
+      this.dragState.active = false;
       this.isClickSuppressed = false;
       this.track.style.cursor = '';
       if (ydCarousel.hasDOM()) {
@@ -839,8 +850,15 @@ class ydCarousel {
         windowEnd: this.virtual.windowEnd,
         renderIndex: this.virtual.renderIndex,
         pendingRebalance: this.virtual.pendingRebalance,
+        lastRebalanceIndex: this.virtual.lastRebalanceIndex,
+        safetyMargin: this.windowSafetyMargin(),
         renderedIndices: this.buildVirtualWindow(this.currentIndex)
       }),
+      drag: {
+        active: this.dragState.active,
+        startLogicalIndex: this.dragState.startLogicalIndex,
+        currentLogicalIndex: this.dragState.currentLogicalIndex
+      },
       health: this.health(),
       performance: this.performanceStats(),
       warnings: this.warnings(),
@@ -1024,8 +1042,8 @@ class ydCarousel {
     return indices.map(index => this.virtual.logicalSlides[index]);
   }
 
-  resolveRenderIndex(logicalIndex) {
-    const window = this.buildVirtualWindow(this.currentIndex);
+  resolveRenderIndex(logicalIndex, windowArray = null) {
+    const window = windowArray || this.buildVirtualWindow(this.currentIndex);
     const index = window.indexOf(logicalIndex);
     return index >= 0 ? index : 0;
   }
@@ -1100,6 +1118,98 @@ class ydCarousel {
     }
 
     this.syncRenderIndex();
+  }
+
+  distanceToWindowStart(logicalIndex) {
+    const window = this.virtual.lastWindow.length > 0 ? this.virtual.lastWindow : this.buildVirtualWindow(this.currentIndex);
+    return this.resolveRenderIndex(logicalIndex, window);
+  }
+
+  distanceToWindowEnd(logicalIndex) {
+    const window = this.virtual.lastWindow.length > 0 ? this.virtual.lastWindow : this.buildVirtualWindow(this.currentIndex);
+    return this.virtual.windowSize - 1 - this.resolveRenderIndex(logicalIndex, window);
+  }
+
+  approachingWindowEdge() {
+    const futureIndex = this.predictFutureIndex();
+    const window = this.virtual.lastWindow.length > 0 ? this.virtual.lastWindow : this.buildVirtualWindow(this.currentIndex);
+    
+    if (window.indexOf(futureIndex) === -1) {
+      return true;
+    }
+
+    const threshold = Math.max(2 * this.virtual.slidesPerView, 6);
+
+    if (this._velocity > 0) {
+      return this.distanceToWindowEnd(futureIndex) <= threshold;
+    }
+
+    if (this._velocity < 0) {
+      return this.distanceToWindowStart(futureIndex) <= threshold;
+    }
+
+    return false;
+  }
+
+  predictFutureIndex() {
+    const projectedPosition = this.targetPos + this.inertia;
+    return this.findNearestSlide(projectedPosition);
+  }
+
+  midFlightRebalance() {
+    const futureIndex = this.predictFutureIndex();
+
+    if (futureIndex === this.virtual.lastRebalanceIndex) {
+      return;
+    }
+
+    this.virtual.lastRebalanceIndex = futureIndex;
+    this.rebalanceWindow(futureIndex);
+    this.onMidDragRebalance();
+  }
+
+  windowSafetyMargin() {
+    if (!this.virtual.enabled) return 0;
+    const futureIndex = this.predictFutureIndex();
+    const window = this.virtual.lastWindow.length > 0 ? this.virtual.lastWindow : this.buildVirtualWindow(this.currentIndex);
+    
+    if (window.indexOf(futureIndex) === -1) {
+      return 0;
+    }
+
+    return Math.min(
+      this.distanceToWindowStart(futureIndex),
+      this.distanceToWindowEnd(futureIndex)
+    );
+  }
+
+  updateDragLogicalIndex() {
+    if (!this.dragState.active) {
+      return;
+    }
+    this.dragState.currentLogicalIndex = this.findNearestSlide(this.targetPos);
+  }
+
+  onMidDragRebalance() {
+    if (!this.dragState.active) {
+      return;
+    }
+    const logical = this.dragState.currentLogicalIndex;
+    this.virtual.renderIndex = this.resolveRenderIndex(logical);
+  }
+
+  isDragRebalanceSafe() {
+    return (this.dragState.active && this.activePointerId !== undefined);
+  }
+
+  validateDragPosition() {
+    if (!this.dragState.active) {
+      return;
+    }
+    const expected = this.resolveRenderIndex(this.dragState.currentLogicalIndex);
+    if (expected !== this.virtual.renderIndex) {
+      this.virtual.renderIndex = expected;
+    }
   }
 
   slideCount() {
@@ -1215,7 +1325,14 @@ class ydCarousel {
       windowEnd: this.virtual.windowEnd,
       renderIndex: this.virtual.renderIndex,
       pendingRebalance: this.virtual.pendingRebalance,
-      renderedIndices: this.buildVirtualWindow(this.currentIndex)
+      lastRebalanceIndex: this.virtual.lastRebalanceIndex,
+      safetyMargin: this.windowSafetyMargin(),
+      renderedIndices: this.buildVirtualWindow(this.currentIndex),
+      dragState: {
+        active: this.dragState.active,
+        startLogicalIndex: this.dragState.startLogicalIndex,
+        currentLogicalIndex: this.dragState.currentLogicalIndex
+      }
     });
   }
 
@@ -1588,6 +1705,7 @@ class ydCarousel {
       this.virtual.buffer = 0;
       this.virtual.windowSize = 0;
       this.virtual.pendingRebalance = null;
+      this.virtual.lastRebalanceIndex = -1;
 
       this.maxScroll = 0;
       this.currentIndex = 0;
@@ -1982,6 +2100,12 @@ class ydCarousel {
   onPointerDown(e) {
     if (e.button !== 0 || this._isPaused || this._isFrozen) return; 
     this.isDraggingActive = true;
+    this.dragState.active = true;
+    this.dragState.startLogicalIndex = this.currentIndex;
+    this.dragState.currentLogicalIndex = this.currentIndex;
+    this.dragState.startPointer = this.getPointerPos(e);
+    this.dragState.startTargetPos = this.targetPos;
+
     this.activePointerId = e.pointerId;
     this.isClickSuppressed = false;
 
@@ -2039,6 +2163,7 @@ class ydCarousel {
     }
 
     this.targetPos = newTarget;
+    this.updateDragLogicalIndex();
     this._wake();
     this.emit('dragMove');
 
@@ -2052,6 +2177,7 @@ class ydCarousel {
   onPointerUp(e) {
     if (!this.isDraggingActive) return;
     this.isDraggingActive = false;
+    this.dragState.active = false;
     
     setTimeout(() => { this.isClickSuppressed = false; }, 50);
 
@@ -2171,6 +2297,10 @@ class ydCarousel {
       }
     }
 
+    if (this.virtual.enabled && this.approachingWindowEdge()) {
+      this.midFlightRebalance();
+    }
+
     if (this.options.dragFree && Math.abs(this.inertia) > 0.1 && !this.isDraggingActive) {
       this.inertia *= this.options.friction;
       this.targetPos += this.inertia;
@@ -2200,6 +2330,10 @@ class ydCarousel {
     } else {
       this.isSettled = false;
       this.currentPos += diff * this.options.duration;
+    }
+
+    if (this.dragState.active) {
+      this.validateDragPosition();
     }
 
     const transformVal = this.getTransformValue();
@@ -2290,6 +2424,14 @@ class ydCarousel {
     this.previewGroup = 0;
     this.maxScroll = 0;
     this._manualFrozen = false;
+
+    this.dragState = {
+      active: false,
+      startLogicalIndex: 0,
+      currentLogicalIndex: 0,
+      startPointer: 0,
+      startTargetPos: 0
+    };
     
     this.metrics.viewportSize = 0;
     this.metrics.trackSize = 0;
@@ -2314,6 +2456,7 @@ class ydCarousel {
     this.virtual.windowSize = 0;
     this.virtual.renderIndex = 0;
     this.virtual.pendingRebalance = null;
+    this.virtual.lastRebalanceIndex = -1;
   }
 
   goToGroup(groupIndex, immediate = false, force = false) {
@@ -2365,6 +2508,7 @@ class ydCarousel {
     this.prevIndex = this.currentIndex;
     this.currentIndex = this.findNearestSlide(nextTarget);
     this.previewIndex = this.currentIndex;
+    this.virtual.lastRebalanceIndex = -1;
 
     if (this.virtual.enabled) {
       this.updateVirtualRenderer(this.currentIndex);
@@ -2395,6 +2539,7 @@ class ydCarousel {
         this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex: targetSlide });
         this.prevIndex = this.currentIndex;
         this.currentIndex = targetSlide;
+        this.virtual.lastRebalanceIndex = -1;
 
         if (this.virtual.enabled) {
           this.updateVirtualRenderer(this.currentIndex);
