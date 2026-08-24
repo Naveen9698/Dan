@@ -990,20 +990,31 @@ class ydCarousel {
     ) || null;
   }
 
+  getConfiguredSlidesPerView() {
+    const classTarget = this.root.className + ' ' + (this.track ? this.track.className : '');
+    const match = classTarget.match(/\bslides-(\d+)\b/);
+    if (!match) {
+      return null;
+    }
+    const value = parseInt(match[1], 10);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
   getSlidesPerView() {
     const avg = this.metrics.averageSlideSize;
     if (avg <= 0) {
       return 1;
     }
-    return Math.max(1, Math.ceil(this.metrics.viewportSize / avg));
+    const effectiveSize = avg + this.metrics.gap;
+    return Math.max(1, Math.round(this.metrics.viewportSize / effectiveSize));
   }
 
   getVirtualBuffer() {
-    return Math.max(this.getSlidesPerView() * 3, 6);
+    return Math.max(this.virtual.slidesPerView * 3, 6);
   }
 
   getWindowSize() {
-    const visible = this.getSlidesPerView();
+    const visible = this.virtual.slidesPerView;
     const buffer = this.getVirtualBuffer();
     return buffer + visible + buffer;
   }
@@ -1252,7 +1263,6 @@ class ydCarousel {
   }
 
   slideCount() {
-    // LOGICAL COUNT
     return this.logicalSlideCount();
   }
   
@@ -1731,7 +1741,7 @@ class ydCarousel {
     // RENDERED DOM COUNT
     if (!this.renderedSlideCount()) {
       this.metrics.slideSnaps = [];
-      this.metrics.groupSnaps = [];
+      this.metrics.groupSnaps = []; // legacy
       this.metrics.snapPoints = [];
       this.metrics.slideOffsets = [];
       this.metrics.slideSizes = [];
@@ -1795,12 +1805,26 @@ class ydCarousel {
       this.metrics.averageSlideSize = 0;
     }
 
-    this.virtual.slidesPerView = this.getSlidesPerView();
+    const configuredSlidesPerView = this.getConfiguredSlidesPerView();
+    this.virtual.slidesPerView = configuredSlidesPerView ?? this.getSlidesPerView();
+    if (this.virtual.slidesPerView < 1) {
+      this.virtual.slidesPerView = 1;
+    }
+    
     this.virtual.buffer = this.getVirtualBuffer();
     this.virtual.windowSize = this.getWindowSize();
 
-    this.virtual.logicalGroups = this.buildLogicalGroups();
+    const rebuiltGroups = this.buildLogicalGroups();
+    if (rebuiltGroups.length > 0) {
+      this.virtual.logicalGroups = rebuiltGroups;
+    }
     this.virtual.groupSnaps = this.buildLogicalGroupSnaps();
+
+    console.log({
+      slidesPerView: this.virtual.slidesPerView,
+      logicalGroups: this.virtual.logicalGroups,
+      groupCount: this.virtual.logicalGroups.length
+    });
 
     if (this.virtual.enabled) {
       this.updateVirtualRenderer(this.currentIndex);
@@ -1870,7 +1894,7 @@ class ydCarousel {
     
     this.metrics.slideOffsets = [];
     this.metrics.slideSnaps = [];
-    this.metrics.groupSnaps = [];
+    this.metrics.groupSnaps = []; // legacy
     
     let currentGroupStartOffset = 0;
     let currentGroupStartSnap = 0;
@@ -2510,6 +2534,16 @@ class ydCarousel {
     const maxGroup = this.groupCount() - 1;
     const targetGroup = Math.max(0, Math.min(groupIndex, maxGroup));
     
+    const changed = (this.currentGroup !== targetGroup);
+
+    if (changed) {
+      this.emit('beforeSelect', { currentGroup: this.currentGroup, targetGroup });
+      this.prevGroup = this.currentGroup;
+      this.currentGroup = targetGroup;
+      this.previewGroup = this.currentGroup;
+      this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
+    }
+    
     const logicalIndex = this.virtual.logicalGroups[targetGroup];
     this.goToSlide(logicalIndex, immediate, force);
   }
@@ -2535,7 +2569,9 @@ class ydCarousel {
       this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
     }
     
-    const safeSnapIndex = Math.min(this.currentIndex, this.metrics.slideSnaps.length - 1);
+    // For translation, we still need to grab the snap of the physical rendered node representing the target
+    const targetRenderIndex = this.virtual.enabled ? this.resolveRenderIndex(this.currentIndex) : this.currentIndex;
+    const safeSnapIndex = Math.max(0, Math.min(targetRenderIndex, this.metrics.slideSnaps.length - 1));
     const rawTarget = this.metrics.slideSnaps[safeSnapIndex];
     
     let nextTarget = rawTarget;
@@ -3189,11 +3225,11 @@ class ydCarousel {
                 
                 const currentEvalGroup = api.previewGroup !== undefined ? api.previewGroup : api.currentGroup;
                 
-                if (api.metrics.groupSnaps[currentEvalGroup] !== undefined) {
-                   distToCurrent = Math.abs(api.metrics.groupSnaps[currentEvalGroup] - normalizedTarget);
+                if (api.virtual.logicalGroups[currentEvalGroup] !== undefined) {
+                   distToCurrent = Math.abs(api.virtual.logicalGroups[currentEvalGroup] - normalizedTarget);
                 }
 
-                api.metrics.groupSnaps.forEach((p, i) => {
+                api.virtual.logicalGroups.forEach((p, i) => {
                    let dist = Math.abs(p - normalizedTarget);
                    if (dist < minGroupDist) { minGroupDist = dist; closestGroup = i; }
                 });
