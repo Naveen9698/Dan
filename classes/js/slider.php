@@ -229,7 +229,7 @@ class ydCarousel {
       slideSizes: [],
       slideOffsets: [], 
       slideSnaps: [], 
-      groupSnaps: [], 
+      groupSnaps: [], // legacy
       snapPoints: []  
     };
 
@@ -239,6 +239,8 @@ class ydCarousel {
       renderedSlides: [],
       windowSlides: [],
       lastWindow: [],
+      logicalGroups: [],
+      groupSnaps: [],
       windowStart: 0,
       windowEnd: 0,
       slidesPerView: 0,
@@ -472,9 +474,9 @@ class ydCarousel {
     
     this.announceHandler = (api, payload) => {
       if (api.options.slideSnap) {
-        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.metrics.slideSnaps.length}`;
+        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.logicalSlideCount()}`;
       } else {
-        announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.metrics.groupSnaps.length}`;
+        announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.groupCount()}`;
       }
     };
     this.on('select', this.announceHandler);
@@ -664,7 +666,6 @@ class ydCarousel {
       return Object.freeze(list);
     }
     
-    // LOGICAL COUNT
     if (this.options.loop && this.logicalSlideCount() <= 1) {
       list.push('Loop mode is enabled but requires at least 2 slides.');
     }
@@ -672,7 +673,6 @@ class ydCarousel {
       list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
     }
     
-    // LOGICAL COUNT
     if (this.logicalSlideCount() === 0) {
       list.push('Carousel track contains no slides.');
     }
@@ -791,12 +791,12 @@ class ydCarousel {
       issues.push('autoVisibility is enabled but IntersectionObserver is not supported in this environment.');
     }
 
-    if (this.metrics.slideSnaps.length > 0 && this.currentIndex >= this.metrics.slideSnaps.length) {
+    if (this.logicalSlideCount() > 0 && this.currentIndex >= this.logicalSlideCount()) {
       issues.push('Current index exceeds slide count');
     }
     if (this.currentIndex < 0) issues.push('Current index below zero');
 
-    if (this.metrics.groupSnaps.length > 0 && this.currentGroup >= this.metrics.groupSnaps.length) {
+    if (this.groupCount() > 0 && this.currentGroup >= this.groupCount()) {
       issues.push('Current group exceeds group count');
     }
     if (this.currentGroup < 0) issues.push('Current group below zero');
@@ -825,7 +825,6 @@ class ydCarousel {
       renderTicks: this._stats.renderTicks,
       domNodeCount: totalNodes,
       clonedNodes: clones,
-      // LOGICAL COUNT
       originalSlides: this.logicalSlideCount(),
       activeObservers: this._isFrozen ? 0 : ((this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0))
     });
@@ -841,6 +840,9 @@ class ydCarousel {
         renderedSlides: this.getRenderedCount(),
         windowSlides: this.virtual.windowSlides.length,
         lastWindow: [...this.virtual.lastWindow],
+        logicalGroups: [...this.virtual.logicalGroups],
+        groupCount: this.virtual.logicalGroups.length,
+        currentGroupStart: this.virtual.logicalGroups[this.currentGroup] !== undefined ? this.virtual.logicalGroups[this.currentGroup] : 0,
         currentLogicalIndex: this.currentIndex,
         currentRenderIndex: this.virtual.renderIndex,
         slidesPerView: this.virtual.slidesPerView,
@@ -880,7 +882,7 @@ class ydCarousel {
         slideSizes: Object.freeze([...this.metrics.slideSizes]),
         slideOffsets: Object.freeze([...this.metrics.slideOffsets]),
         slideSnaps: Object.freeze([...this.metrics.slideSnaps]),
-        groupSnaps: Object.freeze([...this.metrics.groupSnaps]),
+        groupSnaps: Object.freeze([...this.metrics.groupSnaps]), // legacy
         snapPoints: Object.freeze([...this.metrics.snapPoints])
       }),
       config: Object.freeze({
@@ -939,11 +941,11 @@ class ydCarousel {
   importState(state) {
     if (!state) return;
     if (typeof state.index === 'number') {
-      const maxIdx = Math.max(0, this.metrics.slideSnaps.length - 1);
+      const maxIdx = Math.max(0, this.logicalSlideCount() - 1);
       const targetIdx = Math.max(0, Math.min(state.index, maxIdx));
       this.goToSlide(targetIdx, true);
     } else if (typeof state.group === 'number') {
-      const maxGrp = Math.max(0, this.metrics.groupSnaps.length - 1);
+      const maxGrp = Math.max(0, this.groupCount() - 1); 
       const targetGrp = Math.max(0, Math.min(state.group, maxGrp));
       this.goToGroup(targetGrp, true);
     }
@@ -1003,6 +1005,46 @@ class ydCarousel {
     return buffer + visible + buffer;
   }
 
+  normalizeLogicalIndex(index) {
+    const total = this.logicalSlideCount();
+    if (!total) return 0;
+    let normalized = index;
+    while (normalized < 0) normalized += total;
+    while (normalized >= total) normalized -= total;
+    return normalized;
+  }
+
+  buildLogicalGroups() {
+    const groups = [];
+    const visible = this.virtual.slidesPerView || 1;
+    const total = this.logicalSlideCount();
+    for (let i = 0; i < total; i += visible) {
+      groups.push(i);
+    }
+    return groups;
+  }
+
+  buildLogicalGroupSnaps() {
+    return this.virtual.logicalGroups.map(groupStart => ({
+      logicalIndex: groupStart
+    }));
+  }
+
+  getGroupForLogicalIndex(index) {
+    const normIndex = this.options.loop ? this.normalizeLogicalIndex(index) : index;
+    const groups = this.virtual.logicalGroups;
+    if (!groups || groups.length === 0) return 0;
+    let result = 0;
+    for (let i = 0; i < groups.length; i++) {
+      if (groups[i] <= normIndex) {
+        result = i;
+      } else {
+        break;
+      }
+    }
+    return result;
+  }
+
   buildVirtualWindow(activeIndex) {
     if (!this.virtual.enabled) {
       return [];
@@ -1019,14 +1061,7 @@ class ydCarousel {
     const window = [];
 
     for (let i = start; i < end; i++) {
-      let logicalIndex = i;
-      while (logicalIndex < 0) {
-        logicalIndex += total;
-      }
-      while (logicalIndex >= total) {
-        logicalIndex -= total;
-      }
-      window.push(logicalIndex);
+      window.push(this.normalizeLogicalIndex(i));
     }
 
     console.assert(
@@ -1188,6 +1223,7 @@ class ydCarousel {
       return;
     }
     this.dragState.currentLogicalIndex = this.findNearestSlide(this.targetPos);
+    this.previewGroup = this.getGroupForLogicalIndex(this.dragState.currentLogicalIndex);
   }
 
   onMidDragRebalance() {
@@ -1213,11 +1249,10 @@ class ydCarousel {
   }
 
   slideCount() {
-    // LOGICAL COUNT
     return this.logicalSlideCount();
   }
   
-  groupCount() { return this.metrics.groupSnaps.length; }
+  groupCount() { return this.virtual.logicalGroups.length; }
   selectedGroup() { return this.currentGroup; }
   
   state() {
@@ -1316,6 +1351,9 @@ class ydCarousel {
       renderedSlides: this.getRenderedCount(),
       windowSlides: this.virtual.windowSlides.length,
       lastWindow: [...this.virtual.lastWindow],
+      logicalGroups: [...this.virtual.logicalGroups],
+      groupCount: this.virtual.logicalGroups.length,
+      currentGroupStart: this.virtual.logicalGroups[this.currentGroup] !== undefined ? this.virtual.logicalGroups[this.currentGroup] : 0,
       currentLogicalIndex: this.currentIndex,
       currentRenderIndex: this.virtual.renderIndex,
       slidesPerView: this.virtual.slidesPerView,
@@ -1365,7 +1403,6 @@ class ydCarousel {
       previousGroup: this.prevGroup,
       previewIndex: this.previewIndex !== undefined ? this.previewIndex : this.currentIndex, 
       previewGroup: this.previewGroup !== undefined ? this.previewGroup : this.currentGroup,    
-      // LOGICAL COUNT
       slideCount: this.logicalSlideCount(),
       progress: this.scrollProgress(),
       visualProgress: this.getVisualProgress(),
@@ -1514,26 +1551,14 @@ class ydCarousel {
       this.currentGroup = 0;
       return;
     }
-    this.currentIndex = Math.max(0, Math.min(this.currentIndex, this.metrics.slideSnaps.length - 1));
-    this.currentGroup = Math.max(0, Math.min(this.currentGroup, this.metrics.groupSnaps.length - 1));
+    this.currentIndex = Math.max(0, Math.min(this.currentIndex, this.logicalSlideCount() - 1));
+    this.currentGroup = Math.max(0, Math.min(this.currentGroup, this.groupCount() - 1));
     
     if (this.options.slideSnap) {
-      const targetSnap = this.metrics.slideSnaps[this.currentIndex];
-      let targetGroup = 0;
-      for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
-        if (this.metrics.groupSnaps[i] <= targetSnap) targetGroup = i;
-        else break;
-      }
-      this.currentGroup = targetGroup;
+      this.currentGroup = this.getGroupForLogicalIndex(this.currentIndex);
     } else {
-      const targetSnap = this.metrics.groupSnaps[this.currentGroup];
-      let nearest = 0;
-      let minDistance = Infinity;
-      this.metrics.slideSnaps.forEach((snap, idx) => {
-         const dist = Math.abs(snap - targetSnap);
-         if (dist < minDistance) { minDistance = dist; nearest = idx; }
-      });
-      this.currentIndex = nearest;
+      const targetLogical = this.virtual.logicalGroups[this.currentGroup];
+      this.currentIndex = targetLogical || 0;
     }
   }
 
@@ -1586,11 +1611,11 @@ class ydCarousel {
 
   canScrollNext() {
     if (this.root.classList.contains('stop-last')) {
-      if (this.options.slideSnap) return this.currentIndex < this.metrics.slideSnaps.length - 1;
-      return this.currentGroup < this.metrics.groupSnaps.length - 1;
+      if (this.options.slideSnap) return this.currentIndex < this.logicalSlideCount() - 1;
+      return this.currentGroup < this.groupCount() - 1;
     }
-    if (this.options.slideSnap) return this.options.loop || this.currentIndex < this.metrics.slideSnaps.length - 1;
-    return this.options.loop || this.currentGroup < this.metrics.groupSnaps.length - 1;
+    if (this.options.slideSnap) return this.options.loop || this.currentIndex < this.logicalSlideCount() - 1;
+    return this.options.loop || this.currentGroup < this.groupCount() - 1;
   }
 
   canScrollPrev() {
@@ -1701,6 +1726,8 @@ class ydCarousel {
 
       this.virtual.windowSlides = [];
       this.virtual.lastWindow = [];
+      this.virtual.logicalGroups = [];
+      this.virtual.groupSnaps = [];
       this.virtual.slidesPerView = 0;
       this.virtual.buffer = 0;
       this.virtual.windowSize = 0;
@@ -1757,6 +1784,9 @@ class ydCarousel {
     this.virtual.slidesPerView = this.getSlidesPerView();
     this.virtual.buffer = this.getVirtualBuffer();
     this.virtual.windowSize = this.getWindowSize();
+
+    this.virtual.logicalGroups = this.buildLogicalGroups();
+    this.virtual.groupSnaps = this.buildLogicalGroupSnaps();
 
     if (this.virtual.enabled) {
       this.updateVirtualRenderer(this.currentIndex);
@@ -2242,7 +2272,7 @@ class ydCarousel {
     const isVert = this.options.vertical;
     
     if (e.key === 'Home') this.options.slideSnap ? this.goToSlide(0) : this.goToGroup(0);
-    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.metrics.slideSnaps.length - 1) : this.goToGroup(this.metrics.groupSnaps.length - 1);
+    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.logicalSlideCount() - 1) : this.goToGroup(this.groupCount() - 1);
     
     if (e.key === 'PageDown') this.scrollNext();
     if (e.key === 'PageUp') this.scrollPrev();
@@ -2449,6 +2479,8 @@ class ydCarousel {
     this.virtual.renderedSlides = [];
     this.virtual.windowSlides = [];
     this.virtual.lastWindow = [];
+    this.virtual.logicalGroups = [];
+    this.virtual.groupSnaps = [];
     this.virtual.windowStart = 0;
     this.virtual.windowEnd = 0;
     this.virtual.slidesPerView = 0;
@@ -2460,21 +2492,39 @@ class ydCarousel {
   }
 
   goToGroup(groupIndex, immediate = false, force = false) {
-    if (!this.metrics.groupSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
-    const maxGroup = this.metrics.groupSnaps.length - 1;
+    if (!this.groupCount() || ((this._isPaused || this._isFrozen) && !force)) return;
+    const maxGroup = this.groupCount() - 1;
     const targetGroup = Math.max(0, Math.min(groupIndex, maxGroup));
     
-    const changed = (this.currentGroup !== targetGroup);
+    const logicalIndex = this.virtual.logicalGroups[targetGroup];
+    this.goToSlide(logicalIndex, immediate, force);
+  }
+
+  goToSlide(slideIndex, immediate = false, force = false) {
+    if (!this.metrics.slideSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
+    const maxSlide = this.logicalSlideCount() - 1;
+    const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
+
+    const changed = (this.currentIndex !== targetSlide);
 
     if (changed) {
-      this.emit('beforeSelect', { currentGroup: this.currentGroup, targetGroup });
-      this.prevGroup = this.currentGroup;
-      this.currentGroup = targetGroup;
-      this.previewGroup = this.currentGroup;
-      this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
+      this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex: targetSlide });
+      this.prevIndex = this.currentIndex;
+      this.currentIndex = targetSlide;
+      this.virtual.lastRebalanceIndex = -1;
+
+      if (this.virtual.enabled) {
+        this.updateVirtualRenderer(this.currentIndex);
+      }
+
+      this.previewIndex = this.currentIndex;
+      this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
     }
     
-    let nextTarget = this.metrics.groupSnaps[this.currentGroup];
+    const safeSnapIndex = Math.min(this.currentIndex, this.metrics.slideSnaps.length - 1);
+    const rawTarget = this.metrics.slideSnaps[safeSnapIndex];
+    
+    let nextTarget = rawTarget;
     this.inertia = 0; 
 
     if (this.options.loop && !immediate) {
@@ -2488,6 +2538,7 @@ class ydCarousel {
     }
 
     this.targetPos = nextTarget;
+
     if (immediate) {
       this.inertia = 0;
       this._velocity = 0;
@@ -2505,17 +2556,13 @@ class ydCarousel {
       this._wake();
     }
 
-    this.prevIndex = this.currentIndex;
-    this.currentIndex = this.findNearestSlide(nextTarget);
-    this.previewIndex = this.currentIndex;
-    this.virtual.lastRebalanceIndex = -1;
-
-    if (this.virtual.enabled) {
-      this.updateVirtualRenderer(this.currentIndex);
-    }
+    const targetGroup = this.getGroupForLogicalIndex(this.currentIndex);
     
-    if (this.currentIndex !== this.prevIndex) {
-      this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
+    if (this.currentGroup !== targetGroup) {
+       this.prevGroup = this.currentGroup;
+       this.currentGroup = targetGroup;
+       this.previewGroup = this.currentGroup;
+       this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
     }
     
     this.updateSlideStates();
@@ -2527,99 +2574,11 @@ class ydCarousel {
     }
   }
 
-  goToSlide(slideIndex, immediate = false, force = false) {
-    if (!this.metrics.slideSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
-    const maxSlide = this.metrics.slideSnaps.length - 1;
-    const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
-
-    if (this.options.slideSnap) {
-      const changed = (this.currentIndex !== targetSlide);
-
-      if (changed) {
-        this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex: targetSlide });
-        this.prevIndex = this.currentIndex;
-        this.currentIndex = targetSlide;
-        this.virtual.lastRebalanceIndex = -1;
-
-        if (this.virtual.enabled) {
-          this.updateVirtualRenderer(this.currentIndex);
-        }
-
-        this.previewIndex = this.currentIndex;
-        this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
-      }
-      
-      const rawTarget = this.metrics.slideSnaps[this.currentIndex];
-      let nextTarget = rawTarget;
-      this.inertia = 0; 
-
-      if (this.options.loop && !immediate) {
-        const distNormal = nextTarget - this.targetPos;
-        const distForward = (nextTarget + this.metrics.realTrackSize) - this.targetPos;
-        const distBackward = (nextTarget - this.metrics.realTrackSize) - this.targetPos;
-        const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
-        
-        if (minDist === Math.abs(distForward)) nextTarget += this.metrics.realTrackSize;
-        else if (minDist === Math.abs(distBackward)) nextTarget -= this.metrics.realTrackSize;
-      }
-
-      this.targetPos = nextTarget;
-
-      if (immediate) {
-        this.inertia = 0;
-        this._velocity = 0;
-        this.currentPos = this.targetPos;
-        const transformVal = this.getTransformValue();
-        this.track.style.transform = this.options.vertical 
-          ? `translate3d(0, ${transformVal}px, 0)` 
-          : `translate3d(${transformVal}px, 0, 0)`;
-          
-        if (!this.isSettled) {
-          this.isSettled = true;
-          this.emit('settle');
-        }
-      } else {
-        this._wake();
-      }
-
-      let targetGroup = 0;
-      for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
-        if (this.metrics.groupSnaps[i] <= rawTarget) targetGroup = i;
-        else break;
-      }
-      
-      if (this.currentGroup !== targetGroup) {
-         this.prevGroup = this.currentGroup;
-         this.currentGroup = targetGroup;
-         this.previewGroup = this.currentGroup;
-         this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
-      }
-      
-      this.updateSlideStates();
-      this.updateAutoHeight();
-
-      if (changed) {
-        this.emit('select');
-        this.emit('afterSelect'); 
-      }
-      return;
-    }
-
-    const targetSnap = this.metrics.slideSnaps[targetSlide];
-    let targetGroup = 0;
-    for (let i = 0; i < this.metrics.groupSnaps.length; i++) {
-      if (this.metrics.groupSnaps[i] <= targetSnap) targetGroup = i;
-      else break;
-    }
-    this.goToGroup(targetGroup, immediate, force);
-  }
-
   snapToClosest(immediate = false, force = false) {
     let closestIndex = 0;
     let minDistance = Infinity;
-    const snaps = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
     
-    snaps.forEach((point, index) => {
+    this.metrics.slideSnaps.forEach((point, index) => {
       const d1 = Math.abs(point - this.targetPos);
       const d2 = this.options.loop ? Math.abs((point + this.metrics.realTrackSize) - this.targetPos) : Infinity;
       const d3 = this.options.loop ? Math.abs((point - this.metrics.realTrackSize) - this.targetPos) : Infinity;
@@ -2631,7 +2590,7 @@ class ydCarousel {
     });
 
     if (this.options.dragFree) {
-       this.targetPos = snaps[closestIndex];
+       this.targetPos = this.metrics.slideSnaps[closestIndex];
        if (immediate) {
          this.currentPos = this.targetPos;
          const transformVal = this.getTransformValue();
@@ -2649,25 +2608,26 @@ class ydCarousel {
        if (this.options.slideSnap) {
          this.goToSlide(closestIndex, immediate, force);
        } else {
-         this.goToGroup(closestIndex, immediate, force);
+         const group = this.getGroupForLogicalIndex(closestIndex);
+         this.goToGroup(group, immediate, force);
        }
     }
   }
 
   scrollNext(force = false) {
-    if (!this.metrics.slideSnaps.length && !this.metrics.groupSnaps.length) return;
+    if (!this.logicalSlideCount()) return;
     if ((this._isPaused || this._isFrozen) && !force) return;
     
     if (this.options.slideSnap) {
       if (this.options.loop) {
-        this.goToSlide((this.currentIndex + 1) % this.metrics.slideSnaps.length, false, force);
+        this.goToSlide((this.currentIndex + 1) % this.logicalSlideCount(), false, force);
       } else {
-        this.goToSlide(Math.min(this.currentIndex + 1, this.metrics.slideSnaps.length - 1), false, force);
+        this.goToSlide(Math.min(this.currentIndex + 1, this.logicalSlideCount() - 1), false, force);
       }
       return;
     }
     
-    if (this.currentGroup < this.metrics.groupSnaps.length - 1) {
+    if (this.currentGroup < this.groupCount() - 1) {
       this.goToGroup(this.currentGroup + 1, false, force);
     } else if (this.options.loop && this.canScrollNext()) {
       this.goToGroup(0, false, force);
@@ -2675,12 +2635,12 @@ class ydCarousel {
   }
 
   scrollPrev(force = false) {
-    if (!this.metrics.slideSnaps.length && !this.metrics.groupSnaps.length) return;
+    if (!this.logicalSlideCount()) return;
     if ((this._isPaused || this._isFrozen) && !force) return;
     
     if (this.options.slideSnap) {
       if (this.options.loop) {
-        this.goToSlide((this.currentIndex - 1 + this.metrics.slideSnaps.length) % this.metrics.slideSnaps.length, false, force);
+        this.goToSlide((this.currentIndex - 1 + this.logicalSlideCount()) % this.logicalSlideCount(), false, force);
       } else {
         this.goToSlide(Math.max(this.currentIndex - 1, 0), false, force);
       }
@@ -2690,7 +2650,7 @@ class ydCarousel {
     if (this.currentGroup > 0) {
       this.goToGroup(this.currentGroup - 1, false, force);
     } else if (this.options.loop && this.canScrollPrev()) {
-      this.goToGroup(this.metrics.groupSnaps.length - 1, false, force);
+      this.goToGroup(this.groupCount() - 1, false, force);
     }
   }
 
@@ -2907,8 +2867,10 @@ class ydCarousel {
             dotsContainer.setAttribute('role', 'tablist');
             dotsContainer.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
             
-            const snaps = api.options.slideSnap ? api.metrics.slideSnaps : api.metrics.groupSnaps;
-            snaps.forEach((_, idx) => {
+            const totalDots = api.options.slideSnap ? api.logicalSlideCount() : api.groupCount();
+            const dotsArray = new Array(totalDots).fill(0);
+
+            dotsArray.forEach((_, idx) => {
               let dot = template ? template.cloneNode(true) : document.createElement('button');
               if (!template) dot.className = 'yd_dot';
               dot.setAttribute('role', 'tab');
@@ -2930,9 +2892,9 @@ class ydCarousel {
                   e.preventDefault();
                   let targetIdx = idx;
                   if (e.key === nextKey) {
-                    targetIdx = (idx + 1) % snaps.length;
+                    targetIdx = (idx + 1) % totalDots;
                   } else if (e.key === prevKey) {
-                    targetIdx = (idx - 1 + snaps.length) % snaps.length;
+                    targetIdx = (idx - 1 + totalDots) % totalDots;
                   }
                   const targetDot = dotsContainer.children[targetIdx];
                   if (targetDot) targetDot.focus();
@@ -2950,7 +2912,7 @@ class ydCarousel {
 
                 if (e.key === 'End') {
                   e.preventDefault();
-                  const lastIdx = snaps.length - 1;
+                  const lastIdx = totalDots - 1;
                   const targetDot = dotsContainer.children[lastIdx];
                   if (targetDot) targetDot.focus();
                   if (api.options.slideSnap) api.goToSlide(lastIdx);
@@ -3006,7 +2968,7 @@ class ydCarousel {
               const current = api.options.slideSnap 
                 ? (payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex) + 1 
                 : (payload.previewGroup !== undefined ? payload.previewGroup : payload.currentGroup) + 1;
-              const total = api.options.slideSnap ? api.metrics.slideSnaps.length : api.metrics.groupSnaps.length;
+              const total = api.options.slideSnap ? api.logicalSlideCount() : api.groupCount();
 
               if (currentEl && totalEl) {
                 currentEl.textContent = current;
@@ -3404,7 +3366,7 @@ class ydCarousel {
               stop: () => stopPermanent(),
               reset: () => {
                  permanentlyStopped = false;
-                 const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
+                 const ready = api.options.slideSnap ? api.logicalSlideCount() > 0 : api.groupCount() > 0;
                  if (!hasStarted && ready) {
                   isPaused = false;
                   play();
@@ -3415,7 +3377,7 @@ class ydCarousel {
                 resetVisual();
                 if (permanentlyStopped) {
                   permanentlyStopped = false;
-                  const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
+                  const ready = api.options.slideSnap ? api.logicalSlideCount() > 0 : api.groupCount() > 0;
                   if (ready) {
                      isPaused = false;
                      play();
@@ -3517,7 +3479,7 @@ class ydCarousel {
             
             if (typeof requestAnimationFrame === 'function') {
               requestAnimationFrame(() => {
-                const ready = api.options.slideSnap ? api.metrics.slideSnaps.length > 0 : api.metrics.groupSnaps.length > 0;
+                const ready = api.options.slideSnap ? api.logicalSlideCount() > 0 : api.groupCount() > 0;
                 if (ready) {
                   play();
                 }
@@ -3575,7 +3537,7 @@ class ydCarousel {
               
               const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
               const isAtStart = (api.options.slideSnap ? api.currentIndex === 0 : api.currentGroup === 0) && delta < 0;
-              const maxEnd = api.options.slideSnap ? api.metrics.slideSnaps.length - 1 : api.metrics.groupSnaps.length - 1;
+              const maxEnd = api.options.slideSnap ? api.logicalSlideCount() - 1 : api.groupCount() - 1;
               const isAtEnd = (api.options.slideSnap ? api.currentIndex >= maxEnd : api.currentGroup >= maxEnd) && delta > 0;
               
               if (!api.options.loop && (isAtStart || isAtEnd)) {
