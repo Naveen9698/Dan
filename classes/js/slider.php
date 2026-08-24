@@ -229,13 +229,15 @@ class ydCarousel {
       enabled: this.root.dataset.virtual === 'true',
       logicalSlides: [],
       renderedSlides: [],
+      windowSlides: [],
+      lastWindow: [],
       windowStart: 0,
       windowEnd: 0,
       slidesPerView: 0,
       buffer: 0,
       windowSize: 0,
       renderIndex: 0,
-      pendingRebalance: false
+      pendingRebalance: null
     };
 
     this.listeners = {};
@@ -824,15 +826,20 @@ class ydCarousel {
       inspection: this.inspect(),
       virtual: Object.freeze({
         enabled: this.virtual.enabled,
-        logicalSlides: this.logicalSlideCount(),
-        renderedSlides: this.virtual.renderedSlides.length,
+        logicalSlides: this.getLogicalCount(),
+        renderedSlides: this.getRenderedCount(),
+        windowSlides: this.virtual.windowSlides.length,
+        lastWindow: [...this.virtual.lastWindow],
+        currentLogicalIndex: this.currentIndex,
+        currentRenderIndex: this.virtual.renderIndex,
         slidesPerView: this.virtual.slidesPerView,
         buffer: this.virtual.buffer,
         windowSize: this.virtual.windowSize,
         windowStart: this.virtual.windowStart,
         windowEnd: this.virtual.windowEnd,
         renderIndex: this.virtual.renderIndex,
-        pendingRebalance: this.virtual.pendingRebalance
+        pendingRebalance: this.virtual.pendingRebalance,
+        renderedIndices: this.buildVirtualWindow(this.currentIndex)
       }),
       health: this.health(),
       performance: this.performanceStats(),
@@ -937,7 +944,7 @@ class ydCarousel {
   targetPosition() { return this.targetPos; }
 
   logicalSlides() { return this.virtual.logicalSlides; }
-  renderedSlides() { return this.slides; }
+  renderedSlides() { return this.virtual.renderedSlides; }
 
   logicalSlideCount() {
     if (this.virtual.logicalSlides.length > 0) {
@@ -946,10 +953,19 @@ class ydCarousel {
     return this.slides.length;
   }
 
-  renderedSlideCount() { return this.slides.length; }
+  renderedSlideCount() { return this.virtual.renderedSlides.length; }
+
+  getLogicalCount() { return this.logicalSlideCount(); }
+  getRenderedCount() { return this.virtual.renderedSlides.length; }
 
   getLogicalSlide(index) { return this.virtual.logicalSlides[index] || null; }
-  getRenderedSlide(index) { return this.slides[index] || null; }
+  getRenderedSlide(index) { return this.virtual.renderedSlides[index] || null; }
+
+  getRenderedSlideByLogicalIndex(index) {
+    return this.slides.find(
+      slide => Number(slide.getAttribute('data-slide-index')) === index
+    ) || null;
+  }
 
   getSlidesPerView() {
     const avg = this.metrics.averageSlideSize;
@@ -967,6 +983,123 @@ class ydCarousel {
     const visible = this.getSlidesPerView();
     const buffer = this.getVirtualBuffer();
     return buffer + visible + buffer;
+  }
+
+  buildVirtualWindow(activeIndex) {
+    if (!this.virtual.enabled) {
+      return [];
+    }
+
+    const total = this.logicalSlideCount();
+    if (!total) {
+      return [];
+    }
+
+    const buffer = this.virtual.buffer;
+    const start = activeIndex - buffer;
+    const end = activeIndex + buffer + this.virtual.slidesPerView;
+    const window = [];
+
+    for (let i = start; i < end; i++) {
+      let logicalIndex = i;
+      while (logicalIndex < 0) {
+        logicalIndex += total;
+      }
+      while (logicalIndex >= total) {
+        logicalIndex -= total;
+      }
+      window.push(logicalIndex);
+    }
+
+    console.assert(
+      window.length === this.virtual.windowSize,
+      'Invalid virtual window size'
+    );
+
+    return window;
+  }
+
+  buildRenderedSlides(activeIndex) {
+    const indices = this.buildVirtualWindow(activeIndex);
+    return indices.map(index => this.virtual.logicalSlides[index]);
+  }
+
+  resolveRenderIndex(logicalIndex) {
+    const window = this.buildVirtualWindow(this.currentIndex);
+    const index = window.indexOf(logicalIndex);
+    return index >= 0 ? index : 0;
+  }
+
+  syncRenderIndex() {
+    this.virtual.renderIndex = this.resolveRenderIndex(this.currentIndex);
+  }
+
+  calculateWindowDelta(oldWindow, newWindow) {
+    return {
+      removed: oldWindow.filter(x => !newWindow.includes(x)),
+      added: newWindow.filter(x => !oldWindow.includes(x))
+    };
+  }
+
+  measureOutgoingWidth(indices) {
+    let width = 0;
+    indices.forEach(index => {
+      const slide = this.getRenderedSlideByLogicalIndex(index);
+      if (!slide) {
+        return;
+      }
+      const rect = slide.getBoundingClientRect();
+      width += (this.options.vertical ? rect.height : rect.width) + this.metrics.gap;
+    });
+    return width;
+  }
+
+  applyTranslationCompensation(delta, direction) {
+    if (direction === 'forward') {
+      this.currentPos -= delta;
+      this.targetPos -= delta;
+    } else {
+      this.currentPos += delta;
+      this.targetPos += delta;
+    }
+  }
+
+  rebalanceWindow(activeIndex) {
+    const oldWindow = [...this.virtual.lastWindow];
+    const newWindow = this.buildVirtualWindow(activeIndex);
+    const diff = this.calculateWindowDelta(oldWindow, newWindow);
+    const deltaWidth = this.measureOutgoingWidth(diff.removed);
+
+    this.virtual.windowSlides = this.buildRenderedSlides(activeIndex);
+
+    let direction = this.currentIndex > this.prevIndex ? 'forward' : 'backward';
+    if (this.options.loop && this.logicalSlideCount() > 0) {
+      const half = this.logicalSlideCount() / 2;
+      if (this.prevIndex - this.currentIndex > half) direction = 'forward';
+      else if (this.currentIndex - this.prevIndex > half) direction = 'backward';
+    }
+
+    this.virtual.pendingRebalance = {
+      direction,
+      deltaWidth
+    };
+
+    this.virtual.lastWindow = [...newWindow];
+  }
+
+  updateVirtualRenderer(activeIndex) {
+    if (!this.virtual.enabled) {
+      return;
+    }
+
+    if (this.virtual.lastWindow.length === 0) {
+      this.virtual.windowSlides = this.buildRenderedSlides(activeIndex);
+      this.virtual.lastWindow = this.buildVirtualWindow(activeIndex);
+    } else {
+      this.rebalanceWindow(activeIndex);
+    }
+
+    this.syncRenderIndex();
   }
 
   slideCount() {
@@ -1069,16 +1202,32 @@ class ydCarousel {
   virtualInfo() {
     return Object.freeze({
       enabled: this.virtual.enabled,
-      logicalSlides: this.logicalSlideCount(),
-      renderedSlides: this.virtual.renderedSlides.length,
+      logicalSlides: this.getLogicalCount(),
+      renderedSlides: this.getRenderedCount(),
+      windowSlides: this.virtual.windowSlides.length,
+      lastWindow: [...this.virtual.lastWindow],
+      currentLogicalIndex: this.currentIndex,
+      currentRenderIndex: this.virtual.renderIndex,
       slidesPerView: this.virtual.slidesPerView,
       buffer: this.virtual.buffer,
       windowSize: this.virtual.windowSize,
       windowStart: this.virtual.windowStart,
       windowEnd: this.virtual.windowEnd,
       renderIndex: this.virtual.renderIndex,
-      pendingRebalance: this.virtual.pendingRebalance
+      pendingRebalance: this.virtual.pendingRebalance,
+      renderedIndices: this.buildVirtualWindow(this.currentIndex)
     });
+  }
+
+  virtualWindowInfo() {
+    return {
+      activeIndex: this.currentIndex,
+      slidesPerView: this.virtual.slidesPerView,
+      buffer: this.virtual.buffer,
+      windowSize: this.virtual.windowSize,
+      renderedSlides: this.virtual.renderedSlides.length,
+      indices: this.buildVirtualWindow(this.currentIndex)
+    };
   }
 
   virtualMathReport() {
@@ -1165,7 +1314,8 @@ class ydCarousel {
   
   activeSlide() { 
     // RENDERED LOOKUP
-    return this.getRenderedSlide(this.currentIndex); 
+    const activeIdx = this.virtual.enabled ? this.virtual.renderIndex : this.currentIndex;
+    return this.getRenderedSlide(activeIdx); 
   }
   
   slideNodes() { 
@@ -1209,7 +1359,8 @@ class ydCarousel {
     if (this.destroyed) return;
     if (this.batchDepth === 0) {
       // RENDERED LOOKUP
-      this._trackedActiveNode = this.getRenderedSlide(this.currentIndex);
+      const activeIdx = this.virtual.enabled ? this.virtual.renderIndex : this.currentIndex;
+      this._trackedActiveNode = this.getRenderedSlide(activeIdx);
       this._purgeClones(); 
     }
     this.batchDepth++;
@@ -1407,11 +1558,12 @@ class ydCarousel {
     if (this.mutationObserver) this.mutationObserver.disconnect();
     this._purgeClones();
     
-    this.slides = Array.from(this.track.children);
+    // NEW OWNERSHIP MODEL
+    this.virtual.renderedSlides = Array.from(this.track.children);
+    this.slides = this.virtual.renderedSlides;
     
-    if (!this.virtual.enabled) {
-      this.virtual.logicalSlides = [...this.slides];
-      this.virtual.renderedSlides = [...this.slides];
+    if (!this.virtual.enabled || this.virtual.logicalSlides.length === 0) {
+      this.virtual.logicalSlides = [...this.virtual.renderedSlides];
     }
 
     if (this._isDynamicRefreshing) {
@@ -1430,9 +1582,12 @@ class ydCarousel {
       this.metrics.slideSizes = [];
       this.metrics.averageSlideSize = 0;
 
+      this.virtual.windowSlides = [];
+      this.virtual.lastWindow = [];
       this.virtual.slidesPerView = 0;
       this.virtual.buffer = 0;
       this.virtual.windowSize = 0;
+      this.virtual.pendingRebalance = null;
 
       this.maxScroll = 0;
       this.currentIndex = 0;
@@ -1485,6 +1640,10 @@ class ydCarousel {
     this.virtual.buffer = this.getVirtualBuffer();
     this.virtual.windowSize = this.getWindowSize();
 
+    if (this.virtual.enabled) {
+      this.updateVirtualRenderer(this.currentIndex);
+    }
+
     // RENDERED LOOKUP
     const firstRect = this.getRenderedSlide(0).getBoundingClientRect();
     
@@ -1507,8 +1666,8 @@ class ydCarousel {
       physicalSize = relativeOffsets[lastIdx] + this.metrics.slideSizes[lastIdx];
     }
 
-    // LOGICAL COUNT
-    if (this.logicalSlideCount() > 1) {
+    // RENDERED DOM COUNT (Gap Calculation Fix)
+    if (this.getRenderedCount() > 1) {
       loopGap = relativeOffsets[1] - (relativeOffsets[0] + this.metrics.slideSizes[0]);
       loopGap = Math.max(0, loopGap);
     }
@@ -2146,13 +2305,15 @@ class ydCarousel {
 
     this.virtual.logicalSlides = [];
     this.virtual.renderedSlides = [];
+    this.virtual.windowSlides = [];
+    this.virtual.lastWindow = [];
     this.virtual.windowStart = 0;
     this.virtual.windowEnd = 0;
     this.virtual.slidesPerView = 0;
     this.virtual.buffer = 0;
     this.virtual.windowSize = 0;
     this.virtual.renderIndex = 0;
-    this.virtual.pendingRebalance = false;
+    this.virtual.pendingRebalance = null;
   }
 
   goToGroup(groupIndex, immediate = false, force = false) {
@@ -2204,6 +2365,10 @@ class ydCarousel {
     this.prevIndex = this.currentIndex;
     this.currentIndex = this.findNearestSlide(nextTarget);
     this.previewIndex = this.currentIndex;
+
+    if (this.virtual.enabled) {
+      this.updateVirtualRenderer(this.currentIndex);
+    }
     
     if (this.currentIndex !== this.prevIndex) {
       this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
@@ -2230,6 +2395,11 @@ class ydCarousel {
         this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex: targetSlide });
         this.prevIndex = this.currentIndex;
         this.currentIndex = targetSlide;
+
+        if (this.virtual.enabled) {
+          this.updateVirtualRenderer(this.currentIndex);
+        }
+
         this.previewIndex = this.currentIndex;
         this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
       }
@@ -2395,6 +2565,10 @@ class ydCarousel {
       visualNext = prevIdx;
     }
 
+    const activeRenderIndex = this.virtual.enabled ? this.virtual.renderIndex : this.currentIndex;
+    const prevRenderIndex = this.virtual.enabled ? this.resolveRenderIndex(visualPrev) : visualPrev;
+    const nextRenderIndex = this.virtual.enabled ? this.resolveRenderIndex(visualNext) : visualNext;
+
     // RENDERED DOM COUNT
     this.slides.forEach((slide, idx) => {
       slide.classList.remove('active', 'prev', 'next');
@@ -2405,13 +2579,13 @@ class ydCarousel {
       // LOGICAL COUNT usage
       slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
 
-      if (idx === this.currentIndex) {
+      if (idx === activeRenderIndex) {
         slide.classList.add('active');
         slide.setAttribute('aria-current', 'true');
         slide.setAttribute('tabindex', '0');
       } else {
-        if (idx === visualPrev) slide.classList.add('prev');
-        else if (idx === visualNext) slide.classList.add('next');
+        if (idx === prevRenderIndex) slide.classList.add('prev');
+        else if (idx === nextRenderIndex) slide.classList.add('next');
         slide.setAttribute('tabindex', '-1');
       }
     });
@@ -2427,9 +2601,9 @@ class ydCarousel {
         
         if (idx === this.currentIndex) {
           clone.classList.add('active');
-        } else if (idx === visualPrev) {
+        } else if (idx === prevIdx) {
           clone.classList.add('prev');
-        } else if (idx === visualNext) {
+        } else if (idx === nextIdx) {
           clone.classList.add('next');
         }
       });
@@ -2443,7 +2617,8 @@ class ydCarousel {
   updateAutoHeight() {
     if (!this.options.autoHeight) return;
     // RENDERED LOOKUP
-    const slide = this.getRenderedSlide(this.currentIndex);
+    const activeIdx = this.virtual.enabled ? this.virtual.renderIndex : this.currentIndex;
+    const slide = this.getRenderedSlide(activeIdx);
     if (!slide) return;
     
     const height = slide.offsetHeight;
