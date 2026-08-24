@@ -23,7 +23,7 @@
 class ydCarousel {
   static VERSION = '2.6.2'; 
   static ENGINE = 'ydCarousel-Enterprise';
-  static DEBUG = true; // Enabled for Milestone 10 diagnostics
+  static DEBUG = true; // Enabled for diagnostics
   static SNAP_EPSILON = 0.5; 
   static _autoInitObserver = null;
   static _pluginRegistry = new Map();
@@ -474,7 +474,7 @@ class ydCarousel {
     
     this.announceHandler = (api, payload) => {
       if (api.options.slideSnap) {
-        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.logicalSlideCount()}`;
+        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slideSnapCount()}`;
       } else {
         announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.groupCount()}`;
       }
@@ -793,8 +793,8 @@ class ydCarousel {
       issues.push('autoVisibility is enabled but IntersectionObserver is not supported in this environment.');
     }
 
-    if (this.logicalSlideCount() > 0 && this.currentIndex >= this.logicalSlideCount()) {
-      issues.push('Current index exceeds slide count');
+    if (this.logicalSlideCount() > 0 && this.currentIndex > this.maxReachableSlideIndex()) {
+      issues.push('Current index exceeds reachable slide count');
     }
     if (this.currentIndex < 0) issues.push('Current index below zero');
 
@@ -827,7 +827,6 @@ class ydCarousel {
       renderTicks: this._stats.renderTicks,
       domNodeCount: totalNodes,
       clonedNodes: clones,
-      // LOGICAL COUNT
       originalSlides: this.logicalSlideCount(),
       activeObservers: this._isFrozen ? 0 : ((this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0))
     });
@@ -857,7 +856,9 @@ class ydCarousel {
         pendingRebalance: this.virtual.pendingRebalance,
         lastRebalanceIndex: this.virtual.lastRebalanceIndex,
         safetyMargin: this.windowSafetyMargin(),
-        renderedIndices: this.buildVirtualWindow(this.currentIndex)
+        renderedIndices: this.buildVirtualWindow(this.currentIndex),
+        virtualProgress: this.virtualProgress(),
+        virtualTrackSize: this.virtualTrackSize()
       }),
       drag: {
         active: this.dragState.active,
@@ -944,7 +945,7 @@ class ydCarousel {
   importState(state) {
     if (!state) return;
     if (typeof state.index === 'number') {
-      const maxIdx = Math.max(0, this.logicalSlideCount() - 1);
+      const maxIdx = this.maxReachableSlideIndex();
       const targetIdx = Math.max(0, Math.min(state.index, maxIdx));
       this.goToSlide(targetIdx, true);
     } else if (typeof state.group === 'number') {
@@ -1267,8 +1268,36 @@ class ydCarousel {
   }
   
   groupCount() { return this.virtual.logicalGroups.length; }
+  slideSnapCount() { return this.metrics.slideSnaps.length; }
+  
+  maxReachableSlideIndex() {
+    if (this.options.loop) {
+      return Math.max(0, this.logicalSlideCount() - 1);
+    }
+    return Math.max(0, this.slideSnapCount() - 1);
+  }
+
   selectedGroup() { return this.currentGroup; }
   
+  virtualTrackSize() {
+    return this.logicalSlideCount() * this.metrics.averageSlideSize;
+  }
+
+  virtualProgress() {
+    const total = this.maxReachableSlideIndex();
+    if (total <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(1, this.currentIndex / total));
+  }
+
+  visualScrollbarProgress() {
+    if (this.virtual.enabled) {
+      return this.virtualProgress();
+    }
+    return this.scrollProgress();
+  }
+
   state() {
     return Object.freeze({
       version: this.version(),
@@ -1384,7 +1413,9 @@ class ydCarousel {
         active: this.dragState.active,
         startLogicalIndex: this.dragState.startLogicalIndex,
         currentLogicalIndex: this.dragState.currentLogicalIndex
-      }
+      },
+      virtualProgress: this.virtualProgress(),
+      virtualTrackSize: this.virtualTrackSize()
     });
   }
 
@@ -1403,6 +1434,7 @@ class ydCarousel {
     return {
       viewport: this.metrics.viewportSize,
       averageSlide: this.metrics.averageSlideSize,
+      gap: this.metrics.gap,
       slidesPerView: this.getSlidesPerView(),
       buffer: this.getVirtualBuffer(),
       windowSize: this.getWindowSize()
@@ -1417,10 +1449,10 @@ class ydCarousel {
       previousGroup: this.prevGroup,
       previewIndex: this.previewIndex !== undefined ? this.previewIndex : this.currentIndex, 
       previewGroup: this.previewGroup !== undefined ? this.previewGroup : this.currentGroup,    
-      // LOGICAL COUNT
       slideCount: this.logicalSlideCount(),
       progress: this.scrollProgress(),
       visualProgress: this.getVisualProgress(),
+      virtualProgress: this.virtualProgress(),
       isDragging: this.isDraggingActive,
       isSettled: this.isSettled,
       looping: this.options.loop,
@@ -1478,7 +1510,16 @@ class ydCarousel {
   }
 
   scrollTo(index, immediate = false) { this.goToSlide(index, immediate); }
+  
   selectedIndex() { return this.currentIndex; }
+  
+  selectedLogicalSlide() {
+    if (this.options.loop) {
+      return this.currentIndex;
+    }
+    return Math.min(this.currentIndex, this.logicalSlideCount() - 1);
+  }
+  
   previousIndex() { return this.prevIndex; }
   
   activeSlide() { 
@@ -1566,7 +1607,7 @@ class ydCarousel {
       this.currentGroup = 0;
       return;
     }
-    this.currentIndex = Math.max(0, Math.min(this.currentIndex, this.logicalSlideCount() - 1));
+    this.currentIndex = Math.max(0, Math.min(this.currentIndex, this.maxReachableSlideIndex()));
     this.currentGroup = Math.max(0, Math.min(this.currentGroup, this.groupCount() - 1));
     
     if (this.options.slideSnap) {
@@ -1626,10 +1667,10 @@ class ydCarousel {
 
   canScrollNext() {
     if (this.root.classList.contains('stop-last')) {
-      if (this.options.slideSnap) return this.currentIndex < this.logicalSlideCount() - 1;
+      if (this.options.slideSnap) return this.currentIndex < this.maxReachableSlideIndex();
       return this.currentGroup < this.groupCount() - 1;
     }
-    if (this.options.slideSnap) return this.options.loop || this.currentIndex < this.logicalSlideCount() - 1;
+    if (this.options.slideSnap) return this.options.loop || this.currentIndex < this.maxReachableSlideIndex();
     return this.options.loop || this.currentGroup < this.groupCount() - 1;
   }
 
@@ -2310,7 +2351,7 @@ class ydCarousel {
     const isVert = this.options.vertical;
     
     if (e.key === 'Home') this.options.slideSnap ? this.goToSlide(0) : this.goToGroup(0);
-    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.logicalSlideCount() - 1) : this.goToGroup(this.groupCount() - 1);
+    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.maxReachableSlideIndex()) : this.goToGroup(this.groupCount() - 1);
     
     if (e.key === 'PageDown') this.scrollNext();
     if (e.key === 'PageUp') this.scrollPrev();
@@ -2550,7 +2591,7 @@ class ydCarousel {
 
   goToSlide(slideIndex, immediate = false, force = false) {
     if (!this.metrics.slideSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
-    const maxSlide = this.logicalSlideCount() - 1;
+    const maxSlide = this.maxReachableSlideIndex();
     const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
 
     const changed = (this.currentIndex !== targetSlide);
@@ -2679,7 +2720,7 @@ class ydCarousel {
       if (this.options.loop) {
         this.goToSlide((this.currentIndex + 1) % this.logicalSlideCount(), false, force);
       } else {
-        this.goToSlide(Math.min(this.currentIndex + 1, this.logicalSlideCount() - 1), false, force);
+        this.goToSlide(Math.min(this.currentIndex + 1, this.maxReachableSlideIndex()), false, force);
       }
       return;
     }
@@ -2924,7 +2965,7 @@ class ydCarousel {
             dotsContainer.setAttribute('role', 'tablist');
             dotsContainer.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
             
-            const totalDots = api.options.slideSnap ? api.logicalSlideCount() : api.groupCount();
+            const totalDots = api.options.slideSnap ? api.slideSnapCount() : api.groupCount();
             const dotsArray = new Array(totalDots).fill(0);
 
             dotsArray.forEach((_, idx) => {
@@ -3025,7 +3066,7 @@ class ydCarousel {
               const current = api.options.slideSnap 
                 ? (payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex) + 1 
                 : (payload.previewGroup !== undefined ? payload.previewGroup : payload.currentGroup) + 1;
-              const total = api.options.slideSnap ? api.logicalSlideCount() : api.groupCount();
+              const total = api.options.slideSnap ? api.slideSnapCount() : api.groupCount();
 
               if (currentEl && totalEl) {
                 currentEl.textContent = current;
@@ -3135,7 +3176,10 @@ class ydCarousel {
                 ? scrollbar.offsetHeight - thumb.offsetHeight
                 : scrollbar.offsetWidth - thumb.offsetWidth;
               
-              const visualProgress = payload.visualProgress !== undefined ? payload.visualProgress : api.getVisualProgress();
+              let visualProgress = api.visualScrollbarProgress();
+              if (api.isRTL && !api.options.vertical) {
+                visualProgress = 1 - visualProgress;
+              }
               
               if (api.options.vertical) {
                 thumb.style.transform = `translate3d(0, ${visualProgress * movableSpace}px, 0)`;
@@ -3154,8 +3198,8 @@ class ydCarousel {
               
               const pct = visualToLogical(api, raw);
               
-              api.targetPos = pct * api.maxScroll;
-              api.snapToClosest();
+              const targetIndex = Math.round(pct * api.maxReachableSlideIndex());
+              api.goToSlide(targetIndex);
             };
 
             onThumbDown = (e) => {
@@ -3164,7 +3208,7 @@ class ydCarousel {
               e.stopPropagation();
               isDraggingThumb = true;
               startPointerPos = api.options.vertical ? e.clientY : e.clientX;
-              startProgress = api.scrollProgress();
+              startProgress = api.visualScrollbarProgress();
 
               api.previewIndex = api.currentIndex;
               api.previewGroup = api.currentGroup;
@@ -3203,57 +3247,8 @@ class ydCarousel {
                 thumb.style.transform = `translate3d(${visualProgress * movableSpace}px, 0, 0)`;
               }
               
-              const dragDistance = api.maxScroll;
-              let newTarget = rawProgress * dragDistance;
-              newTarget = Math.max(0, Math.min(newTarget, api.maxScroll));
-              
-              api.targetPos = newTarget;
-              api.currentPos = newTarget; 
-              
-              api._wake(); 
-
-              let previewUpdated = false;
-              let normalizedTarget = newTarget;
-              
-              if (api.options.loop && api.metrics.realTrackSize > 0) {
-                 normalizedTarget = (((newTarget - api.metrics.prependOffset) % api.metrics.realTrackSize) + api.metrics.realTrackSize) % api.metrics.realTrackSize + api.metrics.prependOffset;
-              }
-
-              if (!api.options.slideSnap) {
-                let minGroupDist = Infinity, closestGroup = api.previewGroup;
-                let distToCurrent = Infinity;
-                
-                const currentEvalGroup = api.previewGroup !== undefined ? api.previewGroup : api.currentGroup;
-                
-                if (api.virtual.logicalGroups[currentEvalGroup] !== undefined) {
-                   distToCurrent = Math.abs(api.virtual.logicalGroups[currentEvalGroup] - normalizedTarget);
-                }
-
-                api.virtual.logicalGroups.forEach((p, i) => {
-                   let dist = Math.abs(p - normalizedTarget);
-                   if (dist < minGroupDist) { minGroupDist = dist; closestGroup = i; }
-                });
-                
-                const hysteresis = Math.min(12, Math.max(5, api.metrics.viewportSize * 0.01));
-                if (currentEvalGroup !== closestGroup && minGroupDist < distToCurrent - hysteresis) {
-                   api.previewGroup = closestGroup;
-                   previewUpdated = true;
-                }
-              }
-
-              let nearestSlide = api.findNearestSlide(normalizedTarget);
-              const currentEvalSlide = api.previewIndex !== undefined ? api.previewIndex : api.currentIndex;
-              
-              if (currentEvalSlide !== nearestSlide) {
-                 api.previewIndex = nearestSlide;
-                 if (api.options.slideSnap) {
-                    previewUpdated = true;
-                 }
-              }
-
-              if (previewUpdated) {
-                 api.emit('previewUpdate');
-              }
+              const targetIndex = Math.round(rawProgress * api.maxReachableSlideIndex());
+              api.goToSlide(targetIndex);
             };
 
             onThumbUp = (e) => {
@@ -3338,7 +3333,7 @@ class ydCarousel {
             }
 
             updateProgress = (api, payload) => {
-              const pct = api.scrollProgress() * 100;
+              const pct = api.visualScrollbarProgress() * 100;
               progressEl.style.setProperty('--progress', `${pct}%`);
             };
             api.on('scroll', updateProgress);
@@ -3594,7 +3589,7 @@ class ydCarousel {
               
               const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
               const isAtStart = (api.options.slideSnap ? api.currentIndex === 0 : api.currentGroup === 0) && delta < 0;
-              const maxEnd = api.options.slideSnap ? api.logicalSlideCount() - 1 : api.groupCount() - 1;
+              const maxEnd = api.options.slideSnap ? api.maxReachableSlideIndex() : api.groupCount() - 1;
               const isAtEnd = (api.options.slideSnap ? api.currentIndex >= maxEnd : api.currentGroup >= maxEnd) && delta > 0;
               
               if (!api.options.loop && (isAtStart || isAtEnd)) {
