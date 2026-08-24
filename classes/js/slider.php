@@ -474,7 +474,7 @@ class ydCarousel {
     
     this.announceHandler = (api, payload) => {
       if (api.options.slideSnap) {
-        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slideSnapCount()}`;
+        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.logicalSlideCount()}`;
       } else {
         announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.groupCount()}`;
       }
@@ -857,7 +857,8 @@ class ydCarousel {
         lastRebalanceIndex: this.virtual.lastRebalanceIndex,
         safetyMargin: this.windowSafetyMargin(),
         renderedIndices: this.buildVirtualWindow(this.currentIndex),
-        virtualProgress: this.virtualProgress(),
+        logicalProgress: this.logicalProgress(),
+        logicalProgressPrecise: this.logicalProgressPrecise(),
         virtualTrackSize: this.virtualTrackSize()
       }),
       drag: {
@@ -1263,12 +1264,20 @@ class ydCarousel {
     }
   }
 
+  getVisibleDotIndex() {
+    if (this.options.slideSnap) {
+      return this.currentIndex;
+    }
+    return this.currentGroup;
+  }
+
   slideCount() {
     return this.logicalSlideCount();
   }
   
   groupCount() { return this.virtual.logicalGroups.length; }
   slideSnapCount() { return this.metrics.slideSnaps.length; }
+  datasetCount() { return this.logicalSlideCount(); }
   
   maxReachableSlideIndex() {
     if (this.options.loop) {
@@ -1450,6 +1459,9 @@ class ydCarousel {
       previewIndex: this.previewIndex !== undefined ? this.previewIndex : this.currentIndex, 
       previewGroup: this.previewGroup !== undefined ? this.previewGroup : this.currentGroup,    
       slideCount: this.logicalSlideCount(),
+      logicalSlideCount: this.logicalSlideCount(),
+      renderedSlideCount: this.renderedSlideCount(),
+      renderIndex: this.virtual.renderIndex,
       progress: this.scrollProgress(),
       visualProgress: this.getVisualProgress(),
       virtualProgress: this.virtualProgress(),
@@ -1717,7 +1729,14 @@ class ydCarousel {
   }
 
   slidesNotInView() {
-    return this.slides.map((_, idx) => idx).filter(idx => !this.visibleSlides.has(idx));
+    const allLogical = [];
+    const total = this.logicalSlideCount();
+    for (let i = 0; i < total; i++) {
+      if (!this.visibleSlides.has(i)) {
+        allLogical.push(i);
+      }
+    }
+    return allLogical;
   }
 
   _wake() {
@@ -2779,8 +2798,9 @@ class ydCarousel {
       
       slide.setAttribute('role', 'group');
       slide.setAttribute('aria-roledescription', 'slide');
-      // LOGICAL COUNT usage
-      slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
+      
+      const logicalIndex = Number(slide.getAttribute('data-slide-index'));
+      slide.setAttribute('aria-label', `${logicalIndex + 1} of ${total}`);
 
       if (idx === activeRenderIndex) {
         slide.classList.add('active');
@@ -3021,10 +3041,8 @@ class ydCarousel {
               dotsContainer.appendChild(dot);
             });
             
-            updateDots = (api, payload) => {
-              const activeIdx = api.options.slideSnap 
-                ? (payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex)
-                : (payload.previewGroup !== undefined ? payload.previewGroup : payload.currentGroup);
+            updateDots = (api) => {
+              const activeIdx = api.getVisibleDotIndex();
 
               Array.from(dotsContainer.children).forEach((dot, idx) => {
                 const isActive = idx === activeIdx;
@@ -3038,7 +3056,7 @@ class ydCarousel {
             api.on('activeGroupChange', updateDots);
             api.on('activeSlideChange', updateDots);
             api.on('previewUpdate', updateDots); 
-            updateDots(api, api.getEventPayload());
+            updateDots(api);
           },
           destroy: (api) => {
             api.off('select', updateDots);
@@ -3064,9 +3082,9 @@ class ydCarousel {
             
             updateCounter = (api, payload) => {
               const current = api.options.slideSnap 
-                ? (payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex) + 1 
+                ? Math.min((payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex) + 1, api.datasetCount())
                 : (payload.previewGroup !== undefined ? payload.previewGroup : payload.currentGroup) + 1;
-              const total = api.options.slideSnap ? api.slideSnapCount() : api.groupCount();
+              const total = api.options.slideSnap ? api.datasetCount() : api.groupCount();
 
               if (currentEl && totalEl) {
                 currentEl.textContent = current;
@@ -3754,18 +3772,18 @@ class ydCarousel {
           name: 'creative',
           init: (api) => {
             onScroll = () => {
-              const updateNode = (slide, idx) => {
-                const progress = api.slideProgress(idx); 
+              const updateNode = (slide) => {
+                const logicalIndex = Number(slide.getAttribute('data-slide-index'));
+                const progress = api.slideProgress(logicalIndex); 
                 slide.style.setProperty('--slide-progress', progress.toFixed(4));
                 slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
               };
               // RENDERED DOM COUNT
-              api.slides.forEach((slide, idx) => updateNode(slide, idx));
+              api.slides.forEach((slide) => updateNode(slide));
               
               if (api.options.loop) {
                 api.track.querySelectorAll('.yd_slide-clone').forEach(clone => {
-                  const idx = parseInt(clone.getAttribute('data-slide-index'), 10);
-                  updateNode(clone, idx);
+                  updateNode(clone);
                 });
               }
             };
@@ -3793,7 +3811,7 @@ class ydCarousel {
           init: (api) => {
             onSlideEnter = (api, payload) => {
               // RENDERED LOOKUP
-              const slide = api.getRenderedSlide(payload.index);
+              const slide = api.getRenderedSlideByLogicalIndex(payload.index);
               if (slide && !slide.dataset.loaded) {
                 const img = slide.querySelector('img[data-src]');
                 if (img && img.dataset.src) {
@@ -3843,7 +3861,8 @@ class ydCarousel {
                  const state = api.state();
                  debugEl.textContent = `
 [ydCarousel v${state.version}]
-Group: ${state.group} | Idx: ${state.index}
+Group: ${state.group} | Logic: ${state.index}
+Render: ${api.virtual.renderIndex}
 Prog:  ${state.progress.toFixed(2)}
 VPrg:  ${state.visualProgress.toFixed(2)}
 Drag:  ${state.dragging}
