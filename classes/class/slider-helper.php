@@ -9,17 +9,34 @@
   background-color: #4a4a4a;
 }
 
+.yd_slide,
+.yd_container,
+.yd_viewport {
+  box-sizing: border-box;
+}
+
 .yd_slide { flex-shrink:0 }
 
 .yd_viewport {
   overflow: hidden;
   position: relative;
   transition: height 0.3s ease;
+  touch-action: pan-y;
+}
+
+.yd_carousel.vertical .yd_viewport {
+  touch-action: pan-x;
 }
 
 .yd_scrollbar.disabled { 
   pointer-events: none; 
   opacity: 0.5; 
+}
+
+.yd_slide-clone {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .yd_carousel.vertical .yd_scrollbar {
@@ -72,10 +89,15 @@
 .yd_scrollbar-thumb {
   height: 100%;
 }
+
 .yd_container {
   display: flex;
   will-change: transform;
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
+
 .yd_carousel.vertical .yd_container {
     flex-direction: column;
 }

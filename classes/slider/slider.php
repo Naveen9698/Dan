@@ -1,4 +1,4 @@
-<div class="yd_carousel group-snap pn-relative loop keyboard autoplay">
+<div class="yd_carousel group-snap pn-relative loop keyboard autoplay debug">
 
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-xl">
