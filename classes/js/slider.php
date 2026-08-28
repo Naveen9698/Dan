@@ -1,2148 +1,310 @@
 /**
- * ydCarousel 2.7.0 LTS - PRODUCTION
- * Architecture Freeze: "One Engine, One Source Of Truth".
- * Virtual Renderer REMOVED. Pure Clone Loop Engine RESTORED.
- * Standardized exclusively on originalSlides for dataset truth.
+ * ydCarousel 3.0 - MODULAR FRAMEWORK ARCHITECTURE
+ * Core: Strict Sandbox, Full Renderer Encapsulation, Immutable Architecture.
+ * Production Ready: 100% Loop Agnostic, Isolated Plugins, Lifecycle Hardened.
  */
-class ydCarousel {
-  static VERSION = '2.7.0-LTS'; 
-  static ENGINE = 'ydCarousel-Enterprise';
-  static DEBUG = true; 
-  static SNAP_EPSILON = 0.5;
+
+const EVENTS = Object.freeze({
+  INIT: 'init', RESIZE: 'resize', DESTROY: 'destroy',
+  PAUSE: 'pause', RESUME: 'resume', FREEZE: 'freeze', UNFREEZE: 'unfreeze',
+  DRAG_START: 'drag:start', DRAG_MOVE: 'drag:move', DRAG_END: 'drag:end',
+  SCROLL: 'scroll', SETTLE: 'settle', DOM_CHANGED: 'dom:changed',
+  NAV_BEFORE: 'nav:before', NAV: 'nav', NAV_AFTER: 'nav:after',
+  SELECT_BEFORE: 'select:before', SELECT: 'select', SELECT_AFTER: 'select:after',
+  SLIDE_ACTIVE_CHANGE: 'slide:active', GROUP_ACTIVE_CHANGE: 'group:active',
+  PREVIEW_UPDATE: 'preview:update', SLIDE_ENTER: 'slide:enter', SLIDE_EXIT: 'slide:exit',
+  LOOP_ENTER: 'loop:enter', LOOP_EXIT: 'loop:exit', LOOP_REPOSITION: 'loop:reposition',
+  AUTOPLAY_START: 'autoplay:start', AUTOPLAY_PAUSE: 'autoplay:pause', AUTOPLAY_RESUME: 'autoplay:resume', AUTOPLAY_STOP: 'autoplay:stop',
+  SYNC_START: 'sync:start', SYNC_UPDATE: 'sync:update', SYNC_STOP: 'sync:stop',
+  DEBUG_OPEN: 'debug:open', DEBUG_CLOSE: 'debug:close',
+  PLUGIN_ENABLED: 'plugin:enabled', PLUGIN_DISABLED: 'plugin:disabled'
+});
+
+function deepFreeze(obj, visited = new WeakSet()) {
+  if (!obj || typeof obj !== 'object' || visited.has(obj) || Object.isFrozen(obj)) return obj;
+  visited.add(obj);
+  Object.getOwnPropertyNames(obj).forEach(name => {
+    const value = obj[name];
+    if (value && typeof value === 'object') deepFreeze(value, visited);
+  });
+  return Object.freeze(obj);
+}
+
+// ==========================================
+// LAYER 1: Core Environment & Global Registry
+// ==========================================
+class Environment {
+  static hasDOM() { return typeof window !== 'undefined' && typeof document !== 'undefined'; }
+  static now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
+}
+
+class CarouselRegistry {
   static MAX_LOOP_CLONES = 120;
-  static _autoInitObserver = null;
   static _pluginRegistry = new Map();
   static activeCarousel = null; 
   static _keyboardInitialized = false; 
   static _keyboardUsers = 0; 
   static _instances = new Set(); 
 
-  static EVENTS = Object.freeze([
-    'init', 'resize', 'destroy',
-    'pause', 'resume', 'freeze', 'unfreeze',
-    'dragStart', 'dragMove', 'dragEnd',
-    'scroll', 'settle',
-    'beforeSelect', 'select', 'afterSelect',
-    'activeSlideChange', 'activeGroupChange',
-    'previewUpdate', 
-    'slideEnter', 'slideExit',
-    'loopEnter', 'loopExit', 'loopReposition',
-    'autoplayStart', 'autoplayPause', 'autoplayResume', 'autoplayStop',
-    'syncStart', 'syncUpdate', 'syncStop',
-    'debugOpen', 'debugClose',
-    'pluginEnabled', 'pluginDisabled'
-  ]);
-
-  static _now() {
-    return typeof performance !== 'undefined' ? performance.now() : Date.now();
-  }
-
-  static hasDOM() {
-    return typeof window !== 'undefined' && typeof document !== 'undefined';
-  }
-
-  static registerPlugin(pluginDef) {
-    if (!pluginDef.name) throw new Error('[ydCarousel] Plugin must have a name');
-    this._pluginRegistry.set(pluginDef.name, pluginDef);
-  }
-
   static _globalKeyDownHandler(e) {
-    if (ydCarousel.activeCarousel && ydCarousel.activeCarousel.options.keyboard) {
-      ydCarousel.activeCarousel.onKeyDown(e);
+    if (CarouselRegistry.activeCarousel && CarouselRegistry.activeCarousel.options.keyboard) {
+      CarouselRegistry.activeCarousel.internal.keyboard.onKeyDown(e);
     }
   }
-
-  static startAutoInit() {
-    if (!ydCarousel.hasDOM()) return;
-    if (typeof MutationObserver === 'undefined') return;
-
-    const initAll = () => {
-      document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
-        if (!el.__ydCarousel) {
-          try {
-            new ydCarousel(el);
-          } catch (err) {
-            console.error('[ydCarousel] Auto-init failed:', err);
-          }
+  static register(api) {
+    this._instances.add(api);
+    if (!this.activeCarousel || this.activeCarousel.internal.state.flags.destroyed || (api.options.keyboard && !this.activeCarousel.options.keyboard)) {
+      this.activeCarousel = api;
+    }
+  }
+  static unregister(api) {
+    this._instances.delete(api);
+    if (this.activeCarousel === api) {
+      this.activeCarousel = null;
+      if (Environment.hasDOM()) {
+        const readyCarousels = Array.from(document.querySelectorAll('.yd_carousel-ready'))
+          .map(el => el.__ydCarousel).filter(a => a && !a.internal.state.flags.destroyed);
+        if (readyCarousels.length > 0) {
+          this.activeCarousel = readyCarousels.find(a => a.options.keyboard) || readyCarousels[0];
         }
-      });
-    };
-    initAll();
-    if (!this._autoInitObserver) {
-      let timeout;
-      this._autoInitObserver = new MutationObserver(() => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          ydCarousel._instances.forEach(api => {
-            if (!document.contains(api.root)) api.destroy();
-          });
-          initAll();
-        }, 100); 
-      });
-      this._autoInitObserver.observe(document.body, { childList: true, subtree: true }); 
+      }
     }
   }
-
-  static stopAutoInit() {
-    if (this._autoInitObserver) {
-      this._autoInitObserver.disconnect();
-      this._autoInitObserver = null;
-    }
+  static validateRenderer(renderer) {
+    const REQUIRED_RENDERER_METHODS = [
+      'nextIndex', 'prevIndex', 'nextGroup', 'prevGroup', 'resolveTarget',
+      'handleReposition', 'normalizePosition', 'distanceToSnap',
+      'getScrollProgress', 'getVisualProgress', 'getSlideProgress',
+      'cloneCount', 'cloneDiagnostics'
+    ];
+    REQUIRED_RENDERER_METHODS.forEach(method => {
+      if (typeof renderer[method] !== 'function') throw new Error(`Renderer missing: ${method}`);
+    });
   }
+}
 
-  /**
-   * Slide Ownership Clarification
-   * originalSlides = logical dataset / source of truth
-   * track.children = originals + clones (after clone creation)
-   */
-  constructor(element) {
-    this.root = element;
-    
-    this.track = this.root ? this.root.querySelector('.yd_container') : null;
-    if (!this.track) {
-      throw new Error('[ydCarousel] Missing .yd_container element');
-    }
-    
-    this.root.__ydCarousel = this;
-
-    const reducedSetting = this.root.dataset.reducedMotion || 'auto';
-    let respectReducedMotion = false;
-    
-    if (reducedSetting === 'true') {
-      respectReducedMotion = true;
-    } else if (reducedSetting === 'false') {
-      respectReducedMotion = false;
-    } else if (ydCarousel.hasDOM() && window.matchMedia) {
-      respectReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-    
-    this.reducedMotion = respectReducedMotion;
-    
-    this.options = {
-      loop: this.root.classList.contains('loop'),
-      dragFree: this.root.classList.contains('drag-free'),
-      alignCenter: this.root.classList.contains('align-center'),
-      alignEnd: this.root.classList.contains('align-end'),
-      keyboard: this.root.classList.contains('keyboard'),
-      autoplay: !this.reducedMotion && this.root.classList.contains('autoplay'),
-      direction: this.root.classList.contains('rtl') ? 'rtl' : 'ltr',
-      vertical: this.root.classList.contains('vertical'),
-      autoHeight: this.root.classList.contains('auto-height'),
-      autoVisibility: this.root.dataset.autoVisibility !== 'false', 
-      focusOnChange: this.root.classList.contains('focus-on-change') || this.root.dataset.focusOnChange === 'true',
-      duration: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.duration) || 0.1),
-      friction: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.friction) || 0.92),
-      delay: parseInt(this.root.dataset.delay) || 4000,
-      dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
-      velocityThreshold: parseFloat(this.root.dataset.velocityThreshold) || 0.5,
-      dragInertia: this.reducedMotion ? 0 : (parseFloat(this.root.dataset.dragInertia) || 40),
-      slideSnap: this.root.classList.contains('slide-snap'),
-      groupSnap: this.root.classList.contains('group-snap')
-    };
-
-    this.isRTL = this.options.direction === 'rtl';
-    this.dir = this.isRTL ? -1 : 1;
-
-    if (this.options.groupSnap) {
-      this.options.slideSnap = false;
-    }
-    if (!this.options.slideSnap && !this.options.groupSnap) {
-      this.options.slideSnap = true;
-    }
-
-    this.currentPos = 0;
-    this.targetPos = 0;
-    
-    this.currentIndex = 0;
-    this.prevIndex = 0; 
-    this.currentGroup = 0;
-    this.prevGroup = 0;
-
-    this.previewIndex = 0;
-    this.previewGroup = 0;
-
-    this._velocity = 0; 
-    this.inertia = 0;
-    this._isPaused = false;
-    this._isFrozen = false;
-    this._isAutoFrozen = false;
-    this._manualFrozen = false;
-    this._lastIntersectionState = true;
-    
-    this.isDraggingActive = false;
-    this.activePointerId = undefined;
-    this.isSettled = true;
-    this.destroyed = false;        
-    this.rafId = null;
-    this.mutationRaf = null;
-    this.pluginRefreshRaf = null;
-    this.maxScroll = 0;
-
-    this.dragStartPos = 0;
-    this.dragStartCurrentPos = 0;
-    this.lastPointerPos = 0;
-    this.lastPointerTime = 0;
-    this.isClickSuppressed = false;
-    this._keyboardRegistered = false; 
-
-    this._generatedRootId = false;
-    this._generatedTrackId = false;
-    this._announcer = null;
-
-    this.dragState = {
-      active: false,
-      startIndex: 0,
-      currentIndex: 0,
-      startPointer: 0,
-      startTargetPos: 0
-    };
-    
-    this.ignoreNextMutation = false; 
-    this.batchDepth = 0;
-    this._trackedActiveNode = null;
-    this._isDynamicRefreshing = false;
-
-    this.originalSlides = [];
-    this.logicalGroups = [];
-    this.visibleSlides = new Set(); 
-
-    this._stats = {
-      renderTicks: 0,
-      layoutCalcs: 0,
-      lastLayoutTime: 0,
-      initTime: ydCarousel._now()
-    };
-    this._eventStats = {};
-    this._pluginErrorTracker = new Map();
-
-    this.metrics = {
-      viewportSize: 0,
-      trackSize: 0,
-      realTrackSize: 0, 
-      prependOffset: 0,  
-      gap: 0,
-      slidesPerView: 0,
-      averageSlideSize: 0,
-      slideSizes: [],
-      slideOffsets: [], 
-      slideSnaps: [], 
-      groupSnaps: [], 
-      snapPoints: []  
-    };
-
+class EventBus {
+  constructor(api) {
+    this.api = api;
     this.listeners = {};
-    this.plugins = []; 
-    this.activePlugins = new Map(); 
-
-    this.onPointerDown = this.onPointerDown.bind(this);
-    this.onPointerMove = this.onPointerMove.bind(this);
-    this.onPointerUp = this.onPointerUp.bind(this);
-    this.onClick = this.onClick.bind(this);
-    this.onKeyDown = this.onKeyDown.bind(this);
-    this.onResize = this.onResize.bind(this);
-    this.onMutation = this.onMutation.bind(this);
-    this.tick = this.tick.bind(this);
-    this._docVisHandler = this._onDocVisibilityChange.bind(this);
-    this.onActivate = () => { ydCarousel.activeCarousel = this; }; 
-    
-    this.onDeactivate = (e) => {
-      if (e && e.type === 'focusout' && this.root.contains(e.relatedTarget)) return;
-      if (ydCarousel.activeCarousel === this) {
-        const fallback = [...ydCarousel._instances].find(api => api !== this && !api.destroyed && api.options.keyboard);
-        ydCarousel.activeCarousel = fallback || null; 
-      }
-    };
-
-    this.init();
+    this._eventStats = {};
   }
-
-  get rtl() {
-    return this.isRTL;
+  emit(event, customData = {}) {
+    if (!this.api.internal) return;
+    const state = this.api.internal.state;
+    if (state.flags.destroyed && event !== EVENTS.DESTROY) return;
+    this._eventStats[event] = (this._eventStats[event] || 0) + 1;
+    const payload = { ...this.getEventPayload(), ...customData };
+    if (this.listeners[event]) [...this.listeners[event]].forEach(cb => { try { cb(this.api, payload); } catch (err) { console.error(err); } });
+    if (this.listeners['*']) [...this.listeners['*']].forEach(cb => { try { cb(event, this.api, payload); } catch (err) { console.error(err); } });
   }
-
-  getTransformValue() {
-    if (this.options.vertical) {
-      return -this.currentPos;
-    }
-    return -this.currentPos * this.dir;
+  on(event, callback) {
+    if (!this.listeners[event]) this.listeners[event] = [];
+    if (!this.listeners[event].includes(callback)) this.listeners[event].push(callback);
+    return this.api;
   }
-
-  init() {
-    if (this.destroyed) this.destroyed = false;
-    this._isPaused = false;
-    this._isFrozen = false;
-    this._isAutoFrozen = false;
-    this._manualFrozen = false;
-    
-    this.root.dataset.direction = this.options.direction;
-
-    ydCarousel._instances.add(this); 
-    
-    if (
-      !ydCarousel.activeCarousel ||
-      ydCarousel.activeCarousel.destroyed ||
-      (this.options.keyboard && !ydCarousel.activeCarousel.options.keyboard)
-    ) {
-      ydCarousel.activeCarousel = this;
-    }
-    
-    this.setupAccessibility();
-    this.setupObservers();
-    this.updateMeasurements();
-    this.bindEvents();
-    
-    this.initPlugins();
-    this.initEnterprisePlugins(); 
-
-    this.startPhysicsLoop();
-    this.root.classList.add('yd_carousel-ready');
-    this.emit('init');
+  off(event, callback) {
+    if (!this.listeners[event]) return this.api;
+    this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+    if (this.listeners[event].length === 0) delete this.listeners[event];
+    return this.api;
   }
-
-  pause() {
-    if (this.destroyed || this._isPaused) return;
-    this._isPaused = true;
-    
-    if (this.rafId) {
-      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-
-    if (this.isDraggingActive) {
-      this.isDraggingActive = false;
-      this.dragState.active = false;
-      this.isClickSuppressed = false;
-      this.track.style.cursor = '';
-      if (ydCarousel.hasDOM()) {
-        window.removeEventListener('pointermove', this.onPointerMove);
-        window.removeEventListener('pointerup', this.onPointerUp);
-        window.removeEventListener('pointercancel', this.onPointerUp);
-      }
-      if (this.activePointerId !== undefined) {
-        try { this.track.releasePointerCapture(this.activePointerId); } catch (err) {}
-        this.activePointerId = undefined;
-      }
-      this.emit('dragEnd');
-      this.snapToClosest(true, true);
-    }
-    
-    this.emit('pause');
-  }
-
-  resume() {
-    if (this.destroyed || !this._isPaused) return;
-    this._isPaused = false;
-    if (!this._isFrozen) this._wake(); 
-    this.emit('resume');
-  }
-
-  isPaused() { return this._isPaused; }
-
-  freeze(isManual = true) {
-    if (this.destroyed) return;
-    
-    if (isManual) {
-      this._manualFrozen = true;
-    }
-    
-    if (this._isFrozen) return;
-    this._isFrozen = true;
-
-    if (this.rafId) {
-      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-
-    if (this.mutationRaf) {
-      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.mutationRaf);
-      this.mutationRaf = null;
-    }
-
-    if (this.isDraggingActive) {
-      this.isDraggingActive = false;
-      this.dragState.active = false;
-      this.isClickSuppressed = false;
-      this.track.style.cursor = '';
-      if (ydCarousel.hasDOM()) {
-        window.removeEventListener('pointermove', this.onPointerMove);
-        window.removeEventListener('pointerup', this.onPointerUp);
-        window.removeEventListener('pointercancel', this.onPointerUp);
-      }
-      if (this.activePointerId !== undefined) {
-        try { this.track.releasePointerCapture(this.activePointerId); } catch (err) {}
-        this.activePointerId = undefined;
-      }
-      this.emit('dragEnd');
-      this.snapToClosest(true, true);
-    }
-
-    if (this.resizeObserver) this.resizeObserver.disconnect();
-    if (this.mutationObserver) this.mutationObserver.disconnect();
-    if (this.visibilityObserver) this.visibilityObserver.disconnect();
-
-    this.emit('freeze', { reason: isManual ? 'manual' : 'visibility' });
-  }
-
-  unfreeze(isManual = true) {
-    if (this.destroyed) return;
-    
-    if (isManual) {
-      this._manualFrozen = false;
-    } else if (this._manualFrozen) {
-      return;
-    }
-
-    if (!this._isFrozen) return;
-    this._isFrozen = false;
-
-    if (this.resizeObserver && this.root) {
-      this.resizeObserver.observe(this.root);
-    }
-    if (this.mutationObserver && this.track) {
-      this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
-    }
-    if (this.visibilityObserver && this.track) {
-      Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
-    }
-
-    this.updateMeasurements();
-    this.emit('unfreeze', { reason: isManual ? 'manual' : 'visibility' });
-  }
-
-  isFrozen() { return this._isFrozen; }
-
-  _onDocVisibilityChange() {
-    this._handleAutoVisibility(this._lastIntersectionState, !document.hidden);
-  }
-
-  _handleAutoVisibility(intersecting, docVisible) {
-    this._lastIntersectionState = intersecting;
-    const shouldBeActive = intersecting && docVisible;
-    
-    if (!shouldBeActive && !this._isFrozen) {
-      this._isAutoFrozen = true;
-      this.freeze(false);
-    } else if (shouldBeActive && this._isAutoFrozen) {
-      this._isAutoFrozen = false;
-      this.unfreeze(false);
-    }
-  }
-
-  setupAccessibility() {
-    if (!ydCarousel.hasDOM()) return;
-    
-    this.root.setAttribute('role', 'region');
-    this.root.setAttribute('aria-roledescription', 'carousel');
-    
-    if (!this.root.id) {
-      this.root.id = `yd_carousel_${Math.random().toString(36).slice(2, 11)}`;
-      this._generatedRootId = true;
-    }
-    
-    if (!this.track.id) {
-      this.track.id = `${this.root.id}_track`;
-      this._generatedTrackId = true;
-    }
-    this.track.setAttribute('aria-live', 'polite');
-    
-    let announcer = this.root.querySelector('.yd_carousel-announcer');
-    if (!announcer) {
-      announcer = document.createElement('div');
-      announcer.className = 'yd_carousel-announcer';
-      announcer.setAttribute('aria-live', 'polite');
-      announcer.setAttribute('aria-atomic', 'true');
-      announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
-      this.root.appendChild(announcer);
-    }
-    this._announcer = announcer;
-    
-    this.announceHandler = (api, payload) => {
-      if (api.options.slideSnap) {
-        announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.slideCount()}`;
-      } else {
-        announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.groupCount()}`;
-      }
-    };
-    this.on('select', this.announceHandler);
-  }
-
-  focusActiveSlide() {
-    const active = this.activeSlide();
-    if (!active) return;
-
-    if (!active.hasAttribute('tabindex')) {
-      active.setAttribute('tabindex', '0');
-    }
-
-    if (typeof active.focus === 'function') {
-      try {
-        active.focus({ preventScroll: true });
-      } catch (err) {
-        active.focus();
-      }
-    }
-  }
-
-  circularDetection() {
-    const registry = ydCarousel._pluginRegistry;
-    const cycles = [];
-    const visited = new Map(); 
-    const path = [];
-
-    const dfs = (node) => {
-      visited.set(node, 1);
-      path.push(node);
-
-      const def = registry.get(node);
-      const deps = def ? (def.dependencies || def.requires || []) : [];
-
-      for (const dep of deps) {
-        if (!registry.has(dep)) continue;
-        const state = visited.get(dep) || 0;
-        if (state === 1) {
-          const cycleStart = path.indexOf(dep);
-          cycles.push([...path.slice(cycleStart), dep]);
-        } else if (state === 0) {
-          dfs(dep);
-        }
-      }
-
-      path.pop();
-      visited.set(node, 2);
-    };
-
-    registry.forEach((_, name) => {
-      if ((visited.get(name) || 0) === 0) {
-        dfs(name);
-      }
-    });
-
-    return Object.freeze(cycles.map(c => Object.freeze([...c])));
-  }
-
-  detectCircularDependencies() {
-    return this.circularDetection();
-  }
-
-  validateDependencies(pluginName = null) {
-    const registry = ydCarousel._pluginRegistry;
-    const activeNames = new Set([
-      ...this.plugins.map(p => p.name).filter(Boolean),
-      ...Array.from(this.activePlugins.keys())
-    ]);
-
-    const missing = [];
-    const targetPlugins = pluginName ? [pluginName] : Array.from(registry.keys());
-
-    targetPlugins.forEach(name => {
-      const def = registry.get(name);
-      if (def) {
-        const deps = def.dependencies || def.requires || [];
-        deps.forEach(dep => {
-          if (!activeNames.has(dep)) {
-            missing.push(
-              Object.freeze({
-                plugin: name,
-                missingDependency: dep
-              })
-            );
-          }
-        });
-      } else if (!activeNames.has(name)) {
-        missing.push(
-          Object.freeze({
-            plugin: name,
-            missingDependency: 'unregistered'
-          })
-        );
-      }
-    });
-
-    const circular = this.circularDetection();
-
-    return Object.freeze({
-      valid: missing.length === 0 && circular.length === 0,
-      missing: Object.freeze(missing),
-      circular
-    });
-  }
-
-  dependencyReport() {
-    const registry = ydCarousel._pluginRegistry;
-    const activeNames = new Set([
-      ...this.plugins.map(p => p.name).filter(Boolean),
-      ...Array.from(this.activePlugins.keys())
-    ]);
-
-    const report = {};
-    const missingDependencies = [];
-
-    const dependentsMap = new Map();
-    registry.forEach((_, name) => dependentsMap.set(name, []));
-
-    registry.forEach((def, name) => {
-      const deps = def.dependencies || def.requires || [];
-      deps.forEach(dep => {
-        if (dependentsMap.has(dep)) {
-          dependentsMap.get(dep).push(name);
-        }
-      });
-    });
-
-    registry.forEach((def, name) => {
-      const deps = def.dependencies || def.requires || [];
-      const missing = deps.filter(dep => !activeNames.has(dep));
-
-      if (missing.length > 0) {
-        missingDependencies.push(
-          Object.freeze({
-            plugin: name,
-            missing: Object.freeze([...missing])
-          })
-        );
-      }
-
-      report[name] = Object.freeze({
-        active: activeNames.has(name),
-        dependencies: Object.freeze([...deps]),
-        satisfied: missing.length === 0,
-        missing: Object.freeze([...missing]),
-        dependents: Object.freeze(dependentsMap.get(name) || [])
-      });
-    });
-
-    const circular = this.circularDetection();
-
-    return Object.freeze({
-      valid: missingDependencies.length === 0 && circular.length === 0,
-      plugins: Object.freeze(report),
-      missingDependencies: Object.freeze(missingDependencies),
-      circularDependencies: circular
-    });
-  }
-
-  _recordPluginError(pluginName, err) {
-    const current = this._pluginErrorTracker.get(pluginName) || { count: 0, lastError: null };
-    this._pluginErrorTracker.set(pluginName, {
-      count: current.count + 1,
-      lastError: err ? (err.message || String(err)) : 'Unknown error'
-    });
-  }
-
-  pluginInfo() {
-    const registered = Array.from(ydCarousel._pluginRegistry.keys());
-    const enterpriseActive = Array.from(this.activePlugins.keys());
-    const coreActive = this.plugins.map(p => p.name || 'anonymous');
-    
-    return Object.freeze({
-      totalRegistered: registered.length,
-      totalActive: enterpriseActive.length + coreActive.length,
-      registeredPlugins: Object.freeze([...registered]),
-      activeEnterprise: Object.freeze([...enterpriseActive]),
-      activeCore: Object.freeze([...coreActive])
-    });
-  }
-
-  warnings() {
-    const list = [];
-    if (this.destroyed) {
-      list.push('Instance is destroyed.');
-      return Object.freeze(list);
-    }
-    
-    if (this.options.loop && this.slideCount() <= 1) {
-      list.push('Loop mode is enabled but requires at least 2 slides.');
-    }
-    if (this.options.vertical && this.options.loop && this.root.classList.contains('wheel')) {
-      list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
-    }
-    
-    if (this.slideCount() === 0) {
-      list.push('Carousel track contains no original slides.');
-    }
-    
-    const uptimeSecs = Math.max(1, (ydCarousel._now() - this._stats.initTime) / 1000);
-    if (this._stats.layoutCalcs > 50 && (this._stats.layoutCalcs / uptimeSecs) > 10) {
-      list.push(`High layout recalculation rate (${(this._stats.layoutCalcs / uptimeSecs).toFixed(1)}/sec). Check for frequent DOM mutations.`);
-    }
-
-    const depCheck = this.validateDependencies();
-    if (!depCheck.valid) {
-      depCheck.missing.forEach(m => list.push(`Missing plugin dependency: "${m.missingDependency}" required by "${m.plugin}".`));
-      depCheck.circular.forEach(c => list.push(`Circular plugin dependency cycle: ${c.join(' -> ')}.`));
-    }
-
-    return Object.freeze(list);
-  }
-
-  compatibilityReport() {
-    const hasDOM = ydCarousel.hasDOM();
-    const requiredFeatures = {
-      ResizeObserver: hasDOM && typeof window.ResizeObserver !== 'undefined',
-      IntersectionObserver: hasDOM && typeof window.IntersectionObserver !== 'undefined',
-      MutationObserver: hasDOM && typeof window.MutationObserver !== 'undefined',
-      PointerEvents: hasDOM && typeof window.PointerEvent !== 'undefined',
-      requestAnimationFrame: hasDOM && typeof window.requestAnimationFrame !== 'undefined',
-      performanceNow: typeof performance !== 'undefined' && typeof performance.now === 'function'
-    };
-    
-    const optionalFeatures = {
-      matchMedia: hasDOM && typeof window.matchMedia !== 'undefined',
-      inert: hasDOM && ('inert' in document.createElement('div'))
-    };
-
-    const degradedFeatures = [];
-    if (!requiredFeatures.ResizeObserver) degradedFeatures.push('ResizeObserver missing; auto-resizing via observer disabled.');
-    if (!requiredFeatures.IntersectionObserver) degradedFeatures.push('IntersectionObserver missing; auto-visibility and lazy loading may fall back.');
-    if (!requiredFeatures.MutationObserver) degradedFeatures.push('MutationObserver missing; dynamic DOM mutations will not auto-refresh.');
-    if (!requiredFeatures.requestAnimationFrame) degradedFeatures.push('requestAnimationFrame missing; physics loop will be disabled.');
-
-    const fullyCompatible = Object.values(requiredFeatures).every(Boolean);
-
-    return Object.freeze({
-      engine: ydCarousel.ENGINE,
-      version: ydCarousel.VERSION,
-      environment: hasDOM ? 'browser' : 'non-browser/ssr',
-      fullyCompatible,
-      requiredFeatures: Object.freeze(requiredFeatures),
-      optionalFeatures: Object.freeze(optionalFeatures),
-      degradedFeatures: Object.freeze(degradedFeatures)
-    });
-  }
-
-  pluginHealth() {
-    const registry = ydCarousel._pluginRegistry;
-    const activeNames = new Set(Array.from(this.activePlugins.keys()));
-    const health = {};
-
-    registry.forEach((def, name) => {
-      const errInfo = this._pluginErrorTracker.get(name) || { count: 0, lastError: null };
-      health[name] = Object.freeze({
-        type: 'enterprise',
-        active: activeNames.has(name),
-        errors: errInfo.count,
-        lastError: errInfo.lastError
-      });
-    });
-
-    this.plugins.forEach(p => {
-      if (p.name && !health[p.name]) {
-        const errInfo = this._pluginErrorTracker.get(p.name) || { count: 0, lastError: null };
-        health[p.name] = Object.freeze({
-          type: 'core',
-          active: true,
-          errors: errInfo.count,
-          lastError: errInfo.lastError
-        });
-      }
-    });
-
-    this._pluginErrorTracker.forEach((errInfo, name) => {
-      if (!health[name]) {
-        health[name] = Object.freeze({
-          type: 'core',
-          active: false,
-          errors: errInfo.count,
-          lastError: errInfo.lastError
-        });
-      }
-    });
-
-    return Object.freeze(health);
-  }
-
-  health() {
-    const issues = [];
-    let status = 'healthy';
-
-    if (this.destroyed) {
-      return Object.freeze({ status: 'destroyed', issues: ['Instance is destroyed'], timestamp: Date.now() });
-    }
-
-    if (!this.root) {
-      issues.push('Root element missing');
-    } else if (typeof document !== 'undefined' && !document.contains(this.root)) {
-      issues.push('Root element detached from DOM');
-    }
-
-    if (!this.track) issues.push('Track container missing');
-    
-    if (isNaN(this.currentPos)) issues.push('currentPos computation resulted in NaN');
-    if (isNaN(this.targetPos)) issues.push('targetPos computation resulted in NaN');
-    if (this.batchDepth > 0) issues.push(`Unresolved dynamic batch operations (depth: ${this.batchDepth})`);
-
-    if (ydCarousel.hasDOM() && this.options.autoVisibility && typeof IntersectionObserver === 'undefined') {
-      issues.push('autoVisibility is enabled but IntersectionObserver is not supported in this environment.');
-    }
-
-    if (this.slideCount() > 0 && this.currentIndex > this.maxReachableSlideIndex()) {
-      issues.push('Current index exceeds reachable slide count');
-    }
-    if (this.currentIndex < 0) issues.push('Current index below zero');
-
-    if (this.groupCount() > 0 && this.currentGroup >= this.groupCount()) {
-      issues.push('Current group exceeds group count');
-    }
-    if (this.currentGroup < 0) issues.push('Current group below zero');
-
-    const warns = this.warnings();
-    warns.forEach(w => {
-      if (!issues.includes(w)) issues.push(w);
-    });
-
-    if (issues.length > 0) status = 'degraded';
-
-    return Object.freeze({ status, issues, reducedMotion: this.reducedMotion, timestamp: Date.now() });
-  }
-
-  performanceStats() {
-    if (this.destroyed) {
-      return Object.freeze({ destroyed: true });
-    }
-    
-    const totalNodes = this.track ? this.track.children.length : 0;
-    
-    return Object.freeze({
-      layoutRecalculations: this._stats.layoutCalcs,
-      lastLayoutDurationMs: parseFloat(this._stats.lastLayoutTime.toFixed(2)),
-      renderTicks: this._stats.renderTicks,
-      domNodeCount: totalNodes,
-      clonedNodes: this.cloneCount(),
-      originalSlides: this.slideCount(),
-      cloneDiagnostics: this.cloneDiagnostics(),
-      activeObservers: this._isFrozen ? 0 : ((this.resizeObserver ? 1 : 0) + (this.mutationObserver ? 1 : 0) + (this.visibilityObserver ? 1 : 0))
-    });
-  }
-
-  xray() {
-    return Object.freeze({
-      core: this.info(),
-      inspection: this.inspect(),
-      drag: {
-        active: this.dragState.active,
-        startIndex: this.dragState.startIndex,
-        currentIndex: this.dragState.currentIndex
-      },
-      health: this.health(),
-      performance: this.performanceStats(),
-      warnings: this.warnings(),
-      compatibility: this.compatibilityReport(),
-      plugins: this.pluginInfo(),
-      pluginHealth: this.pluginHealth(),
-      dependencies: this.dependencyReport(),
-      events: Object.freeze({
-        stats: this.eventStats(),
-        totalListeners: this.listenerCount()
-      }),
-      metrics: Object.freeze({
-        viewportSize: this.metrics.viewportSize,
-        trackSize: this.metrics.trackSize,
-        realTrackSize: this.metrics.realTrackSize,
-        prependOffset: this.metrics.prependOffset,
-        gap: this.metrics.gap,
-        averageSlideSize: this.metrics.averageSlideSize,
-        slideSizes: Object.freeze([...this.metrics.slideSizes]),
-        slideOffsets: Object.freeze([...this.metrics.slideOffsets]),
-        slideSnaps: Object.freeze([...this.metrics.slideSnaps]),
-        groupSnaps: Object.freeze([...this.metrics.groupSnaps]), 
-        snapPoints: Object.freeze([...this.metrics.snapPoints])
-      }),
-      config: Object.freeze({
-        loop: this.options.loop,
-        dragFree: this.options.dragFree,
-        alignCenter: this.options.alignCenter,
-        alignEnd: this.options.alignEnd,
-        keyboard: this.options.keyboard,
-        autoplay: this.options.autoplay,
-        direction: this.options.direction,
-        vertical: this.options.vertical,
-        autoHeight: this.options.autoHeight,
-        autoVisibility: this.options.autoVisibility,
-        focusOnChange: this.options.focusOnChange,
-        reducedMotion: this.reducedMotion,
-        duration: this.options.duration,
-        friction: this.options.friction,
-        delay: this.options.delay,
-        dragThreshold: this.options.dragThreshold,
-        velocityThreshold: this.options.velocityThreshold,
-        dragInertia: this.options.dragInertia,
-        slideSnap: this.options.slideSnap,
-        groupSnap: this.options.groupSnap
-      })
-    });
-  }
-
   once(event, callback) {
-    const wrapper = (...args) => {
-      this.off(event, wrapper);
-      callback(...args);
-    };
+    const wrapper = (...args) => { this.off(event, wrapper); callback(...args); };
     return this.on(event, wrapper);
   }
-
+  listenerCount(eventName) {
+    if (eventName) return this.listeners[eventName] ? this.listeners[eventName].length : 0;
+    return Object.keys(this.listeners).reduce((acc, key) => acc + this.listeners[key].length, 0);
+  }
   eventStats(clear = false) {
     const stats = Object.freeze({ ...this._eventStats });
     if (clear) this._eventStats = {};
     return stats;
   }
-
-  listenerCount(eventName) {
-    if (eventName) {
-      return this.listeners[eventName] ? this.listeners[eventName].length : 0;
-    }
-    return Object.keys(this.listeners).reduce((acc, key) => acc + this.listeners[key].length, 0);
-  }
-
-  exportState() {
-    return Object.freeze({
-      index: this.currentIndex,
-      group: this.currentGroup
-    });
-  }
-
-  importState(state) {
-    if (!state) return;
-    if (typeof state.index === 'number') {
-      const maxIdx = this.maxReachableSlideIndex();
-      const targetIdx = Math.max(0, Math.min(state.index, maxIdx));
-      this.goToSlide(targetIdx, true);
-    } else if (typeof state.group === 'number') {
-      const maxGrp = Math.max(0, this.groupCount() - 1); 
-      const targetGrp = Math.max(0, Math.min(state.group, maxGrp));
-      this.goToGroup(targetGrp, true);
-    }
-  }
-
-  isReducedMotion() { return this.reducedMotion; }
-  version() { return ydCarousel.VERSION; }
-  isReady() { return this.root.classList.contains('yd_carousel-ready'); }
-  isDestroyed() { return this.destroyed; }
-  events() { return [...ydCarousel.EVENTS, '*']; }
-  
-  hashGroup() { return this.root.dataset.hashGroup; }
-  syncGroup() { return this.root.dataset.syncGroup; }
-  velocity() { return this._velocity; }
-  currentPosition() { return this.currentPos; }
-  targetPosition() { return this.targetPos; }
-
-  slideCount() { return this.originalSlides.length; }
-  groupCount() { return this.logicalGroups.length; }
-  datasetCount() { return this.originalSlides.length; }
-  
-  getSlide(index) { return this.originalSlides[index] || null; }
-
-  getConfiguredSlidesPerView() {
-    const classTarget = this.root.className + ' ' + (this.track ? this.track.className : '');
-    const match = classTarget.match(/\bslides-(\d+)\b/);
-    if (!match) {
-      return null;
-    }
-    const value = parseInt(match[1], 10);
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-
-  getSlidesPerView() {
-    const avg = this.metrics.averageSlideSize;
-    if (avg <= 0) {
-      return 1;
-    }
-    const effectiveSize = avg + this.metrics.gap;
-    return Math.max(1, Math.round(this.metrics.viewportSize / effectiveSize));
-  }
-
-  normalizeIndex(index) {
-    const total = this.slideCount();
-    if (!total) return 0;
-    let normalized = index;
-    while (normalized < 0) normalized += total;
-    while (normalized >= total) normalized -= total;
-    return normalized;
-  }
-
-  buildLogicalGroups() {
-    const groups = [];
-    const visible = this.metrics.slidesPerView || 1;
-    const total = this.slideCount();
-    for (let i = 0; i < total; i += visible) {
-      groups.push(i);
-    }
-    return groups;
-  }
-
-  getGroupForIndex(index) {
-    const normIndex = this.options.loop ? this.normalizeIndex(index) : index;
-    const groups = this.logicalGroups;
-    if (!groups || groups.length === 0) return 0;
-    let result = 0;
-    for (let i = 0; i < groups.length; i++) {
-      if (groups[i] <= normIndex) {
-        result = i;
-      } else {
-        break;
-      }
-    }
-    return result;
-  }
-
-  updateDragIndex() {
-    if (!this.dragState.active) {
-      return;
-    }
-    this.dragState.currentIndex = this.findNearestSlide(this.targetPos);
-    this.previewGroup = this.getGroupForIndex(this.dragState.currentIndex);
-  }
-
-  getVisibleDotIndex() {
-    if (this.options.slideSnap) {
-      return this.currentIndex;
-    }
-    return this.currentGroup;
-  }
-  
-  slideSnapCount() { return this.metrics.slideSnaps.length; }
-  
-  maxReachableSlideIndex() {
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (loopActive) {
-      return Math.max(0, this.slideCount() - 1);
-    }
-    return Math.max(0, this.slideSnapCount() - 1);
-  }
-
-  selectedGroup() { return this.currentGroup; }
-
-  selectedLogicalSlide() {
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (loopActive) {
-      return this.currentIndex;
-    }
-    return Math.min(this.currentIndex, this.slideCount() - 1);
-  }
-
-  state() {
-    return Object.freeze({
-      version: this.version(),
-      index: this.currentIndex,
-      group: this.currentGroup,
-      previousIndex: this.prevIndex,
-      position: this.currentPos,
-      target: this.targetPos,
-      velocity: this._velocity,
-      progress: this.scrollProgress(),
-      visualProgress: this.getVisualProgress(),
-      dragging: this.isDraggingActive,
-      settled: this.isSettled,
-      looping: this.options.loop,
-      rtl: this.isRTL,
-      direction: this.options.direction,
-      vertical: this.options.vertical,
-      autoHeight: this.options.autoHeight,
-      autoVisibility: this.options.autoVisibility,
-      focusOnChange: this.options.focusOnChange,
-      reducedMotion: this.reducedMotion,
-      paused: this._isPaused,
-      frozen: this._isFrozen,
-      autoFrozen: this._isAutoFrozen,
-      manualFrozen: this._manualFrozen,
-      slideSnap: this.options.slideSnap,
-      groupSnap: this.options.groupSnap
-    });
-  }
-
-  get stateData() { return this.state(); }
-  snapshot() { return this.state(); }
-  pluginsList() { return this.plugins.map(p => p.name || 'anonymous').concat(Array.from(this.activePlugins.keys())); }
-
-  buildInfo() {
-    return Object.freeze({
-      engine: ydCarousel.ENGINE,
-      version: this.version(),
-      build: 'enterprise-production',
-      released: '2026-08'
-    });
-  }
-
-  capabilities() {
-    return Object.freeze({
-      loop: true, dragFree: true, rtl: true, direction: true, vertical: true, autoHeight: true, autoVisibility: true, dynamicApi: true,
-      autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true,
-      sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
-      once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true,
-      pauseResume: true, freezeUnfreeze: true,
-      warnings: true, compatibilityReport: true, pluginHealth: true,
-      debug: true, plugins: true, events: true, diagnostics: true, dependencies: true,
-      snapshots: true, observers: true, registry: true 
-    });
-  }
-
-  runtimeCapabilities() {
-    return Object.freeze({
-      loop: this.options.loop, dragFree: this.options.dragFree,
-      rtl: this.isRTL, direction: this.options.direction, vertical: this.options.vertical,
-      autoplay: this.options.autoplay, keyboard: this.options.keyboard,
-      autoHeight: this.options.autoHeight, autoVisibility: this.options.autoVisibility, focusOnChange: this.options.focusOnChange,
-      reducedMotion: this.reducedMotion,
-      alignCenter: this.options.alignCenter, alignEnd: this.options.alignEnd, 
-      slideSnap: this.options.slideSnap, groupSnap: this.options.groupSnap
-    });
-  }
-
-  info() {
-    return Object.freeze({
-      version: this.version(), build: this.buildInfo(),
-      plugins: Object.freeze(this.pluginsList()),
-      events: Object.freeze(this.events()),
-      capabilities: this.capabilities(),
-      runtimeCapabilities: this.runtimeCapabilities(),
-      state: this.state()
-    });
-  }
-
-  inspect() {
-    return Object.freeze({
-      info: this.info(), state: this.state(),
-      capabilities: this.capabilities(), runtimeCapabilities: this.runtimeCapabilities(),
-      slidesInView: Object.freeze(this.slidesInView()),
-      slidesNotInView: Object.freeze(this.slidesNotInView()),
-      activeSlide: this.selectedIndex()
-    });
-  }
-
   getEventPayload() {
+    if (!this.api.internal) return {};
+    const state = this.api.internal.state;
     return {
-      currentIndex: this.currentIndex,
-      previousIndex: this.prevIndex,
-      currentGroup: this.currentGroup, 
-      previousGroup: this.prevGroup,
-      previewIndex: this.previewIndex !== undefined ? this.previewIndex : this.currentIndex, 
-      previewGroup: this.previewGroup !== undefined ? this.previewGroup : this.currentGroup,    
-      slideCount: this.slideCount(),
-      progress: this.scrollProgress(),
-      visualProgress: this.getVisualProgress(),
-      isDragging: this.isDraggingActive,
-      isSettled: this.isSettled,
-      looping: this.options.loop,
-      direction: this._velocity > 0 ? 1 : (this._velocity < 0 ? -1 : 0),
-      paused: this._isPaused,
-      frozen: this._isFrozen
+      currentIndex: state.index.current, previousIndex: state.index.previous,
+      currentGroup: state.group.current, previousGroup: state.group.previous,
+      previewIndex: state.preview.index !== undefined ? state.preview.index : state.index.current,
+      previewGroup: state.preview.group !== undefined ? state.preview.group : state.group.current,
+      slideCount: state.dom.originalSlides.length,
+      progress: this.api.internal.renderer.getScrollProgress(),
+      visualProgress: this.api.internal.renderer.getVisualProgress(),
+      isDragging: state.flags.isDraggingActive, isSettled: state.flags.isSettled,
+      looping: this.api.options.loop,
+      direction: state.physics.velocity > 0 ? 1 : (state.physics.velocity < 0 ? -1 : 0),
+      paused: state.flags.isPaused, frozen: state.flags.isFrozen
     };
   }
+}
 
-  emit(event, customData = {}) {
-    if (this.destroyed && event !== 'destroy') return;
+// ==========================================
+// LAYER 2: State Store
+// ==========================================
+class CarouselState {
+  constructor() {
+    this.position = { current: 0, target: 0 };
+    this.index = { current: 0, previous: 0 };
+    this.group = { current: 0, previous: 0 };
+    this.preview = { index: 0, group: 0 };
+    this.physics = { velocity: 0, inertia: 0 };
+    this.flags = {
+      isPaused: false, isFrozen: false, isAutoFrozen: false, manualFrozen: false,
+      isDraggingActive: false, isSettled: true, destroyed: false,
+      _lastIntersectionState: true,
+      isClickSuppressed: false, ignoreNextMutation: false, isDynamicRefreshing: false,
+      _generatedRootId: false, _generatedTrackId: false, _keyboardRegistered: false, batchDepth: 0,
+      layoutPending: false, mutationUsingRAF: false, pluginRefreshUsingRAF: false
+    };
+    this.drag = {
+      active: false, startIndex: 0, currentIndex: 0, startPointer: 0, startTargetPos: 0,
+      startPos: 0, startCurrentPos: 0, lastPointerPos: 0, lastPointerTime: 0,
+      activePointerId: undefined
+    };
+    this.metrics = {
+      viewportSize: 0, trackSize: 0, realTrackSize: 0, prependOffset: 0, gap: 0,
+      slidesPerView: 0, averageSlideSize: 0, maxScroll: 0,
+      slideSizes: [], slideOffsets: [], slideSnaps: [], groupSnaps: [], snapPoints: []
+    };
+    this.dom = { originalSlides: [], logicalGroups: [], visibleSlides: new Set(), _trackedActiveNode: null };
+    this.timers = { rafId: null, mutationRaf: null, pluginRefreshRaf: null };
+    this.stats = { renderTicks: 0, layoutCalcs: 0, lastLayoutTime: 0, initTime: Environment.now() };
+  }
+}
 
-    this._eventStats[event] = (this._eventStats[event] || 0) + 1;
-
-    const payload = { ...this.getEventPayload(), ...customData };
+// ==========================================
+// LAYER 3: Orchestration & Lifecycle
+// ==========================================
+class ModuleManager {
+  constructor(api) { this.api = api; }
+  initAll() {
+    this.api.internal.accessibility.setupAccessibility();
+    this.api.internal.observers.setupObservers();
+    this.api.internal.measurements.updateMeasurements();
+    this.api.internal.keyboard.initialize();
+    this.api.internal.drag.initialize();
+    this.api.internal.drag.bindEvents();
+    this.api.internal.plugins.initialize();
+    this.api.internal.plugins.initPlugins();
+    this.api.internal.plugins.initEnterprisePlugins();
     
-    if (this.listeners[event]) {
-      const listeners = [...this.listeners[event]];
-      listeners.forEach(cb => {
-        try {
-          cb(this, payload);
-        } catch (err) {
-          console.error(`[ydCarousel] Error executing listener for event "${event}":`, err);
-        }
-      });
-    }
-
-    if (this.listeners['*']) {
-      const wildcards = [...this.listeners['*']];
-      wildcards.forEach(cb => {
-        try {
-          cb(event, this, payload);
-        } catch (err) {
-          console.error(`[ydCarousel] Error executing wildcard listener for event "${event}":`, err);
-        }
-      });
+    if (!this.api.internal.state.flags.isSettled) {
+      this.api.internal.physics.startPhysicsLoop();
     }
   }
-
-  on(event, callback) {
-    if (!this.listeners[event]) this.listeners[event] = [];
-    if (!this.listeners[event].includes(callback)) {
-      this.listeners[event].push(callback);
-    }
-    return this;
+  destroyAll() {
+    this.api.internal.accessibility.destroy();
+    this.api.internal.keyboard.destroy();
+    this.api.internal.drag.unbindEvents();
+    this.api.internal.observers.destroy();
+    this.api.internal.plugins.destroyAll();
+    this.api.internal.renderer._purgeClones();
   }
+}
 
-  off(event, callback) {
-    if (!this.listeners[event]) return this;
-    this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-    if (this.listeners[event].length === 0) {
-      delete this.listeners[event];
-    }
-    return this;
+class Lifecycle {
+  constructor(api) { this.api = api; }
+  init() {
+    const state = this.api.internal.state;
+    state.flags.destroyed = false;
+    state.flags.isPaused = state.flags.isFrozen = state.flags.isAutoFrozen = state.flags.manualFrozen = false;
+    this.api.root.dataset.direction = this.api.options.direction;
+    CarouselRegistry.register(this.api);
+    this.api.internal.modules.initAll();
+    this.api.root.classList.add('yd_carousel-ready');
+    this.api.internal.events.emit(EVENTS.INIT);
   }
-
-  scrollTo(index, immediate = false) { this.goToSlide(index, immediate); }
-  selectedIndex() { return this.currentIndex; }
-  
-  previousIndex() { return this.prevIndex; }
-  activeSlide() { return this.originalSlides[this.currentIndex] || null; }
-  isDragging() { return this.isDraggingActive; } 
-  isLoop() { return this.options.loop; }        
-
-  refresh(full = false) {
-    if (this.destroyed) return;
-    this.updateMeasurements();
-    if (full) this.initPlugins();
+  pause() {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed || state.flags.isPaused) return;
+    state.flags.isPaused = true;
+    if (state.timers.rafId) { cancelAnimationFrame(state.timers.rafId); state.timers.rafId = null; }
+    if (state.flags.isDraggingActive) this.api.internal.drag.abortDrag();
+    this.api.internal.events.emit(EVENTS.PAUSE);
   }
-
-  reInit(config = {}) {
-    const root = this.root;
-    let savedState = null;
-    if (config && config.preserveState) {
-      savedState = this.exportState();
-    }
-    this.destroy();
-    const newApi = new ydCarousel(root);
-    if (savedState) {
-      newApi.importState(savedState);
-    }
-    return newApi;
+  resume() {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed || !state.flags.isPaused) return;
+    state.flags.isPaused = false;
+    if (!state.flags.isFrozen) this._wake();
+    this.api.internal.events.emit(EVENTS.RESUME);
   }
+  freeze(isManual = true) {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed) return;
+    if (isManual) state.flags.manualFrozen = true;
+    if (state.flags.isFrozen) return;
+    state.flags.isFrozen = true;
+    state.flags.layoutPending = false;
 
-  schedulePluginRefresh() {
-    if (this.pluginRefreshRaf) return;
-    this.pluginRefreshRaf = requestAnimationFrame(() => {
-      this.pluginRefreshRaf = null;
-      if (!this.destroyed) {
-        this.initPlugins();
-      }
-    });
-  }
-
-  rebuildPlugins() {
-    if (this.destroyed) return;
-    this.initPlugins();
-  }
-
-  _purgeClones() {
-    this.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove());
-  }
-  
-  cloneCount() {
-    return this.track ? this.track.querySelectorAll('.yd_slide-clone').length : 0;
-  }
-
-  cloneDiagnostics() {
-    return { cloneNodes: this.cloneCount() };
-  }
-
-  batch(callback) {
-    if (this.destroyed) return;
-    if (this.batchDepth === 0) {
-      this._trackedActiveNode = this.originalSlides[this.currentIndex];
-      this._purgeClones(); 
-    }
-    this.batchDepth++;
-    this.ignoreNextMutation = true;
-    let batchValid = true;
-    try {
-      const result = callback();
-      if (result instanceof Promise) {
-        batchValid = false;
-        this.ignoreNextMutation = false;
-        this._trackedActiveNode = null;
-        throw new Error('[ydCarousel] batch() callback must be synchronous.');
-      }
-    } finally {
-      this.batchDepth--;
-      if (batchValid && this.batchDepth === 0) {
-        this._refreshAfterDynamic();
-      }
-    }
-  }
-
-  _refreshAfterDynamic() {
-    if (this.batchDepth > 0) return;
-    this._isDynamicRefreshing = true;
-    this.updateMeasurements();
-    this._isDynamicRefreshing = false;
-    this._trackedActiveNode = null;
-    this.schedulePluginRefresh();
-  }
-
-  clampState() {
-    if (!this.metrics.slideSnaps.length) {
-      this.currentIndex = 0;
-      this.currentGroup = 0;
-      return;
-    }
-    this.currentIndex = Math.max(0, Math.min(this.currentIndex, this.maxReachableSlideIndex()));
-    this.currentGroup = Math.max(0, Math.min(this.currentGroup, this.groupCount() - 1));
+    if (state.timers.rafId) { cancelAnimationFrame(state.timers.rafId); state.timers.rafId = null; }
     
-    if (this.options.slideSnap) {
-      this.currentGroup = this.getGroupForIndex(this.currentIndex);
-    } else {
-      const targetLogical = this.logicalGroups[this.currentGroup];
-      this.currentIndex = targetLogical || 0;
-    }
-  }
-
-  addSlide(html) {
-    this.batch(() => {
-      this.track.insertAdjacentHTML('beforeend', html);
-    });
-  }
-
-  removeSlide(index) {
-    this.batch(() => {
-      const slide = this.originalSlides[index];
-      if (slide) slide.remove();
-    });
-  }
-
-  removeAllSlides() {
-    this.batch(() => {
-      this.track.innerHTML = '';
-      this._trackedActiveNode = null;
-    });
-  }
-
-  insertSlide(index, html) {
-    this.batch(() => {
-      const target = this.originalSlides[index];
-      if (!target) {
-        this.track.insertAdjacentHTML('beforeend', html);
-      } else {
-        target.insertAdjacentHTML('beforebegin', html);
-      }
-    });
-  }
-
-  replaceSlide(index, html) {
-    this.batch(() => {
-      const target = this.originalSlides[index];
-      if (!target) return;
-      target.insertAdjacentHTML('beforebegin', html);
-      
-      if (this._trackedActiveNode === target) {
-        this._trackedActiveNode = null; 
-      }
-      target.remove();
-    });
-  }
-
-  canScrollNext() {
-    if (this.root.classList.contains('stop-last')) {
-      if (this.options.slideSnap) return this.currentIndex < this.maxReachableSlideIndex();
-      return this.currentGroup < this.groupCount() - 1;
-    }
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (this.options.slideSnap) return loopActive || this.currentIndex < this.maxReachableSlideIndex();
-    return loopActive || this.currentGroup < this.groupCount() - 1;
-  }
-
-  canScrollPrev() {
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (this.options.slideSnap) return loopActive || this.currentIndex > 0;
-    return loopActive || this.currentGroup > 0;
-  }
-
-  scrollProgress() {
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (loopActive && this.metrics.realTrackSize > 0) {
-      let relativePos = (this.currentPos - this.metrics.prependOffset) % this.metrics.realTrackSize;
-      if (relativePos < 0) relativePos += this.metrics.realTrackSize;
-      return Math.max(0, Math.min(1, relativePos / this.metrics.realTrackSize));
-    }
-    if (!this.maxScroll) return 0;
-    return Math.max(0, Math.min(1, this.currentPos / this.maxScroll));
-  }
-  
-  getVisualProgress() {
-    const p = this.scrollProgress();
-    return (this.isRTL && !this.options.vertical) ? 1 - p : p;
-  }
-
-  visualScrollbarProgress() {
-    return this.scrollProgress();
-  }
-
-  slideProgress(index) {
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    const offset = this.metrics.slideOffsets[index] || 0;
-    let distance = this.currentPos - offset;
-    
-    if (loopActive && this.metrics.realTrackSize > 0) {
-      const distFwd = distance - this.metrics.realTrackSize;
-      const distBwd = distance + this.metrics.realTrackSize;
-      if (Math.abs(distFwd) < Math.abs(distance)) distance = distFwd;
-      if (Math.abs(distBwd) < Math.abs(distance)) distance = distBwd;
+    if (state.timers.mutationRaf) { 
+      if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
+      else clearTimeout(state.timers.mutationRaf); 
+      state.timers.mutationRaf = null; 
     }
     
-    let progress = distance / (this.metrics.viewportSize || 1);
-    return Math.max(-1, Math.min(1, progress));
+    if (state.timers.pluginRefreshRaf) { 
+      if (state.flags.pluginRefreshUsingRAF) cancelAnimationFrame(state.timers.pluginRefreshRaf);
+      else clearTimeout(state.timers.pluginRefreshRaf); 
+      state.timers.pluginRefreshRaf = null; 
+    }
+
+    if (state.flags.isDraggingActive) this.api.internal.drag.abortDrag();
+    this.api.internal.observers.disconnectAll();
+    this.api.internal.events.emit(EVENTS.FREEZE, { reason: isManual ? 'manual' : 'visibility' });
   }
+  unfreeze(isManual = true) {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed) return;
+    if (isManual) state.flags.manualFrozen = false;
+    else if (state.flags.manualFrozen) return;
+    if (!state.flags.isFrozen) return;
+    state.flags.isFrozen = false;
 
-  slidesInView() {
-    return [...this.visibleSlides].sort((a, b) => a - b);
+    this.api.internal.observers.reconnectAll();
+    this.api.internal.measurements.updateMeasurements();
+    
+    if (Math.abs(state.position.target - state.position.current) > 0.1 || Math.abs(state.physics.inertia) > 0.1) {
+      this._wake();
+    }
+    this.api.internal.events.emit(EVENTS.UNFREEZE, { reason: isManual ? 'manual' : 'visibility' });
   }
-
-  slidesNotInView() {
-    const all = [];
-    const total = this.slideCount();
-    for (let i = 0; i < total; i++) {
-      if (!this.visibleSlides.has(i)) {
-        all.push(i);
-      }
-    }
-    return all;
-  }
-
-  _wake() {
-    if (this._isPaused || this._isFrozen) return;
-    if (this.isSettled) {
-      this.isSettled = false;
-      this.startPhysicsLoop();
-    }
-  }
-  
-  findNearestSlide(position) {
-    let minDistance = Infinity;
-    let nearest = 0;
-    
-    let searchPos = position;
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (loopActive && this.metrics.realTrackSize > 0) {
-      let rel = position - this.metrics.prependOffset;
-      rel = ((rel % this.metrics.realTrackSize) + this.metrics.realTrackSize) % this.metrics.realTrackSize;
-      searchPos = rel + this.metrics.prependOffset;
-    }
-
-    this.metrics.slideSnaps.forEach((snap, idx) => {
-      let dist = Math.abs(snap - searchPos);
-      if (dist < minDistance) {
-        minDistance = dist;
-        nearest = idx;
-      }
-    });
-    
-    return nearest;
-  }
-
-  updateMeasurements() {
-    const perfStart = ydCarousel._now();
-    this.visibleSlides.clear();
-
-    if (this.mutationObserver) this.mutationObserver.disconnect();
-    
-    this._purgeClones(); 
-    
-    this.originalSlides = Array.from(this.track.children);
-    
-    if (this._isDynamicRefreshing) {
-      if (this._trackedActiveNode && this.originalSlides.includes(this._trackedActiveNode)) {
-        this.currentIndex = this.originalSlides.indexOf(this._trackedActiveNode);
-      }
-    }
-    
-    if (!this.originalSlides.length) {
-      this.metrics.slideSnaps = [];
-      this.metrics.groupSnaps = []; 
-      this.metrics.snapPoints = [];
-      this.metrics.slideOffsets = [];
-      this.metrics.slideSizes = [];
-      this.metrics.averageSlideSize = 0;
-      this.metrics.slidesPerView = 0;
-      
-      this.logicalGroups = [];
-
-      this.maxScroll = 0;
-      this.currentIndex = 0;
-      this.currentGroup = 0;
-
-      this.currentPos = 0;
-      this.targetPos = 0;
-      this._velocity = 0;
-      this.inertia = 0;
-      this.previewIndex = 0;
-      this.previewGroup = 0;
-
-      this.track.style.transform = '';
-      const viewportEl = this.root.querySelector('.yd_viewport') || this.root;
-      if (this.options.autoHeight && viewportEl) {
-        viewportEl.style.height = '';
-      }
-
-      if (this.mutationObserver && !this._isFrozen) {
-        this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
-      }
-      
-      this._stats.layoutCalcs++;
-      this._stats.lastLayoutTime = ydCarousel._now() - perfStart;
-      return;
-    }
-
-    this.originalSlides.forEach((slide, idx) => {
-      slide.setAttribute('data-slide-index', idx);
-    });
-
-    const viewportEl = this.root.querySelector('.yd_viewport') || this.root;
-    const viewportRect = viewportEl.getBoundingClientRect();
-    
-    this.metrics.viewportSize = this.options.vertical ? viewportRect.height : viewportRect.width;
-    
-    this.metrics.slideSizes = this.originalSlides.map(slide => {
-      const sRect = slide.getBoundingClientRect();
-      return this.options.vertical ? sRect.height : sRect.width;
-    });
-
-    if (this.metrics.slideSizes.length) {
-      this.metrics.averageSlideSize = this.metrics.slideSizes.reduce((total, size) => total + size, 0) / this.metrics.slideSizes.length;
-    } else {
-      this.metrics.averageSlideSize = 0;
-    }
-
-    const configuredSlidesPerView = this.getConfiguredSlidesPerView();
-    this.metrics.slidesPerView = configuredSlidesPerView ?? this.getSlidesPerView();
-    if (this.metrics.slidesPerView < 1) {
-      this.metrics.slidesPerView = 1;
-    }
-    
-    this.logicalGroups = this.buildLogicalGroups();
-
-    const firstRect = this.originalSlides[0].getBoundingClientRect();
-    
-    const relativeOffsets = this.originalSlides.map(slide => {
-      const sRect = slide.getBoundingClientRect();
-      if (this.options.vertical) {
-        return sRect.top - firstRect.top;
-      }
-      return this.isRTL ? firstRect.right - sRect.right : sRect.left - firstRect.left;
-    });
-
-    let physicalSize = 0;
-    let loopGap = 0;
-
-    if (this.slideCount() > 0) {
-      const lastIdx = this.slideCount() - 1;
-      physicalSize = relativeOffsets[lastIdx] + this.metrics.slideSizes[lastIdx];
-    }
-
-    if (this.slideCount() > 1) {
-      loopGap = relativeOffsets[1] - (relativeOffsets[0] + this.metrics.slideSizes[0]);
-      loopGap = Math.max(0, loopGap);
-    }
-
-    this.metrics.gap = loopGap;
-    this.metrics.realTrackSize = this.options.loop ? physicalSize + loopGap : physicalSize;
-
-    this.metrics.prependOffset = 0;
-
-    if (this.options.loop && this.slideCount() > 1 && this.metrics.realTrackSize > 0) {
-      this.metrics.prependOffset = this.metrics.realTrackSize;
-      
-      let clonedSize = 0;
-      let setsNeeded = 0;
-      
-      while (clonedSize < (this.metrics.viewportSize * 3) && setsNeeded < 4 && (this.slideCount() * (setsNeeded + 1) * 2) <= ydCarousel.MAX_LOOP_CLONES) {
-        clonedSize += this.metrics.realTrackSize;
-        setsNeeded++;
-      }
-      setsNeeded = Math.max(0, setsNeeded);
-      
-      if (setsNeeded > 0) {
-        for (let i = 0; i < setsNeeded; i++) {
-          const clonesBefore = this.originalSlides.map(s => this.createClone(s));
-          const clonesAfter = this.originalSlides.map(s => this.createClone(s));
-          
-          const firstOriginal = this.originalSlides[0];
-          clonesBefore.forEach(c => this.track.insertBefore(c, firstOriginal));
-          clonesAfter.forEach(c => this.track.appendChild(c));
-        }
-      }
-    }
-
-    this.metrics.trackSize = this.options.vertical ? this.track.scrollHeight : this.track.scrollWidth;
-    
-    this.metrics.slideOffsets = [];
-    this.metrics.slideSnaps = [];
-    this.metrics.groupSnaps = [];
-    
-    let currentGroupStartOffset = 0;
-    let currentGroupStartSnap = 0;
-    
-    this.metrics.slideSizes.forEach((size, idx) => {
-      const relOffset = relativeOffsets[idx];
-      const baseOffset = this.metrics.prependOffset + relOffset;
-      
-      let snap = baseOffset;
-      if (this.options.alignCenter) snap -= (this.metrics.viewportSize / 2) - (size / 2);
-      if (this.options.alignEnd) snap -= this.metrics.viewportSize - size;
-      
-      this.metrics.slideOffsets.push(Math.max(0, snap));
-      this.metrics.slideSnaps.push(Math.max(0, snap));
-
-      if (idx === 0) {
-        this.metrics.groupSnaps.push(Math.max(0, snap));
-        currentGroupStartOffset = relOffset;
-        currentGroupStartSnap = Math.max(0, snap);
-      } else {
-        const span = (relOffset - currentGroupStartOffset) + size;
-        if (span > this.metrics.viewportSize) {
-          currentGroupStartOffset = relOffset;
-          currentGroupStartSnap = Math.max(0, snap);
-          this.metrics.groupSnaps.push(currentGroupStartSnap);
-        }
-      }
-    });
-
-    this.maxScroll = Math.max(0, this.metrics.realTrackSize - this.metrics.viewportSize);
-
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-
-    if (!loopActive) {
-      let rawSlides = this.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-      let uniqueSlideSnaps = [];
-      rawSlides.forEach(snap => {
-        if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > ydCarousel.SNAP_EPSILON) {
-          uniqueSlideSnaps.push(snap);
-        }
-      });
-      this.metrics.slideSnaps = uniqueSlideSnaps;
-      
-      let rawGroups = this.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, this.maxScroll)));
-      let uniqueGroupSnaps = [];
-      rawGroups.forEach(snap => {
-        if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > ydCarousel.SNAP_EPSILON) {
-          uniqueGroupSnaps.push(snap);
-        }
-      });
-      this.metrics.groupSnaps = uniqueGroupSnaps; 
-    }
-
-    this.metrics.snapPoints = this.options.slideSnap ? this.metrics.slideSnaps : this.metrics.groupSnaps;
-
-    this.clampState();
-
-    if (this.visibilityObserver) {
-      this.visibilityObserver.disconnect();
-      if (!this._isFrozen) {
-        Array.from(this.track.children).forEach(node => this.visibilityObserver.observe(node));
-      }
-    }
-
-    if (this.mutationObserver && !this._isFrozen) {
-      this.mutationObserver.observe(this.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
-    }
-
-    this.emit('resize');
-    
-    if (this.options.slideSnap) {
-      this.goToSlide(this.currentIndex, true);
-    } else {
-      this.goToGroup(this.currentGroup, true);
-    }
-
-    this.updateAutoHeight();
-
-    this._stats.layoutCalcs++;
-    this._stats.lastLayoutTime = ydCarousel._now() - perfStart;
-  }
-
-  createClone(slide) {
-    const clone = slide.cloneNode(true);
-    clone.setAttribute('data-slide-index', slide.getAttribute('data-slide-index'));
-    clone.classList.add('yd_slide-clone');
-    
-    clone.setAttribute('role', 'presentation');
-    clone.setAttribute('aria-hidden', 'true');
-    clone.setAttribute('tabindex', '-1');
-    if ('inert' in clone) clone.inert = true;
-    
-    clone.removeAttribute('aria-current');
-    clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
-    
-    const nodes = [clone, ...clone.querySelectorAll('*')];
-    nodes.forEach(node => {
-      node.removeAttribute('id');
-      node.removeAttribute('for');
-      node.removeAttribute('aria-labelledby');
-      node.removeAttribute('aria-describedby');
-      node.removeAttribute('aria-controls');
-      node.setAttribute('aria-hidden', 'true');
-      
-      if (node.matches && node.matches('a, button, input, select, textarea, [tabindex]')) {
-        node.setAttribute('tabindex', '-1');
-      }
-    });
-    return clone;
-  }
-
-  setupObservers() {
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver(this.onResize);
-      this.resizeObserver.observe(this.root);
-    }
-
-    if (typeof MutationObserver !== 'undefined') {
-      this.mutationObserver = new MutationObserver(this.onMutation);
-    }
-
-    if (typeof IntersectionObserver !== 'undefined') {
-      const viewport = this.root.querySelector('.yd_viewport') || this.root;
-      this.visibilityObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          const node = entry.target;
-          const idx = parseInt(node.getAttribute('data-slide-index'), 10);
-          const isClone = node.classList.contains('yd_slide-clone');
-          
-          if (entry.isIntersecting) {
-            node.classList.add('in-view');
-            node.classList.remove('out-view');
-            if (!isClone) {
-              node.removeAttribute('aria-hidden');
-              if (!isNaN(idx) && !this.visibleSlides.has(idx)) {
-                this.visibleSlides.add(idx);
-                this.emit('slideEnter', { index: idx });
-              }
-            }
-          } else {
-            node.classList.add('out-view');
-            node.classList.remove('in-view');
-            if (!isClone) {
-              node.setAttribute('aria-hidden', 'true');
-              if (!isNaN(idx) && this.visibleSlides.has(idx)) {
-                this.visibleSlides.delete(idx);
-                this.emit('slideExit', { index: idx });
-              }
-            }
-          }
-        });
-      }, { root: viewport, threshold: 0.01 });
-
-      if (this.options.autoVisibility) {
-        this.rootVisibilityObserver = new IntersectionObserver((entries) => {
-          this._handleAutoVisibility(entries[0].isIntersecting, !document.hidden);
-        }, { rootMargin: '150px' });
-        this.rootVisibilityObserver.observe(this.root);
-        
-        if (ydCarousel.hasDOM()) {
-          document.addEventListener('visibilitychange', this._docVisHandler);
-        }
-      }
-    }
-  }
-
-  onResize() { this.updateMeasurements(); }
-
-  onMutation(mutations) {
-    if (this.batchDepth > 0) return;
-    if (this.isDraggingActive) return;
-
-    if (this.ignoreNextMutation) {
-      this.ignoreNextMutation = false;
-      return;
-    }
-
-    const isCloneMutation = mutations.some(m => {
-      const nodes = [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)];
-      return nodes.some(n => n.nodeType === 1 && n.classList.contains('yd_slide-clone'));
-    });
-    if (isCloneMutation) return;
-
-    if (this.mutationRaf && typeof cancelAnimationFrame === 'function') {
-      cancelAnimationFrame(this.mutationRaf);
-    }
-    
-    if (typeof requestAnimationFrame === 'function') {
-      this.mutationRaf = requestAnimationFrame(() => {
-        if (this.destroyed) return;
-        const structureChanged = mutations.some(m => m.type === 'childList');
-        this.updateMeasurements();
-        if (structureChanged) {
-          this.schedulePluginRefresh(); 
-        }
-      });
-    } else {
-      if (this.destroyed) return;
-      const structureChanged = mutations.some(m => m.type === 'childList');
-      this.updateMeasurements();
-      if (structureChanged) {
-        this.schedulePluginRefresh();
-      }
-    }
-  }
-
-  getPointerPos(e) { return this.options.vertical ? e.clientY : e.clientX; }
-
-  _registerKeyboard() {
-    if (!this._keyboardRegistered) {
-      ydCarousel._keyboardUsers++;
-      this._keyboardRegistered = true;
-      if (!ydCarousel._keyboardInitialized) {
-        if (ydCarousel.hasDOM()) {
-          document.addEventListener('keydown', ydCarousel._globalKeyDownHandler);
-        }
-        ydCarousel._keyboardInitialized = true;
-      }
-    }
-  }
-
-  _unregisterKeyboard() {
-    if (this._keyboardRegistered) {
-      ydCarousel._keyboardUsers--;
-      this._keyboardRegistered = false;
-      if (ydCarousel._keyboardUsers <= 0) {
-        if (ydCarousel.hasDOM()) {
-          document.removeEventListener('keydown', ydCarousel._globalKeyDownHandler);
-        }
-        ydCarousel._keyboardInitialized = false;
-        ydCarousel._keyboardUsers = 0;
-      }
-    }
-  }
-
-  bindEvents() {
-    this.track.addEventListener('pointerdown', this.onPointerDown);
-    this.track.addEventListener('click', this.onClick, { capture: true });
-    
-    this.root.addEventListener('mouseenter', this.onActivate);
-    this.root.addEventListener('focusin', this.onActivate);
-    this.root.addEventListener('mouseleave', this.onDeactivate);
-    this.root.addEventListener('focusout', this.onDeactivate);
-    this.track.addEventListener('pointerdown', this.onActivate);
-
-    if (this.options.keyboard) {
-      this.root.setAttribute('tabindex', '0');
-      this._registerKeyboard();
-    }
-  }
-
-  unbindEvents() {
-    this.track.removeEventListener('pointerdown', this.onPointerDown);
-    this.track.removeEventListener('click', this.onClick, { capture: true });
-    if (ydCarousel.hasDOM()) {
-      window.removeEventListener('pointermove', this.onPointerMove);
-      window.removeEventListener('pointerup', this.onPointerUp);
-      window.removeEventListener('pointercancel', this.onPointerUp);
-    }
-    
-    this.root.removeEventListener('mouseenter', this.onActivate);
-    this.root.removeEventListener('focusin', this.onActivate);
-    this.root.removeEventListener('mouseleave', this.onDeactivate);
-    this.root.removeEventListener('focusout', this.onDeactivate);
-    this.track.removeEventListener('pointerdown', this.onActivate);
-
-    if (this.options.keyboard) {
-      this._unregisterKeyboard();
-    }
-  }
-
-  onPointerDown(e) {
-    if (e.button !== 0 || this._isPaused || this._isFrozen) return; 
-    this.isDraggingActive = true;
-    this.dragState.active = true;
-    this.dragState.startIndex = this.currentIndex;
-    this.dragState.currentIndex = this.currentIndex;
-    this.dragState.startPointer = this.getPointerPos(e);
-    this.dragState.startTargetPos = this.targetPos;
-
-    this.activePointerId = e.pointerId;
-    this.isClickSuppressed = false;
-
-    this.targetPos = this.currentPos;
-    this.dragStartPos = this.getPointerPos(e);
-    this.dragStartCurrentPos = this.currentPos;
-    
-    this.lastPointerPos = this.getPointerPos(e);
-    this.lastPointerTime = ydCarousel._now();
-    this._velocity = 0;
-    this.inertia = 0; 
-
-    this.previewIndex = this.currentIndex;
-    this.previewGroup = this.currentGroup;
-
-    try {
-      this.track.setPointerCapture(e.pointerId);
-    } catch (err) {}
-    this.track.style.cursor = 'grabbing';
-    
-    if (ydCarousel.hasDOM()) {
-      window.addEventListener('pointermove', this.onPointerMove);
-      window.addEventListener('pointerup', this.onPointerUp);
-      window.addEventListener('pointercancel', this.onPointerUp);
-    }
-    
-    this._wake();
-    this.emit('dragStart');
-    e.preventDefault(); 
-  }
-
-  onPointerMove(e) {
-    if (!this.isDraggingActive) return;
-    const currentPointer = this.getPointerPos(e);
-    
-    let dragDistance = this.dragStartPos - currentPointer;
-    if (!this.options.vertical) dragDistance *= this.dir;
-    if (Math.abs(dragDistance) > this.options.dragThreshold) this.isClickSuppressed = true;
-
-    const now = ydCarousel._now();
-    const dt = now - this.lastPointerTime;
-    if (dt > 0) {
-      let rawVel = (this.lastPointerPos - currentPointer) / dt;
-      if (!this.options.vertical) rawVel *= this.dir;
-      this._velocity = rawVel;
-    }
-    this.lastPointerPos = currentPointer;
-    this.lastPointerTime = now;
-
-    let newTarget = this.dragStartCurrentPos + dragDistance;
-
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-    if (!loopActive) {
-      if (newTarget < 0) newTarget *= 0.3;
-      else if (newTarget > this.maxScroll) newTarget = this.maxScroll + ((newTarget - this.maxScroll) * 0.3);
-    }
-
-    this.targetPos = newTarget;
-    this.updateDragIndex();
-    this._wake();
-    this.emit('dragMove');
-
-    const nearest = this.findNearestSlide(this.targetPos);
-    if (nearest !== this.previewIndex) {
-      this.previewIndex = nearest;
-      this.emit('previewUpdate');
-    }
-  }
-
-  onPointerUp(e) {
-    if (!this.isDraggingActive) return;
-    this.isDraggingActive = false;
-    this.dragState.active = false;
-    
-    setTimeout(() => { this.isClickSuppressed = false; }, 50);
-
-    const pid = e && e.pointerId !== undefined ? e.pointerId : this.activePointerId;
-    if (pid !== undefined) {
-      try { this.track.releasePointerCapture(pid); } catch(err) {}
-    }
-    this.activePointerId = undefined;
-    this.track.style.cursor = '';
-
-    if (ydCarousel.hasDOM()) {
-      window.removeEventListener('pointermove', this.onPointerMove);
-      window.removeEventListener('pointerup', this.onPointerUp);
-      window.removeEventListener('pointercancel', this.onPointerUp);
-    }
-    this.emit('dragEnd');
-
-    if (this.reducedMotion) {
-      this.inertia = 0;
-      this.snapToClosest();
-      return;
-    }
-
-    if (this.options.dragFree) {
-      this.inertia = this._velocity * this.options.dragInertia; 
-    } else {
-      if (Math.abs(this._velocity) > this.options.velocityThreshold) {
-        this._velocity > 0 ? this.scrollNext() : this.scrollPrev();
-      } else {
-        this.snapToClosest();
-      }
-    }
-  }
-
-  onClick(e) {
-    if (this.isClickSuppressed) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }
-
-  onKeyDown(e) {
-    if ((ydCarousel.activeCarousel && ydCarousel.activeCarousel !== this) || this._isPaused || this._isFrozen) return;
-
-    const activeElement = ydCarousel.hasDOM() ? document.activeElement : null;
-    const ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
-    if (activeElement) {
-      const isInputTag = ignoreTags.includes(activeElement.tagName);
-      const isEditable = activeElement.isContentEditable;
-      
-      if (isInputTag || isEditable) {
-        return; 
-      }
-    }
-
-    const keys = ['Home', 'End', 'PageDown', 'PageUp', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'];
-    if (keys.includes(e.key)) {
-      e.preventDefault();
-    }
-
-    const isRtl = this.isRTL;
-    const isVert = this.options.vertical;
-    
-    if (e.key === 'Home') this.options.slideSnap ? this.goToSlide(0) : this.goToGroup(0);
-    if (e.key === 'End') this.options.slideSnap ? this.goToSlide(this.maxReachableSlideIndex()) : this.goToGroup(this.groupCount() - 1);
-    
-    if (e.key === 'PageDown') this.scrollNext();
-    if (e.key === 'PageUp') this.scrollPrev();
-
-    if (e.key === 'ArrowRight' && !isVert) isRtl ? this.scrollPrev() : this.scrollNext();
-    if (e.key === 'ArrowLeft' && !isVert) isRtl ? this.scrollNext() : this.scrollPrev();
-    if (e.key === 'ArrowDown' && isVert) this.scrollNext();
-    if (e.key === 'ArrowUp' && isVert) this.scrollPrev();
-  }
-
-  startPhysicsLoop() {
-    if (typeof requestAnimationFrame !== 'function') return;
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    this.rafId = requestAnimationFrame(this.tick);
-  }
-
-  tick() {
-    if (this.destroyed || this._isPaused || this._isFrozen) {
-      this.rafId = null;
-      return;
-    }
-    
-    this._stats.renderTicks++;
-
-    const isLoopActive = this.options.loop && this.metrics.slideSnaps.length > 0;
-
-    if (isLoopActive) {
-      const firstSnap = this.metrics.prependOffset;
-      const lastSnap = this.metrics.prependOffset + this.metrics.realTrackSize;
-      const buffer = this.metrics.realTrackSize * 0.02;
-      
-      if (this.targetPos < firstSnap - buffer) {
-        this.emit('loopEnter', { position: 'start' });
-        const from = this.currentPos;
-        this.currentPos += this.metrics.realTrackSize;
-        this.targetPos += this.metrics.realTrackSize;
-        if (!this.isDraggingActive) {
-          this.inertia *= 0.5;
-        }
-        this.emit('loopReposition', { from, to: this.currentPos }); 
-        this.emit('loopExit', { position: 'end' });
-        
-        console.assert(Number.isFinite(this.currentPos), 'Invalid currentPos');
-        console.assert(Number.isFinite(this.targetPos), 'Invalid targetPos');
-      } else if (this.targetPos > lastSnap + buffer) {
-        this.emit('loopEnter', { position: 'end' });
-        const from = this.currentPos;
-        this.currentPos -= this.metrics.realTrackSize;
-        this.targetPos -= this.metrics.realTrackSize;
-        if (!this.isDraggingActive) {
-          this.inertia *= 0.5;
-        }
-        this.emit('loopReposition', { from, to: this.currentPos }); 
-        this.emit('loopExit', { position: 'start' });
-        
-        console.assert(Number.isFinite(this.currentPos), 'Invalid currentPos');
-        console.assert(Number.isFinite(this.targetPos), 'Invalid targetPos');
-      }
-    }
-
-    if (this.options.dragFree && Math.abs(this.inertia) > 0.1 && !this.isDraggingActive) {
-      this.inertia *= this.options.friction;
-      this.targetPos += this.inertia;
-      
-      if (!isLoopActive) {
-        if (this.targetPos < 0) {
-          this.targetPos *= 0.8;
-          this.inertia *= 0.5;
-        } else if (this.targetPos > this.maxScroll) {
-          this.targetPos = this.maxScroll + ((this.targetPos - this.maxScroll) * 0.8);
-          this.inertia *= 0.5;
-        }
-      }
-    } else if (this.options.dragFree && !isLoopActive && !this.isDraggingActive) {
-      if (this.targetPos < 0) this.targetPos = 0;
-      if (this.targetPos > this.maxScroll) this.targetPos = this.maxScroll;
-    }
-
-    const diff = this.targetPos - this.currentPos;
-    
-    if (Math.abs(diff) < 0.1 && Math.abs(this.inertia) < 0.1) {
-      this.currentPos = this.targetPos;
-      if (!this.isSettled) {
-        this.isSettled = true;
-        this.emit('settle');
-      }
-    } else {
-      this.isSettled = false;
-      this.currentPos += diff * this.options.duration;
-    }
-
-    const transformVal = this.getTransformValue();
-    
-    if (this.options.vertical) {
-      this.track.style.transform = `translate3d(0, ${transformVal}px, 0)`;
-    } else {
-      this.track.style.transform = `translate3d(${transformVal}px, 0, 0)`;
-    }
-
-    this.emit('scroll');
-    
-    if (!this.isSettled && typeof requestAnimationFrame === 'function') {
-      this.rafId = requestAnimationFrame(this.tick);
-    }
-  }
-
   destroy() {
-    if (this.destroyed) return;
-    this.emit('destroy');
-    this.destroyed = true; 
+    const state = this.api.internal.state;
+    if (state.flags.destroyed) return;
+    this.api.internal.events.emit(EVENTS.DESTROY);
+    state.flags.destroyed = true;
+    state.flags.layoutPending = false;
+
+    if (state.timers.rafId) cancelAnimationFrame(state.timers.rafId);
     
-    if (this.rafId && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.rafId);
-    if (this.mutationRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.mutationRaf);
-    if (this.pluginRefreshRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this.pluginRefreshRaf);
-    this.rafId = null;
-    this.mutationRaf = null;
-    this.pluginRefreshRaf = null;
-    
-    this.root.removeAttribute('data-direction');
-    this.root.removeAttribute('role');
-    this.root.removeAttribute('aria-roledescription');
-    if (this.options.keyboard) {
-      this.root.removeAttribute('tabindex');
+    if (state.timers.mutationRaf) { 
+      if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
+      else clearTimeout(state.timers.mutationRaf); 
     }
-    if (this._generatedRootId) {
-      this.root.removeAttribute('id');
+    if (state.timers.pluginRefreshRaf) { 
+      if (state.flags.pluginRefreshUsingRAF) cancelAnimationFrame(state.timers.pluginRefreshRaf);
+      else clearTimeout(state.timers.pluginRefreshRaf); 
     }
+    state.timers.rafId = state.timers.mutationRaf = state.timers.pluginRefreshRaf = null;
 
-    this.track.removeAttribute('aria-live');
-    if (this._generatedTrackId) {
-      this.track.removeAttribute('id');
-    }
+    this.api.root.removeAttribute('data-direction');
+    if (this.api.options.keyboard) this.api.root.removeAttribute('tabindex');
+    if (state.flags._generatedRootId) this.api.root.removeAttribute('id');
+    if (state.flags._generatedTrackId) this.api.track.removeAttribute('id');
 
-    if (this._announcer) {
-      this._announcer.remove();
-      this._announcer = null;
-    }
+    this.api.internal.modules.destroyAll();
 
-    this.unbindEvents();
-    if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
-    if (this.mutationObserver) { this.mutationObserver.disconnect(); this.mutationObserver = null; }
-    if (this.visibilityObserver) { this.visibilityObserver.disconnect(); this.visibilityObserver = null; }
-    
-    if (this.rootVisibilityObserver) { 
-      this.rootVisibilityObserver.disconnect(); 
-      this.rootVisibilityObserver = null; 
-    }
-    if (ydCarousel.hasDOM()) {
-      document.removeEventListener('visibilitychange', this._docVisHandler);
-    }
+    this.api.root.classList.remove('yd_carousel-ready');
+    this.api.track.style.transform = '';
 
-    if (this.announceHandler) this.off('select', this.announceHandler);
-
-    this.plugins.forEach(p => p.destroy && p.destroy(this));
-    this.plugins = []; 
-    
-    [...this.activePlugins.keys()].forEach(name => this.disablePlugin(name));
-
-    this.root.classList.remove('yd_carousel-ready');
-    this.track.style.transform = '';
-    this._purgeClones();
-
-    if (this.track) {
-      this.track.querySelectorAll('[data-slide-index]').forEach(slide => {
+    if (this.api.track) {
+      this.api.track.querySelectorAll('[data-slide-index]').forEach(slide => {
         slide.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
         slide.removeAttribute('aria-current');
         slide.removeAttribute('tabindex');
@@ -2153,1358 +315,1768 @@ class ydCarousel {
       });
     }
 
-    if (this.root.__ydCarousel === this) {
-      delete this.root.__ydCarousel;
+    if (this.api.root.__ydCarousel === this.api) delete this.api.root.__ydCarousel;
+    CarouselRegistry.unregister(this.api);
+
+    this.api.internal.events.listeners = {};
+    this.api.internal.events._eventStats = {};
+    this.api.internal.diagnostics._pluginErrorTracker.clear();
+
+    state.dom.originalSlides = [];
+    state.dom.visibleSlides.clear();
+  }
+  _wake() {
+    const state = this.api.internal.state;
+    if (state.flags.isPaused || state.flags.isFrozen) return;
+    if (state.flags.isSettled) {
+      state.flags.isSettled = false;
+      this.api.internal.physics.startPhysicsLoop();
     }
+  }
+}
+
+// ==========================================
+// LAYER 4: Renderers (Encapsulation Boundary)
+// ==========================================
+class BaseRenderer {
+  constructor(api) { this.api = api; }
+  isLoopActive() { return false; }
+  normalizePosition(position) { return position; }
+  distanceToSnap(point, position) { return Math.abs(point - position); }
+  normalizeIndex(index) { return index; }
+  nextIndex(currentIndex) { return currentIndex; }
+  prevIndex(currentIndex) { return currentIndex; }
+  nextGroup(currentGroup) { return currentGroup; }
+  prevGroup(currentGroup) { return currentGroup; }
+  getVisualPrev(index) { return index; }
+  getVisualNext(index) { return index; }
+  getScrollProgress() { return 0; }
+  getVisualProgress() { return 0; }
+  getSlideProgress(index) { return 0; }
+  maxReachableSlideIndex() { return 0; }
+  canScrollNext() { return false; }
+  canScrollPrev() { return false; }
+  createClone(slide) {}
+  _purgeClones() {}
+  cloneCount() { return 0; }
+  cloneDiagnostics() { return { cloneNodes: 0 }; }
+  setupTrack(physicalSize, loopGap, relativeOffsets) {
+    const state = this.api.internal.state;
+    state.metrics.gap = loopGap;
+    state.metrics.realTrackSize = physicalSize;
+    state.metrics.prependOffset = 0;
+  }
+  finalizeLayout() {
+    const state = this.api.internal.state;
+    let rawSlides = state.metrics.slideSnaps.map(snap => Math.max(0, Math.min(snap, state.metrics.maxScroll)));
+    let uniqueSlideSnaps = [];
+    rawSlides.forEach(snap => { if (uniqueSlideSnaps.length === 0 || Math.abs(uniqueSlideSnaps[uniqueSlideSnaps.length - 1] - snap) > ydCarousel.SNAP_EPSILON) uniqueSlideSnaps.push(snap); });
+    state.metrics.slideSnaps = uniqueSlideSnaps;
     
-    if (ydCarousel.activeCarousel === this) {
-      ydCarousel.activeCarousel = null;
-      if (ydCarousel.hasDOM()) {
-        const readyCarousels = Array.from(document.querySelectorAll('.yd_carousel-ready'))
-          .map(el => el.__ydCarousel)
-          .filter(api => api && api !== this && !api.destroyed);
-        
-        if (readyCarousels.length > 0) {
-          const withKeyboard = readyCarousels.find(api => api.options.keyboard);
-          ydCarousel.activeCarousel = withKeyboard || readyCarousels[0];
+    let rawGroups = state.metrics.groupSnaps.map(snap => Math.max(0, Math.min(snap, state.metrics.maxScroll)));
+    let uniqueGroupSnaps = [];
+    rawGroups.forEach(snap => { if (uniqueGroupSnaps.length === 0 || Math.abs(uniqueGroupSnaps[uniqueGroupSnaps.length - 1] - snap) > ydCarousel.SNAP_EPSILON) uniqueGroupSnaps.push(snap); });
+    state.metrics.groupSnaps = uniqueGroupSnaps;
+  }
+  resolveTarget(rawTarget, currentTarget) { return rawTarget; }
+  handleReposition() {}
+}
+
+class StandardRenderer extends BaseRenderer {
+  nextIndex(currentIndex) { return Math.min(currentIndex + 1, this.maxReachableSlideIndex()); }
+  prevIndex(currentIndex) { return Math.max(currentIndex - 1, 0); }
+  nextGroup(currentGroup) { return Math.min(currentGroup + 1, this.api.internal.state.dom.logicalGroups.length - 1); }
+  prevGroup(currentGroup) { return Math.max(currentGroup - 1, 0); }
+  getVisualPrev(index) { return Math.max(index - 1, 0); }
+  getVisualNext(index) { const total = this.api.internal.state.dom.originalSlides.length; return total ? Math.min(index + 1, total - 1) : 0; }
+  maxReachableSlideIndex() { return Math.max(0, this.api.internal.state.metrics.slideSnaps.length - 1); }
+  canScrollNext() {
+    const state = this.api.internal.state;
+    if (this.api.options.slideSnap) return state.index.current < this.maxReachableSlideIndex();
+    return state.group.current < state.dom.logicalGroups.length - 1;
+  }
+  canScrollPrev() {
+    const state = this.api.internal.state;
+    if (this.api.options.slideSnap) return state.index.current > 0;
+    return state.group.current > 0;
+  }
+  getScrollProgress() {
+    const state = this.api.internal.state;
+    if (!state.metrics.maxScroll) return 0;
+    return Math.max(0, Math.min(1, state.position.current / state.metrics.maxScroll));
+  }
+  getVisualProgress() {
+    const p = this.getScrollProgress();
+    return (this.api.isRTL && !this.api.options.vertical) ? 1 - p : p;
+  }
+  getSlideProgress(index) {
+    const state = this.api.internal.state;
+    const offset = state.metrics.slideOffsets[index] || 0;
+    let distance = state.position.current - offset;
+    return Math.max(-1, Math.min(1, distance / (state.metrics.viewportSize || 1)));
+  }
+}
+
+class CloneLoopRenderer extends StandardRenderer {
+  isLoopActive() {
+    const state = this.api.internal.state;
+    return this.api.options.loop && state.metrics.slideSnaps.length > 0 && state.metrics.realTrackSize > 0;
+  }
+  normalizePosition(position) {
+    const state = this.api.internal.state;
+    if (!state.metrics.realTrackSize || !this.isLoopActive()) return position;
+    let rel = position - state.metrics.prependOffset;
+    rel = ((rel % state.metrics.realTrackSize) + state.metrics.realTrackSize) % state.metrics.realTrackSize;
+    return rel + state.metrics.prependOffset;
+  }
+  distanceToSnap(point, position) {
+    const state = this.api.internal.state;
+    const d1 = Math.abs(point - position);
+    if (!this.isLoopActive()) return d1;
+    const d2 = Math.abs((point + state.metrics.realTrackSize) - position);
+    const d3 = Math.abs((point - state.metrics.realTrackSize) - position);
+    return Math.min(d1, d2, d3);
+  }
+  normalizeIndex(index) {
+    const total = this.api.internal.state.dom.originalSlides.length;
+    if (!total) return 0;
+    let normalized = index;
+    while (normalized < 0) normalized += total;
+    while (normalized >= total) normalized -= total;
+    return normalized;
+  }
+  nextIndex(currentIndex) {
+    if (!this.isLoopActive()) return super.nextIndex(currentIndex);
+    return (currentIndex + 1) % this.api.internal.state.dom.originalSlides.length;
+  }
+  prevIndex(currentIndex) {
+    if (!this.isLoopActive()) return super.prevIndex(currentIndex);
+    const total = this.api.internal.state.dom.originalSlides.length;
+    return (currentIndex - 1 + total) % total;
+  }
+  nextGroup(currentGroup) {
+    if (!this.isLoopActive()) return super.nextGroup(currentGroup);
+    return (currentGroup + 1) % this.api.internal.state.dom.logicalGroups.length;
+  }
+  prevGroup(currentGroup) {
+    if (!this.isLoopActive()) return super.prevGroup(currentGroup);
+    const total = this.api.internal.state.dom.logicalGroups.length;
+    return (currentGroup - 1 + total) % total;
+  }
+  getVisualPrev(index) {
+    if (!this.isLoopActive()) return super.getVisualPrev(index);
+    const total = this.api.internal.state.dom.originalSlides.length;
+    return total ? (total + index - 1) % total : 0;
+  }
+  getVisualNext(index) {
+    if (!this.isLoopActive()) return super.getVisualNext(index);
+    const total = this.api.internal.state.dom.originalSlides.length;
+    return total ? (index + 1) % total : 0;
+  }
+  maxReachableSlideIndex() {
+    if (!this.isLoopActive()) return super.maxReachableSlideIndex();
+    return Math.max(0, this.api.internal.state.dom.originalSlides.length - 1);
+  }
+  canScrollNext() { return this.isLoopActive() || super.canScrollNext(); }
+  canScrollPrev() { return this.isLoopActive() || super.canScrollPrev(); }
+  
+  getScrollProgress() {
+    if (!this.isLoopActive()) return super.getScrollProgress();
+    const state = this.api.internal.state;
+    if (state.metrics.realTrackSize > 0) {
+      let relativePos = (state.position.current - state.metrics.prependOffset) % state.metrics.realTrackSize;
+      if (relativePos < 0) relativePos += state.metrics.realTrackSize;
+      return Math.max(0, Math.min(1, relativePos / state.metrics.realTrackSize));
+    }
+    return 0;
+  }
+  getSlideProgress(index) {
+    if (!this.isLoopActive()) return super.getSlideProgress(index);
+    const state = this.api.internal.state;
+    const offset = state.metrics.slideOffsets[index] || 0;
+    let distance = state.position.current - offset;
+    if (state.metrics.realTrackSize > 0) {
+      const distFwd = distance - state.metrics.realTrackSize;
+      const distBwd = distance + state.metrics.realTrackSize;
+      if (Math.abs(distFwd) < Math.abs(distance)) distance = distFwd;
+      if (Math.abs(distBwd) < Math.abs(distance)) distance = distBwd;
+    }
+    return Math.max(-1, Math.min(1, distance / (state.metrics.viewportSize || 1)));
+  }
+
+  setupTrack(physicalSize, loopGap, relativeOffsets) {
+    const state = this.api.internal.state;
+    state.metrics.gap = loopGap;
+    state.metrics.realTrackSize = physicalSize + loopGap;
+    state.metrics.prependOffset = state.metrics.realTrackSize;
+    
+    if (state.dom.originalSlides.length > 1 && state.metrics.realTrackSize > 0) {
+      let clonedSize = 0;
+      let setsNeeded = 0;
+      while (clonedSize < (state.metrics.viewportSize * 3) && setsNeeded < 4 && (state.dom.originalSlides.length * (setsNeeded + 1) * 2) <= CarouselRegistry.MAX_LOOP_CLONES) {
+        clonedSize += state.metrics.realTrackSize;
+        setsNeeded++;
+      }
+      setsNeeded = Math.max(0, setsNeeded);
+      if (setsNeeded > 0) {
+        for (let i = 0; i < setsNeeded; i++) {
+          const clonesBefore = state.dom.originalSlides.map(s => this.createClone(s));
+          const clonesAfter = state.dom.originalSlides.map(s => this.createClone(s));
+          const firstOriginal = state.dom.originalSlides[0];
+          clonesBefore.forEach(c => this.api.track.insertBefore(c, firstOriginal));
+          clonesAfter.forEach(c => this.api.track.appendChild(c));
         }
       }
     }
-
-    ydCarousel._instances.delete(this); 
-    this.listeners = {}; 
-    this._eventStats = {};
-    this._pluginErrorTracker.clear();
-    
-    this.originalSlides = [];
-    this.visibleSlides.clear();
-    this.activePlugins.clear();
-    
-    this.currentPos = 0;
-    this.targetPos = 0;
-    this._velocity = 0;
-    this.inertia = 0;
-    this.previewIndex = 0;
-    this.previewGroup = 0;
-    this.maxScroll = 0;
-    this._manualFrozen = false;
-
-    this.dragState = {
-      active: false,
-      startIndex: 0,
-      currentIndex: 0,
-      startPointer: 0,
-      startTargetPos: 0
-    };
-    
-    this.metrics.viewportSize = 0;
-    this.metrics.trackSize = 0;
-    this.metrics.realTrackSize = 0;
-    this.metrics.prependOffset = 0;
-    this.metrics.gap = 0;
-    this.metrics.averageSlideSize = 0;
-    this.metrics.slideSizes = [];
-    this.metrics.slideOffsets = [];
-    this.metrics.slideSnaps = [];
-    this.metrics.groupSnaps = [];
-    this.metrics.snapPoints = [];
-    this.logicalGroups = [];
   }
-
-  goToGroup(groupIndex, immediate = false, force = false) {
-    if (!this.groupCount() || ((this._isPaused || this._isFrozen) && !force)) return;
-    const maxGroup = this.groupCount() - 1;
-    const targetGroup = Math.max(0, Math.min(groupIndex, maxGroup));
-    
-    const changed = (this.currentGroup !== targetGroup);
-
-    if (changed) {
-      this.emit('beforeSelect', { currentGroup: this.currentGroup, targetGroup });
-      this.prevGroup = this.currentGroup;
-      this.currentGroup = targetGroup;
-      this.previewGroup = this.currentGroup;
-      this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
+  finalizeLayout() {
+    if (!this.isLoopActive()) {
+      super.finalizeLayout();
+      return;
     }
+    const state = this.api.internal.state;
     
-    const targetIdx = this.logicalGroups[targetGroup];
-    this.goToSlide(targetIdx, immediate, force);
+    const uniqueSlides = [];
+    state.metrics.slideSnaps.forEach(snap => {
+      if (uniqueSlides.length === 0 || Math.abs(uniqueSlides[uniqueSlides.length - 1] - snap) > ydCarousel.SNAP_EPSILON) {
+        uniqueSlides.push(snap);
+      }
+    });
+    state.metrics.slideSnaps = uniqueSlides;
+
+    const uniqueGroups = [];
+    state.metrics.groupSnaps.forEach(snap => {
+      if (uniqueGroups.length === 0 || Math.abs(uniqueGroups[uniqueGroups.length - 1] - snap) > ydCarousel.SNAP_EPSILON) {
+        uniqueGroups.push(snap);
+      }
+    });
+    state.metrics.groupSnaps = uniqueGroups;
   }
+  resolveTarget(rawTarget, currentTarget) {
+    if (!this.isLoopActive()) return rawTarget;
+    const state = this.api.internal.state;
+    const distNormal = rawTarget - currentTarget;
+    const distForward = (rawTarget + state.metrics.realTrackSize) - currentTarget;
+    const distBackward = (rawTarget - state.metrics.realTrackSize) - currentTarget;
+    const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
+    if (minDist === Math.abs(distForward)) return rawTarget + state.metrics.realTrackSize;
+    if (minDist === Math.abs(distBackward)) return rawTarget - state.metrics.realTrackSize;
+    return rawTarget;
+  }
+  handleReposition() {
+    if (!this.isLoopActive()) return;
+    const state = this.api.internal.state;
+    const firstSnap = state.metrics.prependOffset;
+    const lastSnap = state.metrics.prependOffset + state.metrics.realTrackSize;
+    const buffer = state.metrics.realTrackSize * 0.02;
 
-  goToSlide(slideIndex, immediate = false, force = false) {
-    if (!this.metrics.slideSnaps.length || ((this._isPaused || this._isFrozen) && !force)) return;
-    const maxSlide = this.maxReachableSlideIndex();
-    const targetSlide = Math.max(0, Math.min(slideIndex, maxSlide));
-
-    const changed = (this.currentIndex !== targetSlide);
-
-    if (changed) {
-      this.emit('beforeSelect', { currentIndex: this.currentIndex, targetIndex: targetSlide });
-      this.prevIndex = this.currentIndex;
-      this.currentIndex = targetSlide;
-      this.previewIndex = this.currentIndex;
-      this.emit('activeSlideChange', { currentIndex: this.currentIndex, previousIndex: this.prevIndex });
-    }
-    
-    const safeSnapIndex = Math.max(0, Math.min(this.currentIndex, this.metrics.slideSnaps.length - 1));
-    const rawTarget = this.metrics.slideSnaps[safeSnapIndex];
-    
-    let nextTarget = rawTarget;
-    this.inertia = 0; 
-
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0 && this.metrics.realTrackSize > 0;
-
-    if (loopActive && !immediate) {
-      const distNormal = nextTarget - this.targetPos;
-      const distForward = (nextTarget + this.metrics.realTrackSize) - this.targetPos;
-      const distBackward = (nextTarget - this.metrics.realTrackSize) - this.targetPos;
-      const minDist = Math.min(Math.abs(distNormal), Math.abs(distForward), Math.abs(distBackward));
+    if (state.position.target < firstSnap - buffer) {
+      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'start' });
+      const originalFrom = state.position.current;
+      state.position.current += state.metrics.realTrackSize;
+      state.position.target += state.metrics.realTrackSize;
       
-      if (minDist === Math.abs(distForward)) nextTarget += this.metrics.realTrackSize;
-      else if (minDist === Math.abs(distBackward)) nextTarget -= this.metrics.realTrackSize;
+      state.position.current = this.normalizePosition(state.position.current);
+      state.position.target = this.normalizePosition(state.position.target);
+
+      const normalizedTo = state.position.current;
+      const delta = normalizedTo - originalFrom;
+
+      if (!state.flags.isDraggingActive) state.physics.inertia *= 0.5;
+      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: normalizedTo, delta });
+      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'end' });
+    } else if (state.position.target > lastSnap + buffer) {
+      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'end' });
+      const originalFrom = state.position.current;
+      state.position.current -= state.metrics.realTrackSize;
+      state.position.target -= state.metrics.realTrackSize;
+
+      state.position.current = this.normalizePosition(state.position.current);
+      state.position.target = this.normalizePosition(state.position.target);
+
+      const normalizedTo = state.position.current;
+      const delta = normalizedTo - originalFrom;
+
+      if (!state.flags.isDraggingActive) state.physics.inertia *= 0.5;
+      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: normalizedTo, delta });
+      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'start' });
+    }
+  }
+  createClone(slide) {
+    const clone = slide.cloneNode(true);
+    clone.setAttribute('data-slide-index', slide.getAttribute('data-slide-index'));
+    clone.classList.add('yd_slide-clone');
+    clone.setAttribute('role', 'presentation');
+    clone.setAttribute('aria-hidden', 'true');
+    clone.setAttribute('tabindex', '-1');
+    if ('inert' in clone) clone.inert = true;
+    clone.removeAttribute('aria-current');
+    clone.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
+    const nodes = [clone, ...clone.querySelectorAll('*')];
+    nodes.forEach(node => {
+      node.removeAttribute('id'); node.removeAttribute('for');
+      node.removeAttribute('aria-labelledby'); node.removeAttribute('aria-describedby'); node.removeAttribute('aria-controls');
+      node.setAttribute('aria-hidden', 'true');
+      if (node.matches && node.matches('a, button, input, select, textarea, [tabindex]')) node.setAttribute('tabindex', '-1');
+    });
+    return clone;
+  }
+  _purgeClones() { if (this.api.track) this.api.track.querySelectorAll('.yd_slide-clone').forEach(c => c.remove()); }
+  cloneCount() { return this.api.track ? this.api.track.querySelectorAll('.yd_slide-clone').length : 0; }
+  cloneDiagnostics() { return { cloneNodes: this.cloneCount() }; }
+}
+
+// ==========================================
+// LAYER 5: Measurement Engine
+// ==========================================
+class MeasurementEngine {
+  constructor(api) { this.api = api; }
+  getConfiguredSlidesPerView() {
+    const classTarget = this.api.root.className + ' ' + (this.api.track ? this.api.track.className : '');
+    const match = classTarget.match(/\bslides-(\d+)\b/);
+    return match ? parseInt(match[1], 10) : null;
+  }
+  getSlidesPerView() {
+    const avg = this.api.internal.state.metrics.averageSlideSize;
+    if (avg <= 0) return 1;
+    return Math.max(1, Math.round(this.api.internal.state.metrics.viewportSize / (avg + this.api.internal.state.metrics.gap)));
+  }
+  buildLogicalGroups() {
+    const groups = [];
+    const visible = this.api.internal.state.metrics.slidesPerView || 1;
+    const total = this.api.internal.state.dom.originalSlides.length;
+    for (let i = 0; i < total; i += visible) groups.push(i);
+    return groups;
+  }
+  getGroupForIndex(index) {
+    const normIndex = this.api.internal.renderer.normalizeIndex(index);
+    const groups = this.api.internal.state.dom.logicalGroups;
+    if (!groups || groups.length === 0) return 0;
+    let result = 0;
+    for (let i = 0; i < groups.length; i++) {
+      if (groups[i] <= normIndex) result = i;
+      else break;
+    }
+    return result;
+  }
+  clampState() {
+    const state = this.api.internal.state;
+    if (!state.metrics.slideSnaps.length) {
+      state.index.current = 0; state.group.current = 0; return;
+    }
+    state.index.current = Math.max(0, Math.min(state.index.current, this.api.internal.renderer.maxReachableSlideIndex()));
+    state.group.current = Math.max(0, Math.min(state.group.current, state.dom.logicalGroups.length - 1));
+    if (this.api.options.slideSnap) {
+      state.group.current = this.getGroupForIndex(state.index.current);
+    } else {
+      state.index.current = state.dom.logicalGroups[state.group.current] || 0;
+    }
+  }
+  findNearestSlide(position) {
+    let minDistance = Infinity;
+    let nearest = 0;
+    const searchPos = this.api.internal.renderer.normalizePosition(position);
+
+    this.api.internal.state.metrics.slideSnaps.forEach((snap, idx) => {
+      const dist = this.api.internal.renderer.distanceToSnap(snap, searchPos);
+      if (dist < minDistance) { minDistance = dist; nearest = idx; }
+    });
+    return nearest;
+  }
+  updateMeasurements() {
+    const state = this.api.internal.state;
+    const perfStart = Environment.now();
+    try {
+      state.dom.visibleSlides.clear();
+
+      if (this.api.internal.observers.mutationObserver) this.api.internal.observers.mutationObserver.disconnect();
+      this.api.internal.renderer._purgeClones(); 
+      
+      state.dom.originalSlides = Array.from(this.api.track.children);
+      
+      if (state.flags.isDynamicRefreshing && state.dom._trackedActiveNode && state.dom.originalSlides.includes(state.dom._trackedActiveNode)) {
+        state.index.current = state.dom.originalSlides.indexOf(state.dom._trackedActiveNode);
+      }
+      
+      if (!state.dom.originalSlides.length) {
+        state.metrics.slideSnaps = state.metrics.groupSnaps = state.metrics.snapPoints = state.metrics.slideOffsets = state.metrics.slideSizes = [];
+        state.metrics.averageSlideSize = state.metrics.slidesPerView = state.metrics.maxScroll = state.index.current = state.group.current = state.position.current = state.position.target = state.physics.velocity = state.physics.inertia = state.preview.index = state.preview.group = 0;
+        state.dom.logicalGroups = [];
+        this.api.track.style.transform = '';
+        const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
+        if (this.api.options.autoHeight && viewportEl) viewportEl.style.height = '';
+        if (this.api.internal.observers.mutationObserver && !state.flags.isFrozen) this.api.internal.observers.mutationObserver.observe(this.api.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+        state.stats.layoutCalcs++;
+        state.stats.lastLayoutTime = Environment.now() - perfStart;
+        return;
+      }
+
+      state.dom.originalSlides.forEach((slide, idx) => slide.setAttribute('data-slide-index', idx));
+
+      const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
+      const viewportRect = viewportEl.getBoundingClientRect();
+      state.metrics.viewportSize = this.api.options.vertical ? viewportRect.height : viewportRect.width;
+      
+      state.metrics.slideSizes = state.dom.originalSlides.map(slide => {
+        const sRect = slide.getBoundingClientRect();
+        return this.api.options.vertical ? sRect.height : sRect.width;
+      });
+
+      state.metrics.averageSlideSize = state.metrics.slideSizes.length ? state.metrics.slideSizes.reduce((total, size) => total + size, 0) / state.metrics.slideSizes.length : 0;
+      state.metrics.slidesPerView = this.getConfiguredSlidesPerView() ?? this.getSlidesPerView();
+      if (state.metrics.slidesPerView < 1) state.metrics.slidesPerView = 1;
+      
+      state.dom.logicalGroups = this.buildLogicalGroups();
+
+      const firstRect = state.dom.originalSlides[0].getBoundingClientRect();
+      const relativeOffsets = state.dom.originalSlides.map(slide => {
+        const sRect = slide.getBoundingClientRect();
+        if (this.api.options.vertical) return sRect.top - firstRect.top;
+        return this.api.isRTL ? firstRect.right - sRect.right : sRect.left - firstRect.left;
+      });
+
+      let physicalSize = 0; let loopGap = 0;
+      if (state.dom.originalSlides.length > 0) {
+        const lastIdx = state.dom.originalSlides.length - 1;
+        physicalSize = relativeOffsets[lastIdx] + state.metrics.slideSizes[lastIdx];
+      }
+      if (state.dom.originalSlides.length > 1) {
+        loopGap = Math.max(0, relativeOffsets[1] - (relativeOffsets[0] + state.metrics.slideSizes[0]));
+      }
+
+      this.api.internal.renderer.setupTrack(physicalSize, loopGap, relativeOffsets);
+
+      state.metrics.trackSize = this.api.options.vertical ? this.api.track.scrollHeight : this.api.track.scrollWidth;
+      state.metrics.slideOffsets = [];
+      state.metrics.slideSnaps = [];
+      state.metrics.groupSnaps = [];
+      
+      let currentGroupStartOffset = 0;
+      let currentGroupStartSnap = 0;
+      
+      state.metrics.slideSizes.forEach((size, idx) => {
+        const relOffset = relativeOffsets[idx];
+        const baseOffset = state.metrics.prependOffset + relOffset;
+        let snap = baseOffset;
+        if (this.api.options.alignCenter) snap -= (state.metrics.viewportSize / 2) - (size / 2);
+        if (this.api.options.alignEnd) snap -= state.metrics.viewportSize - size;
+        
+        state.metrics.slideOffsets.push(Math.max(0, snap));
+        state.metrics.slideSnaps.push(Math.max(0, snap));
+
+        if (idx === 0) {
+          state.metrics.groupSnaps.push(Math.max(0, snap));
+          currentGroupStartOffset = relOffset;
+          currentGroupStartSnap = Math.max(0, snap);
+        } else {
+          const span = (relOffset - currentGroupStartOffset) + size;
+          if (span > state.metrics.viewportSize) {
+            currentGroupStartOffset = relOffset;
+            currentGroupStartSnap = Math.max(0, snap);
+            state.metrics.groupSnaps.push(currentGroupStartSnap);
+          }
+        }
+      });
+
+      state.metrics.maxScroll = Math.max(0, state.metrics.realTrackSize - state.metrics.viewportSize);
+
+      this.api.internal.renderer.finalizeLayout();
+
+      state.metrics.snapPoints = this.api.options.slideSnap ? state.metrics.slideSnaps : state.metrics.groupSnaps;
+      
+      if (this.api.internal.renderer.isLoopActive() && state.position.current === 0 && state.metrics.slideSnaps.length > 0) {
+        state.position.current = state.metrics.slideSnaps[0];
+        state.position.target = state.metrics.slideSnaps[0];
+      }
+
+      this.clampState();
+
+      if (this.api.internal.observers.visibilityObserver) {
+        this.api.internal.observers.visibilityObserver.disconnect();
+        if (!state.flags.isFrozen) Array.from(this.api.track.children).forEach(node => this.api.internal.observers.visibilityObserver.observe(node));
+      }
+      if (this.api.internal.observers.mutationObserver && !state.flags.isFrozen) {
+        this.api.internal.observers.mutationObserver.observe(this.api.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+      }
+
+      this.api.internal.events.emit(EVENTS.RESIZE);
+      
+      if (this.api.options.slideSnap) this.api.internal.navigation.goToSlide(state.index.current, true);
+      else this.api.internal.navigation.goToGroup(state.group.current, true);
+
+      this.api.internal.accessibility.updateAutoHeight();
+
+      state.stats.layoutCalcs++;
+      state.stats.lastLayoutTime = Environment.now() - perfStart;
+
+    } finally {
+      state.flags.layoutPending = false;
+    }
+  }
+}
+
+// ==========================================
+// LAYER 6: Physics Engine
+// ==========================================
+class PhysicsEngine {
+  constructor(api) { this.api = api; this.tick = this.tick.bind(this); }
+  startPhysicsLoop() {
+    if (typeof requestAnimationFrame !== 'function') return;
+    const state = this.api.internal.state;
+    if (state.timers.rafId && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(state.timers.rafId);
+    state.timers.rafId = requestAnimationFrame(this.tick);
+  }
+  tick() {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed || state.flags.isPaused || state.flags.isFrozen) { state.timers.rafId = null; return; }
+    state.stats.renderTicks++;
+
+    this.api.internal.renderer.handleReposition();
+
+    if (this.api.options.dragFree && Math.abs(state.physics.inertia) > 0.1 && !state.flags.isDraggingActive) {
+      state.physics.inertia *= this.api.options.friction;
+      state.position.target += state.physics.inertia;
+      if (!this.api.internal.renderer.isLoopActive()) {
+        if (state.position.target < 0) { state.position.target *= 0.8; state.physics.inertia *= 0.5; }
+        else if (state.position.target > state.metrics.maxScroll) { state.position.target = state.metrics.maxScroll + ((state.position.target - state.metrics.maxScroll) * 0.8); state.physics.inertia *= 0.5; }
+      }
+    } else if (this.api.options.dragFree && !this.api.internal.renderer.isLoopActive() && !state.flags.isDraggingActive) {
+      if (state.position.target < 0) state.position.target = 0;
+      if (state.position.target > state.metrics.maxScroll) state.position.target = state.metrics.maxScroll;
     }
 
-    this.targetPos = nextTarget;
+    const diff = state.position.target - state.position.current;
+    if (Math.abs(diff) < 0.1 && Math.abs(state.physics.inertia) < 0.1) {
+      state.position.current = state.position.target;
+      if (!state.flags.isSettled) { 
+        state.flags.isSettled = true; 
+        this.api.internal.events.emit(EVENTS.SETTLE); 
+      }
+      state.timers.rafId = null;
+    } else {
+      state.flags.isSettled = false;
+      state.position.current += diff * this.api.options.duration;
+    }
+
+    const transformVal = this.api.options.vertical ? -state.position.current : -state.position.current * this.api.dir;
+    if (this.api.options.vertical) this.api.track.style.transform = `translate3d(0, ${transformVal}px, 0)`;
+    else this.api.track.style.transform = `translate3d(${transformVal}px, 0, 0)`;
+
+    this.api.internal.events.emit(EVENTS.SCROLL);
+    if (!state.flags.isSettled && typeof requestAnimationFrame === 'function') state.timers.rafId = requestAnimationFrame(this.tick);
+  }
+  scrollProgress() { return this.api.internal.renderer.getScrollProgress(); }
+  getVisualProgress() { return this.api.internal.renderer.getVisualProgress(); }
+  slideProgress(index) { return this.api.internal.renderer.getSlideProgress(index); }
+}
+
+// ==========================================
+// LAYER 7: Navigation Engine
+// ==========================================
+class NavigationEngine {
+  constructor(api) { this.api = api; }
+  maxReachableSlideIndex() { return this.api.internal.renderer.maxReachableSlideIndex(); }
+  canScrollNext() {
+    const state = this.api.internal.state;
+    if (this.api.root.classList.contains('stop-last')) {
+      return this.api.options.slideSnap ? state.index.current < this.maxReachableSlideIndex() : state.group.current < state.dom.logicalGroups.length - 1;
+    }
+    return this.api.internal.renderer.canScrollNext();
+  }
+  canScrollPrev() { return this.api.internal.renderer.canScrollPrev(); }
+  goToGroup(groupIndex, immediate = false, force = false) {
+    const state = this.api.internal.state;
+    if (!state.dom.logicalGroups.length || ((state.flags.isPaused || state.flags.isFrozen) && !force)) return;
+    const targetGroup = Math.max(0, Math.min(groupIndex, state.dom.logicalGroups.length - 1));
+    const changed = (state.group.current !== targetGroup);
+
+    if (changed) {
+      this.api.internal.events.emit(EVENTS.SELECT_BEFORE, { currentGroup: state.group.current, targetGroup });
+      state.group.previous = state.group.current;
+      state.group.current = targetGroup;
+      state.preview.group = state.group.current;
+      this.api.internal.events.emit(EVENTS.GROUP_ACTIVE_CHANGE, { currentGroup: state.group.current, previousGroup: state.group.previous });
+    }
+    this.goToSlide(state.dom.logicalGroups[targetGroup], immediate, force);
+  }
+  goToSlide(slideIndex, immediate = false, force = false) {
+    const state = this.api.internal.state;
+    if (!state.metrics.slideSnaps.length || ((state.flags.isPaused || state.flags.isFrozen) && !force)) return;
+    const targetSlide = Math.max(0, Math.min(slideIndex, this.maxReachableSlideIndex()));
+    const changed = (state.index.current !== targetSlide);
+
+    if (changed) {
+      this.api.internal.events.emit(EVENTS.NAV_BEFORE, { currentIndex: state.index.current, targetIndex: targetSlide });
+      this.api.internal.events.emit(EVENTS.SELECT_BEFORE, { currentIndex: state.index.current, targetIndex: targetSlide });
+      state.index.previous = state.index.current;
+      state.index.current = targetSlide;
+      state.preview.index = state.index.current;
+      this.api.internal.events.emit(EVENTS.NAV, { currentIndex: state.index.current, previousIndex: state.index.previous });
+      this.api.internal.events.emit(EVENTS.SLIDE_ACTIVE_CHANGE, { currentIndex: state.index.current, previousIndex: state.index.previous });
+    }
+    
+    const safeSnapIndex = Math.max(0, Math.min(state.index.current, state.metrics.slideSnaps.length - 1));
+    const rawTarget = state.metrics.slideSnaps[safeSnapIndex];
+    state.physics.inertia = 0; 
+
+    state.position.target = immediate ? rawTarget : this.api.internal.renderer.resolveTarget(rawTarget, state.position.target);
 
     if (immediate) {
-      this.inertia = 0;
-      this._velocity = 0;
-      this.currentPos = this.targetPos;
-      const transformVal = this.getTransformValue();
-      this.track.style.transform = this.options.vertical 
-        ? `translate3d(0, ${transformVal}px, 0)` 
-        : `translate3d(${transformVal}px, 0, 0)`;
-        
-      if (!this.isSettled) {
-        this.isSettled = true;
-        this.emit('settle');
-      }
+      state.physics.inertia = state.physics.velocity = 0;
+      state.position.current = state.position.target;
+      const transformVal = this.api.getTransformValue();
+      this.api.track.style.transform = this.api.options.vertical ? `translate3d(0, ${transformVal}px, 0)` : `translate3d(${transformVal}px, 0, 0)`;
+      if (!state.flags.isSettled) { state.flags.isSettled = true; this.api.internal.events.emit(EVENTS.SETTLE); }
     } else {
-      this._wake();
+      this.api.internal.lifecycle._wake();
     }
 
-    const targetGroup = this.getGroupForIndex(this.currentIndex);
-    
-    if (this.currentGroup !== targetGroup) {
-       this.prevGroup = this.currentGroup;
-       this.currentGroup = targetGroup;
-       this.previewGroup = this.currentGroup;
-       this.emit('activeGroupChange', { currentGroup: this.currentGroup, previousGroup: this.prevGroup });
+    const targetGroup = this.api.internal.measurements.getGroupForIndex(state.index.current);
+    if (state.group.current !== targetGroup) {
+       state.group.previous = state.group.current;
+       state.group.current = targetGroup;
+       state.preview.group = state.group.current;
+       this.api.internal.events.emit(EVENTS.GROUP_ACTIVE_CHANGE, { currentGroup: state.group.current, previousGroup: state.group.previous });
     }
     
-    this.updateSlideStates();
-    this.updateAutoHeight();
+    this.api.internal.accessibility.updateSlideStates();
+    this.api.internal.accessibility.updateAutoHeight();
 
-    if (changed) {
-      this.emit('select');
-      this.emit('afterSelect'); 
+    if (changed) { 
+      this.api.internal.events.emit(EVENTS.SELECT); 
+      this.api.internal.events.emit(EVENTS.SELECT_AFTER); 
+      this.api.internal.events.emit(EVENTS.NAV_AFTER, { currentIndex: state.index.current });
     }
   }
+  scrollNext(force = false) {
+    const state = this.api.internal.state;
+    if (!state.dom.originalSlides.length || ((state.flags.isPaused || state.flags.isFrozen) && !force)) return;
+    if (this.api.options.slideSnap) {
+      this.goToSlide(this.api.internal.renderer.nextIndex(state.index.current), false, force);
+      return;
+    }
+    if (state.group.current < state.dom.logicalGroups.length - 1) this.goToGroup(this.api.internal.renderer.nextGroup(state.group.current), false, force);
+    else if (this.canScrollNext()) this.goToGroup(this.api.internal.renderer.nextGroup(state.group.current), false, force);
+  }
+  scrollPrev(force = false) {
+    const state = this.api.internal.state;
+    if (!state.dom.originalSlides.length || ((state.flags.isPaused || state.flags.isFrozen) && !force)) return;
+    if (this.api.options.slideSnap) {
+      this.goToSlide(this.api.internal.renderer.prevIndex(state.index.current), false, force);
+      return;
+    }
+    if (state.group.current > 0) this.goToGroup(this.api.internal.renderer.prevGroup(state.group.current), false, force);
+    else if (this.canScrollPrev()) this.goToGroup(this.api.internal.renderer.prevGroup(state.group.current), false, force);
+  }
+}
 
+// ==========================================
+// LAYER 8: Interaction Modules
+// ==========================================
+class DragModule {
+  constructor(api) {
+    this.api = api;
+    this.onPointerDown = this.onPointerDown.bind(this);
+    this.onPointerMove = this.onPointerMove.bind(this);
+    this.onPointerUp = this.onPointerUp.bind(this);
+    this.onClick = this.onClick.bind(this);
+  }
+  initialize() {
+    this._onLoopReposition = (api, payload) => {
+      const state = this.api.internal.state;
+      if (state.flags.isDraggingActive) {
+        state.drag.startCurrentPos += payload.delta;
+      }
+    };
+    this.api.internal.events.on(EVENTS.LOOP_REPOSITION, this._onLoopReposition);
+  }
+  bindEvents() {
+    this.api.track.addEventListener('pointerdown', this.onPointerDown);
+    this.api.track.addEventListener('click', this.onClick, { capture: true });
+    this.api.root.addEventListener('mouseenter', this.api.onActivate);
+    this.api.root.addEventListener('focusin', this.api.onActivate);
+    this.api.root.addEventListener('mouseleave', this.api.onDeactivate);
+    this.api.root.addEventListener('focusout', this.api.onDeactivate);
+    this.api.track.addEventListener('pointerdown', this.api.onActivate);
+  }
+  unbindEvents() {
+    this.api.internal.events.off(EVENTS.LOOP_REPOSITION, this._onLoopReposition);
+    this.api.track.removeEventListener('pointerdown', this.onPointerDown);
+    this.api.track.removeEventListener('click', this.onClick, { capture: true });
+    if (Environment.hasDOM()) {
+      window.removeEventListener('pointermove', this.onPointerMove);
+      window.removeEventListener('pointerup', this.onPointerUp);
+      window.removeEventListener('pointercancel', this.onPointerUp);
+    }
+    this.api.root.removeEventListener('mouseenter', this.api.onActivate);
+    this.api.root.removeEventListener('focusin', this.api.onActivate);
+    this.api.root.removeEventListener('mouseleave', this.api.onDeactivate);
+    this.api.root.removeEventListener('focusout', this.api.onDeactivate);
+    this.api.track.removeEventListener('pointerdown', this.api.onActivate);
+  }
+  getPointerPos(e) { return this.api.options.vertical ? e.clientY : e.clientX; }
+  onPointerDown(e) {
+    const state = this.api.internal.state;
+    if (e.button !== 0 || state.flags.isPaused || state.flags.isFrozen) return; 
+    state.flags.isDraggingActive = true;
+    state.drag.active = true;
+    state.drag.startIndex = state.index.current;
+    state.drag.currentIndex = state.index.current;
+    state.drag.startPointer = this.getPointerPos(e);
+    state.drag.startTargetPos = state.position.target;
+    state.drag.activePointerId = e.pointerId;
+    state.flags.isClickSuppressed = false;
+
+    state.position.target = state.position.current;
+    state.drag.startPos = this.getPointerPos(e);
+    state.drag.startCurrentPos = state.position.current;
+    state.drag.lastPointerPos = this.getPointerPos(e);
+    state.drag.lastPointerTime = Environment.now();
+    state.physics.velocity = 0;
+    state.physics.inertia = 0; 
+    state.preview.index = state.index.current;
+    state.preview.group = state.group.current;
+
+    try { this.api.track.setPointerCapture(e.pointerId); } catch (err) {}
+    this.api.track.style.cursor = 'grabbing';
+    if (Environment.hasDOM()) {
+      window.addEventListener('pointermove', this.onPointerMove);
+      window.addEventListener('pointerup', this.onPointerUp);
+      window.addEventListener('pointercancel', this.onPointerUp);
+    }
+    this.api.internal.lifecycle._wake();
+    this.api.internal.events.emit(EVENTS.DRAG_START);
+    e.preventDefault(); 
+  }
+  onPointerMove(e) {
+    const state = this.api.internal.state;
+    if (!state.flags.isDraggingActive) return;
+    const currentPointer = this.getPointerPos(e);
+    let dragDistance = state.drag.startPos - currentPointer;
+    if (!this.api.options.vertical) dragDistance *= this.api.dir;
+    if (Math.abs(dragDistance) > this.api.options.dragThreshold) state.flags.isClickSuppressed = true;
+
+    const now = Environment.now();
+    const dt = now - state.drag.lastPointerTime;
+    if (dt > 0) {
+      let rawVel = (state.drag.lastPointerPos - currentPointer) / dt;
+      if (!this.api.options.vertical) rawVel *= this.api.dir;
+      state.physics.velocity = rawVel;
+    }
+    state.drag.lastPointerPos = currentPointer;
+    state.drag.lastPointerTime = now;
+
+    let newTarget = state.drag.startCurrentPos + dragDistance;
+    if (!this.api.internal.renderer.isLoopActive()) {
+      if (newTarget < 0) newTarget *= 0.3;
+      else if (newTarget > state.metrics.maxScroll) newTarget = state.metrics.maxScroll + ((newTarget - state.metrics.maxScroll) * 0.3);
+    }
+    state.position.target = newTarget;
+    if (state.drag.active) {
+      state.drag.currentIndex = this.api.internal.measurements.findNearestSlide(state.position.target);
+      state.preview.group = this.api.internal.measurements.getGroupForIndex(state.drag.currentIndex);
+    }
+    this.api.internal.lifecycle._wake();
+    this.api.internal.events.emit(EVENTS.DRAG_MOVE);
+
+    const nearest = this.api.internal.measurements.findNearestSlide(state.position.target);
+    if (nearest !== state.preview.index) {
+      state.preview.index = nearest;
+      this.api.internal.events.emit(EVENTS.PREVIEW_UPDATE);
+    }
+  }
+  onPointerUp(e) {
+    const state = this.api.internal.state;
+    if (!state.flags.isDraggingActive) return;
+    state.flags.isDraggingActive = false;
+    state.drag.active = false;
+    setTimeout(() => { state.flags.isClickSuppressed = false; }, 50);
+
+    const pid = e && e.pointerId !== undefined ? e.pointerId : state.drag.activePointerId;
+    if (pid !== undefined) { try { this.api.track.releasePointerCapture(pid); } catch(err) {} }
+    state.drag.activePointerId = undefined;
+    this.api.track.style.cursor = '';
+
+    if (Environment.hasDOM()) {
+      window.removeEventListener('pointermove', this.onPointerMove);
+      window.removeEventListener('pointerup', this.onPointerUp);
+      window.removeEventListener('pointercancel', this.onPointerUp);
+    }
+    this.api.internal.events.emit(EVENTS.DRAG_END);
+
+    if (this.api.reducedMotion) {
+      state.physics.inertia = 0;
+      this.snapToClosest();
+      return;
+    }
+    if (this.api.options.dragFree) {
+      state.physics.inertia = state.physics.velocity * this.api.options.dragInertia; 
+    } else {
+      if (Math.abs(state.physics.velocity) > this.api.options.velocityThreshold) {
+        state.physics.velocity > 0 ? this.api.internal.navigation.scrollNext() : this.api.internal.navigation.scrollPrev();
+      } else {
+        this.snapToClosest();
+      }
+    }
+  }
+  onClick(e) { if (this.api.internal.state.flags.isClickSuppressed) { e.preventDefault(); e.stopPropagation(); } }
+  abortDrag() {
+    const state = this.api.internal.state;
+    state.flags.isDraggingActive = false;
+    state.drag.active = false;
+    state.flags.isClickSuppressed = false;
+    this.api.track.style.cursor = '';
+    if (Environment.hasDOM()) {
+      window.removeEventListener('pointermove', this.onPointerMove);
+      window.removeEventListener('pointerup', this.onPointerUp);
+      window.removeEventListener('pointercancel', this.onPointerUp);
+    }
+    if (state.drag.activePointerId !== undefined) {
+      try { this.api.track.releasePointerCapture(state.drag.activePointerId); } catch (err) {}
+      state.drag.activePointerId = undefined;
+    }
+    this.api.internal.events.emit(EVENTS.DRAG_END);
+    this.snapToClosest(true, true);
+  }
   snapToClosest(immediate = false, force = false) {
     let closestIndex = 0;
     let minDistance = Infinity;
-    
-    const loopActive = this.options.loop && this.metrics.slideSnaps.length > 0 && this.metrics.realTrackSize > 0;
+    const state = this.api.internal.state;
 
-    this.metrics.slideSnaps.forEach((point, index) => {
-      const d1 = Math.abs(point - this.targetPos);
-      const d2 = loopActive ? Math.abs((point + this.metrics.realTrackSize) - this.targetPos) : Infinity;
-      const d3 = loopActive ? Math.abs((point - this.metrics.realTrackSize) - this.targetPos) : Infinity;
-      const distance = Math.min(d1, d2, d3);
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestIndex = index;
-      }
+    state.metrics.slideSnaps.forEach((point, index) => {
+      const distance = this.api.internal.renderer.distanceToSnap(point, state.position.target);
+      if (distance < minDistance) { minDistance = distance; closestIndex = index; }
     });
 
-    if (this.options.dragFree) {
-       this.targetPos = this.metrics.slideSnaps[closestIndex];
+    if (this.api.options.dragFree) {
+       state.position.target = state.metrics.slideSnaps[closestIndex];
        if (immediate) {
-         this.currentPos = this.targetPos;
-         const transformVal = this.getTransformValue();
-         this.track.style.transform = this.options.vertical 
-           ? `translate3d(0, ${transformVal}px, 0)` 
-           : `translate3d(${transformVal}px, 0, 0)`;
-         if (!this.isSettled) {
-           this.isSettled = true;
-           this.emit('settle');
-         }
-       } else {
-         this._wake();
-       }
+         state.position.current = state.position.target;
+         const transformVal = this.api.getTransformValue();
+         this.api.track.style.transform = this.api.options.vertical ? `translate3d(0, ${transformVal}px, 0)` : `translate3d(${transformVal}px, 0, 0)`;
+         if (!state.flags.isSettled) { state.flags.isSettled = true; this.api.internal.events.emit(EVENTS.SETTLE); }
+       } else { this.api.internal.lifecycle._wake(); }
     } else {
-       if (this.options.slideSnap) {
-         this.goToSlide(closestIndex, immediate, force);
-       } else {
-         const group = this.getGroupForIndex(closestIndex);
-         this.goToGroup(group, immediate, force);
-       }
+       if (this.api.options.slideSnap) this.api.internal.navigation.goToSlide(closestIndex, immediate, force);
+       else { const group = this.api.internal.measurements.getGroupForIndex(closestIndex); this.api.internal.navigation.goToGroup(group, immediate, force); }
     }
   }
+}
 
-  scrollNext(force = false) {
-    if (!this.slideCount()) return;
-    if ((this._isPaused || this._isFrozen) && !force) return;
-    
-    if (this.options.slideSnap) {
-      if (this.options.loop) {
-        this.goToSlide((this.currentIndex + 1) % this.slideCount(), false, force);
-      } else {
-        this.goToSlide(Math.min(this.currentIndex + 1, this.maxReachableSlideIndex()), false, force);
-      }
-      return;
+class KeyboardModule {
+  constructor(api) { this.api = api; }
+  initialize() {
+    const state = this.api.internal.state;
+    if (!this.api.options.keyboard) return;
+    if (!state.flags._keyboardRegistered) {
+      CarouselRegistry._keyboardUsers++;
+      state.flags._keyboardRegistered = true;
     }
-    
-    if (this.currentGroup < this.groupCount() - 1) {
-      this.goToGroup(this.currentGroup + 1, false, force);
-    } else if (this.options.loop && this.canScrollNext()) {
-      this.goToGroup(0, false, force);
+    if (!CarouselRegistry._keyboardInitialized) {
+      if (Environment.hasDOM()) document.addEventListener('keydown', CarouselRegistry._globalKeyDownHandler);
+      CarouselRegistry._keyboardInitialized = true;
+    }
+    this.api.root.setAttribute('tabindex', '0');
+  }
+  destroy() {
+    const state = this.api.internal.state;
+    if (!state.flags._keyboardRegistered) return;
+    CarouselRegistry._keyboardUsers--;
+    state.flags._keyboardRegistered = false;
+    if (CarouselRegistry._keyboardUsers <= 0) {
+      if (Environment.hasDOM()) document.removeEventListener('keydown', CarouselRegistry._globalKeyDownHandler);
+      CarouselRegistry._keyboardInitialized = false;
+      CarouselRegistry._keyboardUsers = 0;
     }
   }
+  onKeyDown(e) {
+    const state = this.api.internal.state;
+    if ((CarouselRegistry.activeCarousel && CarouselRegistry.activeCarousel !== this.api) || state.flags.isPaused || state.flags.isFrozen) return;
+    const activeElement = Environment.hasDOM() ? document.activeElement : null;
+    if (activeElement) {
+      const isInputTag = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'].includes(activeElement.tagName);
+      if (isInputTag || activeElement.isContentEditable) return; 
+    }
+    const keys = ['Home', 'End', 'PageDown', 'PageUp', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'];
+    if (keys.includes(e.key)) e.preventDefault();
 
-  scrollPrev(force = false) {
-    if (!this.slideCount()) return;
-    if ((this._isPaused || this._isFrozen) && !force) return;
-    
-    if (this.options.slideSnap) {
-      if (this.options.loop) {
-        this.goToSlide((this.currentIndex - 1 + this.slideCount()) % this.slideCount(), false, force);
-      } else {
-        this.goToSlide(Math.max(this.currentIndex - 1, 0), false, force);
-      }
-      return;
-    }
-    
-    if (this.currentGroup > 0) {
-      this.goToGroup(this.currentGroup - 1, false, force);
-    } else if (this.options.loop && this.canScrollPrev()) {
-      this.goToGroup(this.groupCount() - 1, false, force);
-    }
+    const isVert = this.api.options.vertical;
+    if (e.key === 'Home') this.api.options.slideSnap ? this.api.internal.navigation.goToSlide(0) : this.api.internal.navigation.goToGroup(0);
+    if (e.key === 'End') this.api.options.slideSnap ? this.api.internal.navigation.goToSlide(this.api.internal.navigation.maxReachableSlideIndex()) : this.api.internal.navigation.goToGroup(state.dom.logicalGroups.length - 1);
+    if (e.key === 'PageDown') this.api.internal.navigation.scrollNext();
+    if (e.key === 'PageUp') this.api.internal.navigation.scrollPrev();
+    if (e.key === 'ArrowRight' && !isVert) this.api.isRTL ? this.api.internal.navigation.scrollPrev() : this.api.internal.navigation.scrollNext();
+    if (e.key === 'ArrowLeft' && !isVert) this.api.isRTL ? this.api.internal.navigation.scrollNext() : this.api.internal.navigation.scrollPrev();
+    if (e.key === 'ArrowDown' && isVert) this.api.internal.navigation.scrollNext();
+    if (e.key === 'ArrowUp' && isVert) this.api.internal.navigation.scrollPrev();
   }
+}
 
-  updateSlideStates() {
-    if (!this.originalSlides.length) return;
-
-    const total = this.slideCount();
-    const prevIdx = this.options.loop ? (total + this.currentIndex - 1) % total : this.currentIndex - 1;
-    const nextIdx = this.options.loop ? (this.currentIndex + 1) % total : this.currentIndex + 1;
-
-    let visualPrev = prevIdx;
-    let visualNext = nextIdx;
-    if (this.isRTL && !this.options.vertical) {
-      visualPrev = nextIdx;
-      visualNext = prevIdx;
+// ==========================================
+// LAYER 9: Observer Manager
+// ==========================================
+class ObserverManager {
+  constructor(api) {
+    this.api = api;
+    this.resizeObserver = null;
+    this.mutationObserver = null;
+    this.visibilityObserver = null;
+    this.rootVisibilityObserver = null;
+    this._docVisHandler = () => {
+      const state = this.api.internal.state;
+      const shouldBeActive = state.flags._lastIntersectionState && !document.hidden;
+      if (!shouldBeActive && !state.flags.isFrozen) { state.flags.isAutoFrozen = true; this.api.internal.lifecycle.freeze(false); }
+      else if (shouldBeActive && state.flags.isAutoFrozen) { state.flags.isAutoFrozen = false; this.api.internal.lifecycle.unfreeze(false); }
+    };
+  }
+  setupObservers() {
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.api.internal.measurements.updateMeasurements());
+      this.resizeObserver.observe(this.api.root);
     }
-
-    this.originalSlides.forEach((slide, idx) => {
-      slide.classList.remove('active', 'prev', 'next');
-      slide.removeAttribute('aria-current');
-      
-      slide.setAttribute('role', 'group');
-      slide.setAttribute('aria-roledescription', 'slide');
-      
-      slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
-
-      if (idx === this.currentIndex) {
-        slide.classList.add('active');
-        slide.setAttribute('aria-current', 'true');
-        slide.setAttribute('tabindex', '0');
-      } else {
-        if (idx === visualPrev) slide.classList.add('prev');
-        else if (idx === visualNext) slide.classList.add('next');
-        slide.setAttribute('tabindex', '-1');
-      }
-    });
-
-    if (this.options.loop) {
-      const clones = this.track.querySelectorAll('.yd_slide-clone');
-      clones.forEach(clone => {
-        const idx = parseInt(clone.getAttribute('data-slide-index'), 10);
-        clone.classList.remove('active', 'prev', 'next');
-        clone.removeAttribute('aria-current');
+    if (typeof MutationObserver !== 'undefined') {
+      this.mutationObserver = new MutationObserver((mutations) => {
+        const state = this.api.internal.state;
+        if (state.flags.batchDepth > 0 || state.flags.isDraggingActive || state.flags.ignoreNextMutation || state.flags.layoutPending) {
+          state.flags.ignoreNextMutation = false; 
+          return; 
+        }
+        if (mutations.some(m => [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)].some(n => n.nodeType === 1 && n.classList.contains('yd_slide-clone')))) return;
         
-        if (idx === this.currentIndex) {
-          clone.classList.add('active');
-        } else if (idx === visualPrev) {
-          clone.classList.add('prev');
-        } else if (idx === visualNext) {
-          clone.classList.add('next');
+        if (state.timers.mutationRaf) {
+          if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
+          else clearTimeout(state.timers.mutationRaf);
+          state.timers.mutationRaf = null;
+        }
+
+        const runMutationRefresh = () => {
+          try {
+            state.timers.mutationRaf = null;
+            if (state.flags.destroyed) return;
+            const structureChanged = mutations.some(m => m.type === 'childList');
+            this.api.internal.measurements.updateMeasurements();
+            this.api.internal.events.emit(EVENTS.DOM_CHANGED, { structureChanged });
+          } finally {
+            state.flags.layoutPending = false;
+          }
+        };
+        
+        state.flags.layoutPending = true;
+        if (typeof requestAnimationFrame === 'function') {
+          state.flags.mutationUsingRAF = true;
+          state.timers.mutationRaf = requestAnimationFrame(runMutationRefresh);
+        } else {
+          state.flags.mutationUsingRAF = false;
+          state.timers.mutationRaf = setTimeout(runMutationRefresh, 16);
         }
       });
     }
+    if (typeof IntersectionObserver !== 'undefined') {
+      const viewport = this.api.root.querySelector('.yd_viewport') || this.api.root;
+      this.visibilityObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const node = entry.target;
+          const idx = parseInt(node.getAttribute('data-slide-index'), 10);
+          const isClone = node.classList.contains('yd_slide-clone');
+          if (entry.isIntersecting) {
+            node.classList.add('in-view'); node.classList.remove('out-view');
+            if (!isClone) { node.removeAttribute('aria-hidden'); if (!isNaN(idx)) { this.api.internal.state.dom.visibleSlides.add(idx); this.api.internal.events.emit(EVENTS.SLIDE_ENTER, { index: idx }); } }
+          } else {
+            node.classList.add('out-view'); node.classList.remove('in-view');
+            if (!isClone) { node.setAttribute('aria-hidden', 'true'); if (!isNaN(idx)) { this.api.internal.state.dom.visibleSlides.delete(idx); this.api.internal.events.emit(EVENTS.SLIDE_EXIT, { index: idx }); } }
+          }
+        });
+      }, { root: viewport, threshold: 0.01 });
 
-    if (this.options.focusOnChange && ydCarousel.hasDOM() && this.root.contains(document.activeElement)) {
-      this.focusActiveSlide();
+      if (this.api.options.autoVisibility) {
+        this.rootVisibilityObserver = new IntersectionObserver((entries) => {
+          this.api.internal.state.flags._lastIntersectionState = entries[0].isIntersecting;
+          this._docVisHandler();
+        }, { rootMargin: '150px' });
+        this.rootVisibilityObserver.observe(this.api.root);
+        if (Environment.hasDOM()) document.addEventListener('visibilitychange', this._docVisHandler);
+      }
     }
   }
-  
-  updateAutoHeight() {
-    if (!this.options.autoHeight) return;
-    const slide = this.originalSlides[this.currentIndex];
-    if (!slide) return;
+  disconnectAll() {
+    if (this.resizeObserver) this.resizeObserver.disconnect();
+    if (this.mutationObserver) this.mutationObserver.disconnect();
+    if (this.visibilityObserver) this.visibilityObserver.disconnect();
+  }
+  reconnectAll() {
+    if (this.resizeObserver && this.api.root) this.resizeObserver.observe(this.api.root);
+    if (this.mutationObserver && this.api.track) this.mutationObserver.observe(this.api.track, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+    if (this.visibilityObserver && this.api.track) {
+      this.api.internal.state.dom.visibleSlides.clear();
+      Array.from(this.api.track.children).forEach(node => this.visibilityObserver.observe(node));
+    }
+  }
+  destroy() {
+    this.disconnectAll();
+    if (this.rootVisibilityObserver) this.rootVisibilityObserver.disconnect();
+    if (Environment.hasDOM()) document.removeEventListener('visibilitychange', this._docVisHandler);
+    this.resizeObserver = this.mutationObserver = this.visibilityObserver = this.rootVisibilityObserver = null;
+  }
+}
+
+// ==========================================
+// LAYER 10: Dynamic Content Manager
+// ==========================================
+class DynamicContentManager {
+  constructor(api) { this.api = api; }
+  batch(callback) {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed) return;
+    if (state.flags.batchDepth === 0) {
+      state.dom._trackedActiveNode = state.dom.originalSlides[state.index.current];
+      this.api.internal.renderer._purgeClones(); 
+    }
+    state.flags.batchDepth++;
+    state.flags.ignoreNextMutation = true;
+    let batchValid = true;
+    try {
+      const result = callback();
+      if (result instanceof Promise) {
+        batchValid = false; state.flags.ignoreNextMutation = false; state.dom._trackedActiveNode = null;
+        throw new Error('[ydCarousel] batch() callback must be synchronous.');
+      }
+    } finally {
+      state.flags.batchDepth--;
+      if (batchValid && state.flags.batchDepth === 0) this._refreshAfterDynamic();
+    }
+  }
+  _refreshAfterDynamic() {
+    const state = this.api.internal.state;
+    if (state.flags.batchDepth > 0) return;
+    state.flags.isDynamicRefreshing = true;
+    this.api.internal.measurements.updateMeasurements();
+    state.flags.isDynamicRefreshing = false;
+    state.dom._trackedActiveNode = null;
+    this.api.internal.plugins.schedulePluginRefresh();
+  }
+  addSlide(html) { this.batch(() => { this.api.track.insertAdjacentHTML('beforeend', html); }); }
+  removeSlide(index) { this.batch(() => { const slide = this.api.internal.state.dom.originalSlides[index]; if (slide) slide.remove(); }); }
+  removeAllSlides() { this.batch(() => { this.api.track.innerHTML = ''; this.api.internal.state.dom._trackedActiveNode = null; }); }
+  insertSlide(index, html) {
+    this.batch(() => {
+      const target = this.api.internal.state.dom.originalSlides[index];
+      if (!target) this.api.track.insertAdjacentHTML('beforeend', html);
+      else target.insertAdjacentHTML('beforebegin', html);
+    });
+  }
+  replaceSlide(index, html) {
+    this.batch(() => {
+      const target = this.api.internal.state.dom.originalSlides[index];
+      if (!target) return;
+      target.insertAdjacentHTML('beforebegin', html);
+      if (this.api.internal.state.dom._trackedActiveNode === target) this.api.internal.state.dom._trackedActiveNode = null; 
+      target.remove();
+    });
+  }
+}
+
+// ==========================================
+// LAYER 11: Accessibility Manager
+// ==========================================
+class AccessibilityManager {
+  constructor(api) { this.api = api; this._announcer = null; this.announceHandler = null; }
+  setupAccessibility() {
+    if (!Environment.hasDOM()) return;
+    const state = this.api.internal.state;
+    this.api.root.setAttribute('role', 'region');
+    this.api.root.setAttribute('aria-roledescription', 'carousel');
     
+    if (!this.api.root.id) { this.api.root.id = `yd_carousel_${Math.random().toString(36).slice(2, 11)}`; state.flags._generatedRootId = true; }
+    if (!this.api.track.id) { this.api.track.id = `${this.api.root.id}_track`; state.flags._generatedTrackId = true; }
+    this.api.track.setAttribute('aria-live', 'polite');
+    
+    let announcer = this.api.root.querySelector('.yd_carousel-announcer');
+    if (!announcer) {
+      announcer = document.createElement('div');
+      announcer.className = 'yd_carousel-announcer';
+      announcer.setAttribute('aria-live', 'polite');
+      announcer.setAttribute('aria-atomic', 'true');
+      announcer.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+      this.api.root.appendChild(announcer);
+    }
+    this._announcer = announcer;
+    
+    this.announceHandler = (api, payload) => {
+      if (api.options.slideSnap) announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.internal.state.dom.originalSlides.length}`;
+      else announcer.textContent = `Group ${payload.currentGroup + 1} of ${api.internal.state.dom.logicalGroups.length}`;
+    };
+    this.api.internal.events.on(EVENTS.SELECT, this.announceHandler);
+  }
+  updateSlideStates() {
+    const state = this.api.internal.state;
+    if (!state.dom.originalSlides.length) return;
+    const total = state.dom.originalSlides.length;
+    const prevIdx = this.api.internal.renderer.getVisualPrev(state.index.current);
+    const nextIdx = this.api.internal.renderer.getVisualNext(state.index.current);
+
+    state.dom.originalSlides.forEach((slide, idx) => {
+      slide.classList.remove('active', 'prev', 'next');
+      slide.removeAttribute('aria-current');
+      slide.setAttribute('role', 'group');
+      slide.setAttribute('aria-roledescription', 'slide');
+      slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
+      if (idx === state.index.current) { slide.classList.add('active'); slide.setAttribute('aria-current', 'true'); slide.setAttribute('tabindex', '0'); }
+      else { if (idx === prevIdx) slide.classList.add('prev'); else if (idx === nextIdx) slide.classList.add('next'); slide.setAttribute('tabindex', '-1'); }
+    });
+
+    if (this.api.options.loop) {
+      this.api.track.querySelectorAll('.yd_slide-clone').forEach(clone => {
+        clone.classList.remove('active', 'prev', 'next');
+        clone.removeAttribute('aria-current');
+      });
+    }
+
+    if (this.api.options.focusOnChange && Environment.hasDOM() && this.api.root.contains(document.activeElement)) {
+      const active = state.dom.originalSlides[state.index.current];
+      if (active) {
+        if (!active.hasAttribute('tabindex')) active.setAttribute('tabindex', '0');
+        try { active.focus({ preventScroll: true }); } catch (err) { active.focus(); }
+      }
+    }
+  }
+  updateAutoHeight() {
+    if (!this.api.options.autoHeight) return;
+    const slide = this.api.internal.state.dom.originalSlides[this.api.internal.state.index.current];
+    if (!slide) return;
     const height = slide.offsetHeight;
     if (height <= 0) return;
-    
-    const viewport = this.root.querySelector('.yd_viewport') || this.root;
+    const viewport = this.api.root.querySelector('.yd_viewport') || this.api.root;
     viewport.style.height = height + 'px';
   }
-
-  _initCorePlugin(plugin) {
-    if (!plugin || !plugin.name) return;
-    try {
-      plugin.init(this);
-      this.plugins.push(plugin);
-      this._pluginErrorTracker.delete(plugin.name);
-    } catch (err) {
-      this._recordPluginError(plugin.name, err);
-      console.error(`[ydCarousel] Error initializing core plugin "${plugin.name}":`, err);
-    }
+  destroy() {
+    if (this.announceHandler) this.api.internal.events.off(EVENTS.SELECT, this.announceHandler);
   }
+}
 
-  enablePlugin(name) {
-    if (this.activePlugins.has(name)) return;
-    const pluginDef = ydCarousel._pluginRegistry.get(name);
-    if (!pluginDef) return;
-
-    const deps = pluginDef.dependencies || pluginDef.requires || [];
-    const activeNames = new Set([
-      ...this.plugins.map(p => p.name).filter(Boolean),
-      ...Array.from(this.activePlugins.keys())
-    ]);
-
-    const missing = deps.filter(d => !activeNames.has(d));
-    if (missing.length > 0) {
-      console.warn(`[ydCarousel] Cannot enable plugin "${name}": missing dependencies [${missing.join(', ')}]`);
-      return; 
-    }
-
-    try {
-      const instance = pluginDef.init(this);
-      this.activePlugins.set(name, { def: pluginDef, instance });
-      this._pluginErrorTracker.delete(name);
-      this.emit('pluginEnabled', { name });
-    } catch (err) {
-      this._recordPluginError(name, err);
-      console.error(`[ydCarousel] Error enabling plugin "${name}":`, err);
-    }
-  }
-
-  disablePlugin(name) {
-    const active = this.activePlugins.get(name);
-    if (active) {
-      if (active.def.destroy) {
-        try {
-          active.def.destroy(this, active.instance);
-        } catch (err) {
-          this._recordPluginError(name, err);
-          console.error(`[ydCarousel] Error disabling plugin "${name}":`, err);
-        }
+// ==========================================
+// LAYER 12: Dependency Manager
+// ==========================================
+class DependencyManager {
+  constructor(api) { this.api = api; }
+  circularDetection() {
+    const registry = CarouselRegistry._pluginRegistry;
+    const cycles = []; const visited = new Map(); const path = [];
+    const dfs = (node) => {
+      visited.set(node, 1); path.push(node);
+      const def = registry.get(node); const deps = def ? (def.dependencies || def.requires || []) : [];
+      for (const dep of deps) {
+        if (!registry.has(dep)) continue;
+        const state = visited.get(dep) || 0;
+        if (state === 1) { const cycleStart = path.indexOf(dep); cycles.push([...path.slice(cycleStart), dep]); } 
+        else if (state === 0) dfs(dep);
       }
-      this.activePlugins.delete(name);
-      this.emit('pluginDisabled', { name });
-    }
+      path.pop(); visited.set(node, 2);
+    };
+    registry.forEach((_, name) => { if ((visited.get(name) || 0) === 0) dfs(name); });
+    return Object.freeze(cycles.map(c => Object.freeze([...c])));
   }
-
-  initEnterprisePlugins() {
-    const circular = this.circularDetection();
-    if (circular.length > 0) {
-      console.error('[ydCarousel] Circular plugin dependencies detected:', circular);
-      return;
-    }
-
-    const registry = ydCarousel._pluginRegistry;
-    const order = [];
-    const visited = new Set();
-    const visiting = new Set();
-
-    const visit = (name) => {
-      if (visiting.has(name)) return; 
-      if (visited.has(name)) return;
-      
-      visiting.add(name);
+  validateDependencies(pluginName = null) {
+    const registry = CarouselRegistry._pluginRegistry;
+    const missing = []; const targetPlugins = pluginName ? [pluginName] : Array.from(registry.keys());
+    targetPlugins.forEach(name => {
       const def = registry.get(name);
       if (def) {
         const deps = def.dependencies || def.requires || [];
-        deps.forEach(dep => visit(dep));
+        deps.forEach(dep => { if (!registry.has(dep)) missing.push(Object.freeze({ plugin: name, missingDependency: dep })); });
+      } else if (!registry.has(name)) {
+        missing.push(Object.freeze({ plugin: name, missingDependency: 'unregistered' }));
       }
-      
-      visiting.delete(name);
-      visited.add(name);
-      order.push(name);
+    });
+    const circular = this.circularDetection();
+    return Object.freeze({ valid: missing.length === 0 && circular.length === 0, missing: Object.freeze(missing), circular });
+  }
+  dependencyReport() {
+    const registry = CarouselRegistry._pluginRegistry;
+    const activeNames = new Set([...this.api.internal.plugins.plugins.map(p => p.name).filter(Boolean), ...Array.from(this.api.internal.plugins.activePlugins.keys())]);
+    const report = {}; const missingDependencies = []; const dependentsMap = new Map();
+    registry.forEach((_, name) => dependentsMap.set(name, []));
+    registry.forEach((def, name) => {
+      const deps = def.dependencies || def.requires || [];
+      deps.forEach(dep => { if (dependentsMap.has(dep)) dependentsMap.get(dep).push(name); });
+    });
+    registry.forEach((def, name) => {
+      const deps = def.dependencies || def.requires || [];
+      const missing = deps.filter(dep => !activeNames.has(dep));
+      if (missing.length > 0) missingDependencies.push(Object.freeze({ plugin: name, missing: Object.freeze([...missing]) }));
+      report[name] = Object.freeze({ active: activeNames.has(name), dependencies: Object.freeze([...deps]), satisfied: missing.length === 0, missing: Object.freeze([...missing]), dependents: Object.freeze(dependentsMap.get(name) || []) });
+    });
+    const circular = this.circularDetection();
+    return Object.freeze({ valid: missingDependencies.length === 0 && circular.length === 0, plugins: Object.freeze(report), missingDependencies: Object.freeze(missingDependencies), circularDependencies: circular });
+  }
+}
+
+// ==========================================
+// LAYER 13: Plugins & Diagnostics
+// ==========================================
+class PluginManager {
+  constructor(api) {
+    this.api = api; this.plugins = []; this.activePlugins = new Map();
+  }
+  initialize() {
+    this.api.internal.events.on(EVENTS.DOM_CHANGED, (api, payload) => {
+      if (payload.structureChanged) this.schedulePluginRefresh();
+    });
+  }
+  schedulePluginRefresh() {
+    const state = this.api.internal.state;
+    if (state.timers.pluginRefreshRaf) return;
+    
+    const refreshFn = () => {
+      try {
+        state.timers.pluginRefreshRaf = null;
+        if (!state.flags.destroyed) this.refreshPlugins();
+      } finally {
+        state.flags.pluginRefreshUsingRAF = false;
+      }
     };
 
-    registry.forEach((_, name) => visit(name));
-    order.forEach(name => this.enablePlugin(name));
-  }
-
-  initPlugins() {
-    this.plugins.forEach(p => p.destroy && p.destroy(this));
-    this.plugins = [];
-
-    // CONTROLS (Prev/Next)
-    const prevBtn = this.root.querySelector('.yd_prev');
-    const nextBtn = this.root.querySelector('.yd_next');
-    if (prevBtn || nextBtn) {
-      const controls = (() => {
-        let hPrev, hNext;
-        return {
-          name: 'controls',
-          init: (api) => {
-            hPrev = () => { if (!api.isPaused() && !api.isFrozen()) api.scrollPrev(); };
-            hNext = () => { if (!api.isPaused() && !api.isFrozen()) api.scrollNext(); };
-            if (prevBtn) {
-              prevBtn.addEventListener('click', hPrev);
-              prevBtn.setAttribute('aria-controls', api.track.id);
-            }
-            if (nextBtn) {
-              nextBtn.addEventListener('click', hNext);
-              nextBtn.setAttribute('aria-controls', api.track.id);
-            }
-          },
-          destroy: () => {
-            if (prevBtn) prevBtn.removeEventListener('click', hPrev);
-            if (nextBtn) nextBtn.removeEventListener('click', hNext);
-          }
-        };
-      })();
-      this._initCorePlugin(controls);
-    }
-
-    // CUSTOM HTML DOTS
-    const dotsContainer = this.root.querySelector('.yd_dots');
-    if (dotsContainer) {
-      const dots = (() => {
-        let updateDots;
-        return {
-          name: 'dots',
-          init: (api) => {
-            const template = dotsContainer.querySelector('.yd_dot');
-            dotsContainer.innerHTML = '';
-            dotsContainer.setAttribute('role', 'tablist');
-            dotsContainer.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
-            
-            const totalDots = api.options.slideSnap ? api.slideSnapCount() : api.groupCount();
-            const dotsArray = new Array(totalDots).fill(0);
-
-            dotsArray.forEach((_, idx) => {
-              let dot = template ? template.cloneNode(true) : document.createElement('button');
-              if (!template) dot.className = 'yd_dot';
-              dot.setAttribute('role', 'tab');
-              dot.setAttribute('aria-controls', api.track.id);
-              dot.setAttribute('aria-label', `Go to ${api.options.slideSnap ? 'slide' : 'group'} ${idx + 1}`);
-              
-              dot.addEventListener('click', () => {
-                if (api.isPaused() || api.isFrozen()) return;
-                if (api.options.slideSnap) api.goToSlide(idx);
-                else api.goToGroup(idx);
-              });
-              
-              dot.addEventListener('keydown', (e) => {
-                if (api.isPaused() || api.isFrozen()) return;
-                const nextKey = api.isRTL ? 'ArrowLeft' : 'ArrowRight';
-                const prevKey = api.isRTL ? 'ArrowRight' : 'ArrowLeft';
-
-                if (e.key === nextKey || e.key === prevKey) {
-                  e.preventDefault();
-                  let targetIdx = idx;
-                  if (e.key === nextKey) {
-                    targetIdx = (idx + 1) % totalDots;
-                  } else if (e.key === prevKey) {
-                    targetIdx = (idx - 1 + totalDots) % totalDots;
-                  }
-                  const targetDot = dotsContainer.children[targetIdx];
-                  if (targetDot) targetDot.focus();
-                  if (api.options.slideSnap) api.goToSlide(targetIdx);
-                  else api.goToGroup(targetIdx);
-                }
-
-                if (e.key === 'Home') {
-                  e.preventDefault();
-                  const targetDot = dotsContainer.children[0];
-                  if (targetDot) targetDot.focus();
-                  if (api.options.slideSnap) api.goToSlide(0);
-                  else api.goToGroup(0);
-                }
-
-                if (e.key === 'End') {
-                  e.preventDefault();
-                  const lastIdx = totalDots - 1;
-                  const targetDot = dotsContainer.children[lastIdx];
-                  if (targetDot) targetDot.focus();
-                  if (api.options.slideSnap) api.goToSlide(lastIdx);
-                  else api.goToGroup(lastIdx);
-                }
-              });
-              
-              dotsContainer.appendChild(dot);
-            });
-            
-            updateDots = (api) => {
-              const activeIdx = api.getVisibleDotIndex();
-
-              Array.from(dotsContainer.children).forEach((dot, idx) => {
-                const isActive = idx === activeIdx;
-                dot.classList.toggle('active', isActive);
-                dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                dot.setAttribute('tabindex', isActive ? '0' : '-1');
-                dot.removeAttribute('aria-current');
-              });
-            };
-            api.on('select', updateDots);
-            api.on('activeGroupChange', updateDots);
-            api.on('activeSlideChange', updateDots);
-            api.on('previewUpdate', updateDots); 
-            updateDots(api);
-          },
-          destroy: (api) => {
-            api.off('select', updateDots);
-            api.off('activeGroupChange', updateDots);
-            api.off('activeSlideChange', updateDots);
-            api.off('previewUpdate', updateDots);
-          }
-        };
-      })();
-      this._initCorePlugin(dots);
-    }
-
-    // CUSTOM HTML COUNTER
-    const counterEl = this.root.querySelector('.yd_counter');
-    if (counterEl) {
-      const counter = (() => {
-        let updateCounter;
-        return {
-          name: 'counter',
-          init: (api) => {
-            const currentEl = counterEl.querySelector('.yd_current');
-            const totalEl = counterEl.querySelector('.yd_total');
-            
-            updateCounter = (api, payload) => {
-              const current = api.options.slideSnap 
-                ? Math.min((payload.previewIndex !== undefined ? payload.previewIndex : payload.currentIndex) + 1, api.datasetCount())
-                : (payload.previewGroup !== undefined ? payload.previewGroup : payload.currentGroup) + 1;
-              const total = api.options.slideSnap ? api.datasetCount() : api.groupCount();
-
-              if (currentEl && totalEl) {
-                currentEl.textContent = current;
-                totalEl.textContent = total;
-              } else {
-                counterEl.textContent = `${current} / ${total}`;
-              }
-            };
-            api.on('select', updateCounter);
-            api.on('activeGroupChange', updateCounter);
-            api.on('activeSlideChange', updateCounter);
-            api.on('previewUpdate', updateCounter); 
-            updateCounter(api, api.getEventPayload());
-          },
-          destroy: (api) => {
-            api.off('select', updateCounter);
-            api.off('activeGroupChange', updateCounter);
-            api.off('activeSlideChange', updateCounter);
-            api.off('previewUpdate', updateCounter);
-          }
-        };
-      })();
-      this._initCorePlugin(counter);
-    }
-
-    // SCROLLBAR CONTROL 
-    const scrollbar = this.root.querySelector('.yd_scrollbar');
-    if (scrollbar) {
-      const sbPlugin = (() => {
-        let updateThumbSize, updateProgress, onClickTrack;
-        let onThumbDown, onThumbMove, onThumbUp, onApiPause;
-        let isDraggingThumb = false;
-        let isDisabled = false;
-        let startPointerPos = 0;
-        let startProgress = 0;
-        let thumbRef = null;
-
-        const logicalToVisual = (api, progress) => {
-          return (api.isRTL && !api.options.vertical) ? 1 - progress : progress;
-        };
-        const visualToLogical = (api, progress) => {
-          return (api.isRTL && !api.options.vertical) ? 1 - progress : progress;
-        };
-
-        return {
-          name: 'scrollbar',
-          init: (api) => {
-            if (api.options.loop) {
-              console.warn('[ydCarousel] Scrollbar disabled: Absolute scrollbars cannot be mapped to infinite loops.');
-              scrollbar.style.display = 'none';
-              return;
-            }
-
-            let thumb = scrollbar.querySelector('.yd_scrollbar-thumb');
-            
-            if (!thumb) {
-              thumb = document.createElement('div');
-              thumb.className = 'yd_scrollbar-thumb';
-              scrollbar.appendChild(thumb);
-            }
-            thumbRef = thumb;
-
-            scrollbar.setAttribute('role', 'scrollbar');
-            scrollbar.setAttribute('aria-controls', api.track.id);
-
-            updateThumbSize = () => {
-              if (api.metrics.realTrackSize <= api.metrics.viewportSize) {
-                isDisabled = true;
-                scrollbar.classList.add('disabled');
-                scrollbar.setAttribute('aria-disabled', 'true');
-                thumb.setAttribute('tabindex', '-1');
-                if (api.options.vertical) {
-                  thumb.style.height = '100%';
-                  thumb.style.width = '';
-                } else {
-                  thumb.style.width = '100%';
-                  thumb.style.height = '';
-                }
-                thumb.style.transform = 'translate3d(0,0,0)'; 
-              } else {
-                isDisabled = false;
-                scrollbar.classList.remove('disabled');
-                scrollbar.removeAttribute('aria-disabled');
-                thumb.removeAttribute('tabindex');
-                const ratio = api.metrics.viewportSize / (api.metrics.realTrackSize || 1);
-                const sizePct = `${Math.max(10, Math.min(100, ratio * 100))}%`;
-                if (api.options.vertical) {
-                  thumb.style.height = sizePct;
-                  thumb.style.width = '';
-                } else {
-                  thumb.style.width = sizePct;
-                  thumb.style.height = '';
-                }
-              }
-            };
-
-            updateProgress = (api, payload) => {
-              const valNum = Math.round(payload.progress * 100);
-              scrollbar.setAttribute('aria-valuenow', valNum);
-              scrollbar.setAttribute('aria-valuemin', '0');
-              scrollbar.setAttribute('aria-valuemax', '100');
-
-              if (isDisabled || isDraggingThumb) return; 
-              
-              const movableSpace = api.options.vertical
-                ? scrollbar.offsetHeight - thumb.offsetHeight
-                : scrollbar.offsetWidth - thumb.offsetWidth;
-              
-              let visualProgress = api.visualScrollbarProgress();
-              if (api.isRTL && !api.options.vertical) {
-                visualProgress = 1 - visualProgress;
-              }
-              
-              if (api.options.vertical) {
-                thumb.style.transform = `translate3d(0, ${visualProgress * movableSpace}px, 0)`;
-              } else {
-                thumb.style.transform = `translate3d(${visualProgress * movableSpace}px, 0, 0)`;
-              }
-            };
-
-            onClickTrack = (e) => {
-              if (isDisabled || e.target === thumb || api.isPaused() || api.isFrozen()) return; 
-              const rect = scrollbar.getBoundingClientRect();
-              
-              const raw = api.options.vertical
-                ? (e.clientY - rect.top) / rect.height
-                : (e.clientX - rect.left) / rect.width;
-              
-              const pct = visualToLogical(api, raw);
-              
-              const targetIndex = Math.round(pct * api.maxReachableSlideIndex());
-              api.goToSlide(targetIndex);
-            };
-
-            onThumbDown = (e) => {
-              if (isDisabled || e.button !== 0 || api.isPaused() || api.isFrozen()) return;
-              e.preventDefault();
-              e.stopPropagation();
-              isDraggingThumb = true;
-              startPointerPos = api.options.vertical ? e.clientY : e.clientX;
-              startProgress = api.visualScrollbarProgress();
-
-              api.previewIndex = api.currentIndex;
-              api.previewGroup = api.currentGroup;
-
-              try {
-                thumb.setPointerCapture(e.pointerId);
-              } catch (err) {}
-              thumb.style.cursor = 'grabbing';
-              
-              if (ydCarousel.hasDOM()) {
-                document.addEventListener('pointermove', onThumbMove);
-                document.addEventListener('pointerup', onThumbUp);
-                document.addEventListener('pointercancel', onThumbUp);
-              }
-              
-              api.emit('dragStart');
-            };
-
-            onThumbMove = (e) => {
-              if (!isDraggingThumb) return;
-              const movableSpace = api.options.vertical
-                ? scrollbar.offsetHeight - thumb.offsetHeight
-                : scrollbar.offsetWidth - thumb.offsetWidth;
-              if (movableSpace <= 0) return;
-              
-              const currentPointer = api.options.vertical ? e.clientY : e.clientX;
-              const delta = currentPointer - startPointerPos;
-              
-              const thumbVisualStart = logicalToVisual(api, startProgress);
-              const visualProgress = Math.max(0, Math.min(1, thumbVisualStart + (delta / movableSpace)));
-              const rawProgress = visualToLogical(api, visualProgress);
-              
-              if (api.options.vertical) {
-                thumb.style.transform = `translate3d(0, ${visualProgress * movableSpace}px, 0)`;
-              } else {
-                thumb.style.transform = `translate3d(${visualProgress * movableSpace}px, 0, 0)`;
-              }
-              
-              const targetIndex = Math.round(rawProgress * api.maxReachableSlideIndex());
-              api.goToSlide(targetIndex);
-            };
-
-            onThumbUp = (e) => {
-              if (!isDraggingThumb) return;
-              isDraggingThumb = false;
-              
-              if (e && e.pointerId !== undefined) {
-                try { thumb.releasePointerCapture(e.pointerId); } catch(err) {}
-              }
-              thumb.style.cursor = '';
-              
-              if (ydCarousel.hasDOM()) {
-                document.removeEventListener('pointermove', onThumbMove);
-                document.removeEventListener('pointerup', onThumbUp);
-                document.removeEventListener('pointercancel', onThumbUp);
-              }
-              
-              api.previewIndex = api.currentIndex;
-              api.previewGroup = api.currentGroup;
-
-              api.emit('dragEnd');
-              api.snapToClosest();
-            };
-
-            onApiPause = () => {
-              if (isDraggingThumb) {
-                isDraggingThumb = false;
-                thumb.style.cursor = '';
-                if (ydCarousel.hasDOM()) {
-                  document.removeEventListener('pointermove', onThumbMove);
-                  document.removeEventListener('pointerup', onThumbUp);
-                  document.removeEventListener('pointercancel', onThumbUp);
-                }
-                api.emit('dragEnd');
-                api.snapToClosest(true, true);
-              }
-            };
-
-            api.on('resize', updateThumbSize);
-            api.on('scroll', updateProgress);
-            api.on('pause', onApiPause);
-            api.on('freeze', onApiPause); 
-            scrollbar.addEventListener('click', onClickTrack);
-            thumb.addEventListener('pointerdown', onThumbDown);
-            
-            updateThumbSize();
-            updateProgress(api, api.getEventPayload());
-          },
-          destroy: (api) => {
-            api.off('resize', updateThumbSize);
-            api.off('scroll', updateProgress);
-            api.off('pause', onApiPause);
-            api.off('freeze', onApiPause);
-            scrollbar.removeEventListener('click', onClickTrack);
-            if (thumbRef) {
-              thumbRef.removeEventListener('pointerdown', onThumbDown);
-            }
-            if (ydCarousel.hasDOM()) {
-              document.removeEventListener('pointermove', onThumbMove);
-              document.removeEventListener('pointerup', onThumbUp);
-              document.removeEventListener('pointercancel', onThumbUp);
-            }
-          }
-        };
-      })();
-      this._initCorePlugin(sbPlugin);
-    }
-
-    // CAROUSEL PROGRESS
-    const progressEl = this.root.querySelector('.yd_progress');
-    if (progressEl) {
-      const progress = (() => {
-        let updateProgress;
-        return {
-          name: 'progress',
-          init: (api) => {
-            let fill = progressEl.querySelector('.yd_progress-fill');
-            if (!fill) {
-              fill = document.createElement('div');
-              fill.className = 'yd_progress-fill';
-              progressEl.appendChild(fill);
-            }
-
-            updateProgress = (api, payload) => {
-              const pct = api.visualScrollbarProgress() * 100;
-              progressEl.style.setProperty('--progress', `${pct}%`);
-            };
-            api.on('scroll', updateProgress);
-            updateProgress(api, api.getEventPayload());
-          },
-          destroy: (api) => api.off('scroll', updateProgress)
-        };
-      })();
-      this._initCorePlugin(progress);
-    }
-
-    // AUTOPLAY PROGRESS & SYSTEM
-    if (this.options.autoplay) {
-      const autoplay = (() => {
-        let playTimer, play, stop, stopPermanent, loopProgress, onVisChange, onFocusIn, onFocusOut, pauseTimer, onSettle, resetVisual;
-        let onBeforeSelect, onDragStart, onDragEnd, onApiPause, onApiResume; 
-        let isPaused = false;
-        let hasStarted = false;
-        let permanentlyStopped = false; 
-        let startTime = 0;
-        let animRaf = null;
-        let direction = 1; 
-        
-        return {
-          name: 'autoplay',
-          init: (api) => {
-            direction = api.root.dataset.autoplayDirection === 'backward' ? -1 : 1;
-
-            const apProgressEl = api.root.querySelector('.yd_autoplay-progress');
-            if (apProgressEl) {
-              let fill = apProgressEl.querySelector('.yd_autoplay-progress-fill');
-              if (!fill) {
-                fill = document.createElement('div');
-                fill.className = 'yd_autoplay-progress-fill';
-                apProgressEl.appendChild(fill);
-              }
-              apProgressEl.style.setProperty('--ap-progress', `0%`);
-            }
-
-            resetVisual = () => {
-              if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `0%`); 
-            };
-            
-            loopProgress = () => {
-              if (isPaused || api.isPaused() || api.isFrozen()) return;
-              const elapsed = ydCarousel._now() - startTime;
-              const pct = Math.min(100, (elapsed / api.options.delay) * 100);
-              if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `${pct}%`);
-              if (pct < 100 && typeof requestAnimationFrame === 'function') {
-                animRaf = requestAnimationFrame(loopProgress);
-              }
-            };
-
-            stopPermanent = () => {
-              if (permanentlyStopped) return;
-              permanentlyStopped = true;
-              clearTimeout(playTimer);
-              if (animRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(animRaf);
-              hasStarted = false;
-              isPaused = false;
-              api.emit('autoplayStop');
-            };
-
-            pauseTimer = () => {
-              clearTimeout(playTimer);
-              if (animRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(animRaf);
-            };
-
-            api.autoplayApi = {
-              play: () => {
-                permanentlyStopped = false;
-                isPaused = false;
-                play();
-              },
-              pause: () => {
-                if (hasStarted && !isPaused && !permanentlyStopped) {
-                  isPaused = true;
-                  pauseTimer();
-                  api.emit('autoplayPause');
-                }
-              },
-              stop: () => stopPermanent(),
-              reset: () => {
-                 permanentlyStopped = false;
-                 const ready = api.options.slideSnap ? api.slideCount() > 0 : api.groupCount() > 0;
-                 if (!hasStarted && ready) {
-                  isPaused = false;
-                  play();
-                 }
-              },
-              setDirection: (dir) => {
-                direction = (dir === 'backward' || dir === -1) ? -1 : 1;
-                resetVisual();
-                if (permanentlyStopped) {
-                  permanentlyStopped = false;
-                  const ready = api.options.slideSnap ? api.slideCount() > 0 : api.groupCount() > 0;
-                  if (ready) {
-                     isPaused = false;
-                     play();
-                  }
-                } else if (hasStarted && !isPaused) {
-                  play(); 
-                }
-              },
-              getDirection: () => direction === 1 ? 'forward' : 'backward',
-              getState: () => Object.freeze({
-                started: hasStarted,
-                paused: isPaused,
-                stopped: permanentlyStopped,
-                direction: direction === 1 ? 'forward' : 'backward'
-              })
-            };
-
-            api.resetAutoplay = api.autoplayApi.reset;
-
-            play = () => {
-              if (permanentlyStopped || api.isPaused() || api.isFrozen()) return; 
-              pauseTimer();
-              
-              if (!hasStarted) {
-                hasStarted = true;
-                api.emit('autoplayStart');
-              } else if (isPaused) {
-                isPaused = false;
-                api.emit('autoplayResume'); 
-              }
-              
-              const canContinue = direction === 1 ? api.canScrollNext() : api.canScrollPrev();
-              if (!canContinue) {
-                if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `100%`);
-                stopPermanent();
-                return;
-              }
-
-              startTime = ydCarousel._now();
-              loopProgress();
-              
-              playTimer = setTimeout(() => {
-                direction === 1 ? api.scrollNext() : api.scrollPrev(); 
-              }, api.options.delay);
-            };
-            
-            stop = () => {
-              pauseTimer(); 
-              if (hasStarted && !isPaused && !permanentlyStopped) {
-                isPaused = true;
-                api.emit('autoplayPause');
-              }
-            };
-
-            onSettle = () => {
-               if (hasStarted && !isPaused && !permanentlyStopped) play(); 
-            };
-
-            onVisChange = () => document.hidden ? stop() : play();
-            onFocusIn = () => stop();
-            onFocusOut = () => play();
-
-            onBeforeSelect = () => { pauseTimer(); resetVisual(); };
-            onDragStart = () => { stop(); resetVisual(); };
-            onDragEnd = () => {
-               if (hasStarted && isPaused && !permanentlyStopped) {
-                 isPaused = false;
-                 api.emit('autoplayResume');
-                 if (api.isSettled) play();
-               }
-            };
-
-            onApiPause = () => { stop(); };
-            onApiResume = () => { 
-              if (!permanentlyStopped && hasStarted) {
-                isPaused = false; 
-                if (api.isSettled) play(); 
-              }
-            };
-            
-            api.on('beforeSelect', onBeforeSelect);
-            api.on('dragStart', onDragStart);
-            api.on('dragEnd', onDragEnd);
-            api.on('settle', onSettle);
-            api.on('pause', onApiPause);
-            api.on('resume', onApiResume);
-            api.on('freeze', onApiPause); 
-            api.on('unfreeze', onApiResume);
-            
-            if (api.root.classList.contains('pause-hover')) {
-              api.root.addEventListener('mouseenter', stop);
-              api.root.addEventListener('mouseleave', play);
-            }
-            if (ydCarousel.hasDOM()) {
-              document.addEventListener('visibilitychange', onVisChange);
-            }
-            api.root.addEventListener('focusin', onFocusIn);
-            api.root.addEventListener('focusout', onFocusOut);
-            
-            if (typeof requestAnimationFrame === 'function') {
-              requestAnimationFrame(() => {
-                const ready = api.options.slideSnap ? api.slideCount() > 0 : api.groupCount() > 0;
-                if (ready) {
-                  play();
-                }
-              });
-            }
-          },
-          destroy: (api) => {
-            stop();
-            if (!permanentlyStopped) {
-               api.emit('autoplayStop');
-            }
-            
-            delete api.autoplayApi;
-            delete api.resetAutoplay; 
-            
-            api.off('beforeSelect', onBeforeSelect);
-            api.off('dragStart', onDragStart);
-            api.off('dragEnd', onDragEnd); 
-            api.off('settle', onSettle);
-            api.off('pause', onApiPause);
-            api.off('resume', onApiResume);
-            api.off('freeze', onApiPause);
-            api.off('unfreeze', onApiResume);
-            
-            api.root.removeEventListener('mouseenter', stop);
-            api.root.removeEventListener('mouseleave', play);
-            if (ydCarousel.hasDOM()) {
-              document.removeEventListener('visibilitychange', onVisChange);
-            }
-            api.root.removeEventListener('focusin', onFocusIn);
-            api.root.removeEventListener('focusout', onFocusOut);
-          }
-        };
-      })();
-      this._initCorePlugin(autoplay);
-    }
-
-    // MOUSEWHEEL NAVIGATION
-    if (this.root.classList.contains('wheel')) {
-      const wheel = (() => {
-        let onWheel, resetTimer;
-        let accumulator = 0;
-        return {
-          name: 'wheel',
-          init: (api) => {
-            if (api.options.vertical && api.options.loop) {
-              console.warn('[ydCarousel] Wheel plugin disabled: Vertical loops trap page scrolling.');
-              return;
-            }
-            
-            const threshold = parseInt(api.root.dataset.wheelThreshold) || 60;
-            onWheel = (e) => {
-              if (api.isPaused() || api.isFrozen()) return;
-              if (!api.options.vertical && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
-              
-              const delta = api.options.vertical ? e.deltaY : (e.deltaX || e.deltaY);
-              const isAtStart = (api.options.slideSnap ? api.currentIndex === 0 : api.currentGroup === 0) && delta < 0;
-              const maxEnd = api.options.slideSnap ? api.maxReachableSlideIndex() : api.groupCount() - 1;
-              const isAtEnd = (api.options.slideSnap ? api.currentIndex >= maxEnd : api.currentGroup >= maxEnd) && delta > 0;
-              
-              if (!api.options.loop && (isAtStart || isAtEnd)) {
-                return; 
-              }
-              
-              e.preventDefault();
-              
-              accumulator += delta;
-              
-              if (Math.abs(accumulator) >= threshold) {
-                 let wheelDirection = accumulator > 0;
-                 if (api.isRTL && !api.options.vertical) {
-                   wheelDirection = !wheelDirection;
-                 }
-
-                 wheelDirection ? api.scrollNext() : api.scrollPrev();
-                 accumulator = 0;
-              }
-              clearTimeout(resetTimer);
-              resetTimer = setTimeout(() => { accumulator = 0; }, 100);
-            };
-            api.root.addEventListener('wheel', onWheel, { passive: false });
-          },
-          destroy: (api) => {
-            clearTimeout(resetTimer); 
-            api.root.removeEventListener('wheel', onWheel);
-          }
-        };
-      })();
-      this._initCorePlugin(wheel);
-    }
-
-    // HASH NAVIGATION
-    if (this.root.classList.contains('hash')) {
-      const hashPlugin = (() => {
-        let onHash, onSelect;
-        let isSyncingHash = false; 
-        return {
-          name: 'hash',
-          init: (api) => {
-            const updateUrl = api.root.dataset.hashUpdate !== 'false';
-            const hashGroup = api.hashGroup(); 
-            
-            onHash = () => {
-              if (isSyncingHash) return;
-              const rawHash = ydCarousel.hasDOM() ? window.location.hash.replace('#', '') : '';
-              let slideHash = rawHash;
-              if (hashGroup) {
-                if (rawHash.startsWith(`${hashGroup}:`)) {
-                  slideHash = rawHash.split(':')[1];
-                } else {
-                  return; 
-                }
-              }
-              const targetIdx = api.originalSlides.findIndex(s => s.dataset.hash === slideHash);
-              if (targetIdx > -1 && targetIdx !== api.currentIndex) {
-                try {
-                  isSyncingHash = true;
-                  api.goToSlide(targetIdx);
-                } finally {
-                  isSyncingHash = false;
-                }
-              }
-            };
-            
-            onSelect = (api, payload) => {
-              if (!updateUrl || isSyncingHash) return;
-              const slideHash = api.getSlide(payload.currentIndex)?.dataset.hash;
-              if (slideHash && typeof history !== 'undefined') {
-                const newHash = hashGroup ? `#${hashGroup}:${slideHash}` : `#${slideHash}`;
-                try {
-                  isSyncingHash = true;
-                  history.replaceState(null, null, newHash);
-                } finally {
-                  isSyncingHash = false;
-                }
-              }
-            };
-            
-            if (ydCarousel.hasDOM()) {
-              window.addEventListener('hashchange', onHash);
-            }
-            api.on('select', onSelect);
-            setTimeout(onHash, 0);
-          },
-          destroy: (api) => {
-            if (ydCarousel.hasDOM()) {
-              window.removeEventListener('hashchange', onHash);
-            }
-            api.off('select', onSelect);
-          }
-        };
-      })();
-      this._initCorePlugin(hashPlugin);
-    }
-
-    // THUMBNAIL SYNCING & SYNC GROUPS
-    const syncTarget = this.root.dataset.sync;
-    const syncGroup = this.syncGroup();
-    if (syncTarget || syncGroup) {
-      const syncPlugin = (() => {
-        let onSelect;
-        let hasSynced = false;
-        let isSyncing = false; 
-        return {
-          name: 'sync',
-          init: (api) => {
-            onSelect = (api, payload) => {
-              if (isSyncing) return;
-              if (!ydCarousel.hasDOM()) return;
-
-              let targets = [];
-              if (syncTarget) {
-                 const el = document.querySelector(syncTarget);
-                 if (el && el.__ydCarousel) targets.push(el.__ydCarousel);
-              }
-              if (syncGroup) { 
-                 document.querySelectorAll(`.yd_carousel[data-sync-group="${syncGroup}"]`).forEach(el => {
-                    if (el !== api.root && el.__ydCarousel) targets.push(el.__ydCarousel);
-                 });
-              }
-              
-              if (targets.length) {
-                try {
-                  isSyncing = true;
-                  if (!hasSynced) {
-                    hasSynced = true;
-                    api.emit('syncStart');
-                  } else {
-                    api.emit('syncUpdate');
-                  }
-                  
-                  targets.forEach(targetApi => {
-                    if (targetApi.selectedIndex() !== payload.currentIndex) {
-                       targetApi.goToSlide(payload.currentIndex);
-                    }
-                  });
-                } finally {
-                  isSyncing = false;
-                }
-              }
-            };
-            api.on('select', onSelect);
-          },
-          destroy: (api) => {
-            api.emit('syncStop');
-            api.off('select', onSelect);
-          }
-        };
-      })();
-      this._initCorePlugin(syncPlugin);
-    }
-
-    // CREATIVE EFFECTS
-    if (this.root.classList.contains('creative')) {
-      const creative = (() => {
-        let onScroll;
-        return {
-          name: 'creative',
-          init: (api) => {
-            onScroll = () => {
-              const updateNode = (slide) => {
-                const indexStr = slide.getAttribute('data-slide-index');
-                if (!indexStr) return;
-                const progress = api.slideProgress(Number(indexStr)); 
-                slide.style.setProperty('--slide-progress', progress.toFixed(4));
-                slide.style.setProperty('--slide-abs-progress', Math.abs(progress).toFixed(4));
-              };
-              
-              api.originalSlides.forEach((slide) => updateNode(slide));
-              
-              if (api.options.loop) {
-                api.track.querySelectorAll('.yd_slide-clone').forEach(clone => {
-                  updateNode(clone);
-                });
-              }
-            };
-            api.on('scroll', onScroll);
-            onScroll();
-          },
-          destroy: (api) => {
-            api.off('scroll', onScroll);
-            api.originalSlides.forEach(s => {
-              s.style.removeProperty('--slide-progress');
-              s.style.removeProperty('--slide-abs-progress');
-            });
-          }
-        };
-      })();
-      this._initCorePlugin(creative);
-    }
-
-    // LAZY LOAD
-    if (this.root.classList.contains('lazy-load')) {
-      const lazyLoad = (() => {
-        let onSlideEnter;
-        return {
-          name: 'lazy-load',
-          init: (api) => {
-            onSlideEnter = (api, payload) => {
-              const slide = api.getSlide(payload.index);
-              if (slide && !slide.dataset.loaded) {
-                const img = slide.querySelector('img[data-src]');
-                if (img && img.dataset.src) {
-                  img.onload = () => {
-                    if (api.options.autoHeight) api.updateAutoHeight();
-                  };
-                  img.src = img.dataset.src;
-                  img.removeAttribute('data-src');
-                }
-                slide.dataset.loaded = "true";
-              }
-            };
-            api.on('slideEnter', onSlideEnter);
-            api.slidesInView().forEach(idx => onSlideEnter(api, {index: idx}));
-          },
-          destroy: (api) => {
-            api.off('slideEnter', onSlideEnter);
-          }
-        };
-      })();
-      this._initCorePlugin(lazyLoad);
-    }
-
-    // DEBUG PLUGIN 
-    if (this.root.classList.contains('debug')) {
-      const debugPlugin = (() => {
-         let debugEl, onUpdate, lastUpdate = 0;
-         let opened = false;
-         return {
-            name: 'debug',
-            init: (api) => {
-               if (!ydCarousel.hasDOM()) return;
-
-               const delay = parseInt(api.root.dataset.debugDelay) || 150; 
-               opened = true;
-               api.emit('debugOpen'); 
-               debugEl = document.createElement('div');
-               debugEl.className = 'yd_carousel-debug-panel';
-               debugEl.style.cssText = 'position:absolute;top:0;left:0;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:10px;z-index:9999;pointer-events:none;white-space:pre;line-height:1.4;';
-               api.root.appendChild(debugEl);
-               
-               onUpdate = (api, payload) => {
-                 const now = ydCarousel._now();
-                 if (now - lastUpdate < delay) return; 
-                 lastUpdate = now;
-                 
-                 const state = api.state();
-                 debugEl.textContent = `
-[ydCarousel v${state.version}]
-Group: ${state.group} | Index: ${state.index}
-Prog:  ${state.progress.toFixed(2)}
-VPrg:  ${state.visualProgress.toFixed(2)}
-Drag:  ${state.dragging}
-Setl:  ${state.settled}
-Loop:  ${state.looping}
-Vel:   ${state.velocity.toFixed(2)}
-InVw:  ${api.slidesInView().join(',')}
-Mode:  ${state.slideSnap ? 'slide-snap' : 'group-snap'}
-                 `.trim();
-               };
-               api.on('scroll', onUpdate);
-               api.on('select', onUpdate);
-               api.on('activeGroupChange', onUpdate);
-               api.on('activeSlideChange', onUpdate); 
-               onUpdate(api, api.getEventPayload());
-            },
-            destroy: (api) => {
-               if (debugEl) debugEl.remove();
-               api.off('scroll', onUpdate);
-               api.off('select', onUpdate);
-               api.off('activeGroupChange', onUpdate);
-               api.off('activeSlideChange', onUpdate);
-               if (opened) {
-                 api.emit('debugClose');
-               }
-            }
-         };
-      })();
-      this._initCorePlugin(debugPlugin);
+    if (typeof requestAnimationFrame === 'function') {
+      state.flags.pluginRefreshUsingRAF = true;
+      state.timers.pluginRefreshRaf = requestAnimationFrame(refreshFn);
+    } else {
+      state.flags.pluginRefreshUsingRAF = false;
+      state.timers.pluginRefreshRaf = setTimeout(refreshFn, 16);
     }
   }
-}
-
-// AUTO-INIT SYSTEM
-if (ydCarousel.hasDOM()) {
-  document.addEventListener('DOMContentLoaded', () => ydCarousel.startAutoInit());
-}
-
-if (typeof window !== 'undefined') {
-  window.debugRTL = api => {
-    console.table({
-      currentPos: api.currentPos,
-      targetPos: api.targetPos,
-      progress: api.scrollProgress(),
-      visualProgress: api.getVisualProgress(),
-      maxScroll: api.maxScroll,
-      rtl: api.isRTL
+  refreshPlugins() {
+    this.plugins.forEach(p => { 
+      try {
+        if (p.instance && typeof p.instance.refresh === 'function') {
+          p.instance.refresh(this.api); 
+        } else {
+          if (p.instance?.destroy) p.instance.destroy(this.api);
+          const def = Object.values(BuiltInPlugins).find(d => d.name === p.name);
+          if (def) p.instance = def.init(this.api);
+        }
+      } catch (err) {
+        this.api.internal.diagnostics._recordPluginError(p.name, err);
+      }
     });
-  };
+    this.activePlugins.forEach((p, name) => { 
+      try {
+        if (p.instance && typeof p.instance.refresh === 'function') {
+          p.instance.refresh(this.api); 
+        } else {
+          if (p.instance?.destroy) p.instance.destroy(this.api);
+          const def = CarouselRegistry._pluginRegistry.get(name);
+          if (def) p.instance = def.init(this.api);
+        }
+      } catch (err) {
+        this.api.internal.diagnostics._recordPluginError(name, err);
+      }
+    });
+  }
+  initPlugins() {
+    this.plugins.forEach(p => p.instance && p.instance.destroy && p.instance.destroy(this.api));
+    this.plugins = [];
+    Object.values(BuiltInPlugins).forEach(def => {
+      try { const instance = def.init(this.api); this.plugins.push({ name: def.name, instance }); this.api.internal.diagnostics._pluginErrorTracker.delete(def.name); } 
+      catch (err) { this.api.internal.diagnostics._recordPluginError(def.name, err); }
+    });
+  }
+  initEnterprisePlugins() {
+    Array.from(CarouselRegistry._pluginRegistry.keys()).forEach(name => this.enablePlugin(name));
+  }
+  enablePlugin(name) {
+    if (this.activePlugins.has(name)) return;
+    const pluginDef = CarouselRegistry._pluginRegistry.get(name);
+    if (!pluginDef) return;
+
+    const deps = pluginDef.dependencies || pluginDef.requires || [];
+    deps.forEach(dep => this.enablePlugin(dep)); 
+
+    const depCheck = this.api.internal.dependencies.validateDependencies(name);
+    if (!depCheck.valid) {
+      this.api.internal.diagnostics._recordPluginError(name, new Error('Dependency validation failed'));
+      return;
+    }
+
+    try { const instance = pluginDef.init(this.api); this.activePlugins.set(name, { def: pluginDef, instance }); this.api.internal.events.emit(EVENTS.PLUGIN_ENABLED, { name }); } catch (err) { this.api.internal.diagnostics._recordPluginError(name, err); }
+  }
+  disablePlugin(name) {
+    const active = this.activePlugins.get(name);
+    if (active) { if (active.def.destroy) active.def.destroy(this.api, active.instance); this.activePlugins.delete(name); this.api.internal.events.emit(EVENTS.PLUGIN_DISABLED, { name }); }
+  }
+  destroyAll() {
+    this.plugins.forEach(p => p.instance && p.instance.destroy && p.instance.destroy(this.api));
+    this.plugins = [];
+    [...this.activePlugins.keys()].forEach(name => this.disablePlugin(name));
+  }
 }
+
+class Diagnostics {
+  constructor(api) { this.api = api; this._pluginErrorTracker = new Map(); }
+  _recordPluginError(name, err) {
+    const c = this._pluginErrorTracker.get(name) || { count: 0, lastError: null };
+    this._pluginErrorTracker.set(name, { count: c.count + 1, lastError: err ? (err.message || String(err)) : 'Unknown error' });
+  }
+  health() {
+    const state = this.api.internal.state;
+    if (state.flags.destroyed) return deepFreeze({ status: 'destroyed', issues: ['Instance is destroyed'], timestamp: Date.now() });
+    const issues = [];
+    if (!this.api.root) issues.push('Root element missing');
+    if (!this.api.track) issues.push('Track container missing');
+    if (isNaN(state.position.current)) issues.push('currentPos is NaN');
+    if (state.flags.batchDepth > 0) issues.push(`Unresolved dynamic batch operations`);
+    if (state.index.current < 0) issues.push('Current index below zero');
+    if (state.group.current < 0) issues.push('Current group below zero');
+    return deepFreeze({ status: issues.length ? 'degraded' : 'healthy', issues, reducedMotion: this.api.reducedMotion, timestamp: Date.now() });
+  }
+  performanceStats() {
+    const state = this.api.internal.state;
+    return deepFreeze({
+      layoutRecalculations: state.stats.layoutCalcs, lastLayoutDurationMs: parseFloat(state.stats.lastLayoutTime.toFixed(2)), renderTicks: state.stats.renderTicks,
+      domNodeCount: this.api.track ? this.api.track.children.length : 0, clonedNodes: this.api.internal.renderer.cloneCount(),
+      originalSlides: state.dom.originalSlides.length, cloneDiagnostics: this.api.internal.renderer.cloneDiagnostics(),
+      activeObservers: state.flags.isFrozen ? 0 : ((this.api.internal.observers.resizeObserver ? 1 : 0) + (this.api.internal.observers.mutationObserver ? 1 : 0) + (this.api.internal.observers.visibilityObserver ? 1 : 0))
+    });
+  }
+  warnings() {
+    const list = []; const state = this.api.internal.state;
+    if (state.flags.destroyed) { list.push('Instance is destroyed.'); return deepFreeze(list); }
+    if (this.api.options.loop && state.dom.originalSlides.length <= 1) list.push('Loop mode is enabled but requires at least 2 slides.');
+    if (this.api.options.vertical && this.api.options.loop && this.api.root.classList.contains('wheel')) list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
+    if (state.dom.originalSlides.length === 0) list.push('Carousel track contains no original slides.');
+    const uptimeSecs = Math.max(1, (Environment.now() - state.stats.initTime) / 1000);
+    if (state.stats.layoutCalcs > 50 && (state.stats.layoutCalcs / uptimeSecs) > 10) list.push(`High layout recalculation rate (${(state.stats.layoutCalcs / uptimeSecs).toFixed(1)}/sec). Check for frequent DOM mutations.`);
+    const depCheck = this.api.internal.dependencies.validateDependencies();
+    if (!depCheck.valid) { depCheck.missing.forEach(m => list.push(`Missing plugin dependency: "${m.missingDependency}" required by "${m.plugin}".`)); depCheck.circular.forEach(c => list.push(`Circular plugin dependency cycle: ${c.join(' -> ')}.`)); }
+    return deepFreeze(list);
+  }
+  compatibilityReport() {
+    const hasDOM = Environment.hasDOM();
+    const requiredFeatures = { ResizeObserver: hasDOM && typeof window.ResizeObserver !== 'undefined', IntersectionObserver: hasDOM && typeof window.IntersectionObserver !== 'undefined', MutationObserver: hasDOM && typeof window.MutationObserver !== 'undefined', PointerEvents: hasDOM && typeof window.PointerEvent !== 'undefined', requestAnimationFrame: hasDOM && typeof window.requestAnimationFrame !== 'undefined', performanceNow: typeof performance !== 'undefined' && typeof performance.now === 'function' };
+    const degradedFeatures = [];
+    if (!requiredFeatures.ResizeObserver) degradedFeatures.push('ResizeObserver missing'); if (!requiredFeatures.IntersectionObserver) degradedFeatures.push('IntersectionObserver missing'); if (!requiredFeatures.MutationObserver) degradedFeatures.push('MutationObserver missing'); if (!requiredFeatures.requestAnimationFrame) degradedFeatures.push('requestAnimationFrame missing');
+    return deepFreeze({ engine: ydCarousel.ENGINE, version: ydCarousel.VERSION, environment: hasDOM ? 'browser' : 'non-browser/ssr', fullyCompatible: Object.values(requiredFeatures).every(Boolean), requiredFeatures: Object.freeze(requiredFeatures), optionalFeatures: Object.freeze({ matchMedia: hasDOM && typeof window.matchMedia !== 'undefined', inert: hasDOM && ('inert' in document.createElement('div')) }), degradedFeatures: Object.freeze(degradedFeatures) });
+  }
+  pluginHealth() {
+    const registry = CarouselRegistry._pluginRegistry; const activeNames = new Set(Array.from(this.api.internal.plugins.activePlugins.keys())); const health = {};
+    registry.forEach((def, name) => { const errInfo = this._pluginErrorTracker.get(name) || { count: 0, lastError: null }; health[name] = Object.freeze({ type: 'enterprise', active: activeNames.has(name), errors: errInfo.count, lastError: errInfo.lastError }); });
+    this.api.internal.plugins.plugins.forEach(p => { if (p.name && !health[p.name]) { const errInfo = this._pluginErrorTracker.get(p.name) || { count: 0, lastError: null }; health[p.name] = Object.freeze({ type: 'core', active: true, errors: errInfo.count, lastError: errInfo.lastError }); } });
+    this._pluginErrorTracker.forEach((errInfo, name) => { if (!health[name]) health[name] = Object.freeze({ type: 'core', active: false, errors: errInfo.count, lastError: errInfo.lastError }); });
+    return deepFreeze(health);
+  }
+  xray() {
+    const state = this.api.internal.state;
+    return deepFreeze({
+      core: { version: this.api.version(), build: { engine: ydCarousel.ENGINE, version: this.api.version(), build: 'enterprise-production', released: '2026-08' }, plugins: Object.freeze([...this.api.internal.plugins.plugins.map(p=>p.name||'anonymous'), ...Array.from(this.api.internal.plugins.activePlugins.keys())]), events: Object.freeze(this.api.internal.events), capabilities: this.api.capabilities(), runtimeCapabilities: this.api.runtimeCapabilities(), state: this.api.state() },
+      inspection: { slidesInView: Object.freeze([...state.dom.visibleSlides].sort((a,b)=>a-b)), slidesNotInView: Object.freeze(Array.from({length: state.dom.originalSlides.length}, (_, i) => i).filter(i => !state.dom.visibleSlides.has(i))), activeSlide: state.index.current },
+      drag: { active: state.drag.active, startIndex: state.drag.startIndex, currentIndex: state.drag.currentIndex },
+      health: this.health(), performance: this.performanceStats(), warnings: this.warnings(), compatibility: this.compatibilityReport(),
+      plugins: { totalRegistered: CarouselRegistry._pluginRegistry.size, totalActive: this.api.internal.plugins.activePlugins.size + this.api.internal.plugins.plugins.length, registeredPlugins: Object.freeze(Array.from(CarouselRegistry._pluginRegistry.keys())), activeEnterprise: Object.freeze(Array.from(this.api.internal.plugins.activePlugins.keys())), activeCore: Object.freeze(this.api.internal.plugins.plugins.map(p=>p.name||'anonymous')) },
+      pluginHealth: this.pluginHealth(), dependencies: this.api.internal.dependencies.dependencyReport(),
+      events: Object.freeze({ stats: this.api.internal.events.eventStats(), totalListeners: this.api.internal.events.listenerCount() }),
+      metrics: Object.freeze({ viewportSize: state.metrics.viewportSize, trackSize: state.metrics.trackSize, realTrackSize: state.metrics.realTrackSize, prependOffset: state.metrics.prependOffset, gap: state.metrics.gap, averageSlideSize: state.metrics.averageSlideSize, slideSizes: Object.freeze([...state.metrics.slideSizes]), slideOffsets: Object.freeze([...state.metrics.slideOffsets]), slideSnaps: Object.freeze([...state.metrics.slideSnaps]), groupSnaps: Object.freeze([...state.metrics.groupSnaps]), snapPoints: Object.freeze([...state.metrics.snapPoints]) }),
+      config: Object.freeze({ loop: this.api.options.loop, dragFree: this.api.options.dragFree, alignCenter: this.api.options.alignCenter, alignEnd: this.api.options.alignEnd, keyboard: this.api.options.keyboard, autoplay: this.api.options.autoplay, direction: this.api.options.direction, vertical: this.api.options.vertical, autoHeight: this.api.options.autoHeight, autoVisibility: this.api.options.autoVisibility, focusOnChange: this.api.options.focusOnChange, reducedMotion: this.api.reducedMotion, duration: this.api.options.duration, friction: this.api.options.friction, delay: this.api.options.delay, dragThreshold: this.api.options.dragThreshold, velocityThreshold: this.api.options.velocityThreshold, dragInertia: this.api.options.dragInertia, slideSnap: this.api.options.slideSnap, groupSnap: this.api.options.groupSnap })
+    });
+  }
+}
+
+// ==========================================
+// BUILT-IN PLUGINS (Factory Pattern)
+// ==========================================
+const BuiltInPlugins = {
+  Controls: {
+    name: 'controls',
+    init: (api) => {
+      const p = api.root.querySelector('.yd_prev'); const n = api.root.querySelector('.yd_next');
+      const hP = () => { if(!api.internal.state.flags.isPaused && !api.internal.state.flags.isFrozen) api.internal.navigation.scrollPrev(); };
+      const hN = () => { if(!api.internal.state.flags.isPaused && !api.internal.state.flags.isFrozen) api.internal.navigation.scrollNext(); };
+      if (p) { p.addEventListener('click', hP); p.setAttribute('aria-controls', api.track.id); }
+      if (n) { n.addEventListener('click', hN); n.setAttribute('aria-controls', api.track.id); }
+      return { destroy: () => { if(p) p.removeEventListener('click', hP); if(n) n.removeEventListener('click', hN); } };
+    }
+  },
+  Dots: {
+    name: 'dots',
+    init: (api) => {
+      const c = api.root.querySelector('.yd_dots'); if (!c) return { destroy: ()=>{} };
+      let t = c.querySelector('.yd_dot'); 
+      const originalTemplate = t ? t.cloneNode(true) : null;
+      c.setAttribute('role', 'tablist'); c.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
+      let lastTotal = 0;
+      const build = () => {
+        c.innerHTML = '';
+        const total = api.options.slideSnap ? api.internal.state.metrics.slideSnaps.length : api.internal.state.dom.logicalGroups.length;
+        new Array(total).fill(0).forEach((_, i) => {
+          let d = originalTemplate ? originalTemplate.cloneNode(true) : document.createElement('button'); if(!originalTemplate) d.className='yd_dot';
+          d.setAttribute('role','tab'); d.setAttribute('aria-controls', api.track.id); d.setAttribute('aria-label', `Go ${i+1}`);
+          d.addEventListener('click', () => { if(api.internal.state.flags.isPaused||api.internal.state.flags.isFrozen) return; api.options.slideSnap ? api.internal.navigation.goToSlide(i) : api.internal.navigation.goToGroup(i); });
+          c.appendChild(d);
+        });
+      };
+      const uD = () => {
+        const aI = api.options.slideSnap ? api.internal.state.index.current : api.internal.state.group.current;
+        Array.from(c.children).forEach((d, i) => { const a = i === aI; d.classList.toggle('active', a); d.setAttribute('aria-selected', a); d.setAttribute('tabindex', a?'0':'-1'); });
+      };
+      api.internal.events.on(EVENTS.NAV_AFTER, uD); api.internal.events.on(EVENTS.GROUP_ACTIVE_CHANGE, uD); api.internal.events.on(EVENTS.PREVIEW_UPDATE, uD); 
+      lastTotal = api.options.slideSnap ? api.internal.state.metrics.slideSnaps.length : api.internal.state.dom.logicalGroups.length;
+      build(); uD();
+      return { 
+        destroy: () => { api.internal.events.off(EVENTS.NAV_AFTER, uD); api.internal.events.off(EVENTS.GROUP_ACTIVE_CHANGE, uD); api.internal.events.off(EVENTS.PREVIEW_UPDATE, uD); },
+        refresh: () => { 
+          const total = api.options.slideSnap ? api.internal.state.metrics.slideSnaps.length : api.internal.state.dom.logicalGroups.length;
+          if (total !== lastTotal) {
+            build();
+            lastTotal = total;
+          }
+          uD(); 
+        }
+      };
+    }
+  },
+  Counter: {
+    name: 'counter',
+    init: (api) => {
+      const c = api.root.querySelector('.yd_counter'); if (!c) return { destroy: ()=>{} };
+      const cu = c.querySelector('.yd_current'), t = c.querySelector('.yd_total');
+      const uC = (a, p) => {
+        const cur = a.options.slideSnap ? Math.min((p.previewIndex!==undefined?p.previewIndex:p.currentIndex)+1, a.internal.state.dom.originalSlides.length) : (p.previewGroup!==undefined?p.previewGroup:p.currentGroup)+1;
+        const tot = a.options.slideSnap ? a.internal.state.dom.originalSlides.length : a.internal.state.dom.logicalGroups.length;
+        if(cu&&t) { cu.textContent=cur; t.textContent=tot; } else c.textContent=`${cur} / ${tot}`;
+      };
+      api.internal.events.on(EVENTS.NAV_AFTER, uC); api.internal.events.on(EVENTS.PREVIEW_UPDATE, uC); uC(api, api.internal.events.getEventPayload());
+      return { 
+        destroy: () => { api.internal.events.off(EVENTS.NAV_AFTER, uC); api.internal.events.off(EVENTS.PREVIEW_UPDATE, uC); },
+        refresh: () => { uC(api, api.internal.events.getEventPayload()); }
+      };
+    }
+  },
+  Scrollbar: {
+    name: 'scrollbar',
+    init: (api) => {
+      const s = api.root.querySelector('.yd_scrollbar'); if (!s) return { destroy: ()=>{} };
+      const pD = s.style.display;
+      if (api.options.loop) { s.style.display = 'none'; return { destroy: () => { s.style.display = pD; } }; }
+      let th = s.querySelector('.yd_scrollbar-thumb'); if(!th){ th = document.createElement('div'); th.className = 'yd_scrollbar-thumb'; s.appendChild(th); }
+      const uS = () => {
+        if(api.internal.state.metrics.realTrackSize <= api.internal.state.metrics.viewportSize){ s.classList.add('disabled'); th.style.transform='translate3d(0,0,0)'; }
+        else { s.classList.remove('disabled'); const r=api.internal.state.metrics.viewportSize/(api.internal.state.metrics.realTrackSize||1); const p=`${Math.max(10, Math.min(100, r*100))}%`; if(api.options.vertical) th.style.height=p; else th.style.width=p; }
+      };
+      const uP = (a) => { if(s.classList.contains('disabled')) return; const m = a.options.vertical ? s.offsetHeight-th.offsetHeight : s.offsetWidth-th.offsetWidth; let v = a.internal.renderer.getScrollProgress(); if(a.isRTL && !a.options.vertical) v=1-v; if(a.options.vertical) th.style.transform=`translate3d(0,${v*m}px,0)`; else th.style.transform=`translate3d(${v*m}px,0,0)`; };
+      api.internal.events.on(EVENTS.RESIZE, uS); api.internal.events.on(EVENTS.SCROLL, uP); uS(); uP(api);
+      return { 
+        destroy: () => { s.style.display = pD; api.internal.events.off(EVENTS.RESIZE, uS); api.internal.events.off(EVENTS.SCROLL, uP); },
+        refresh: () => { uS(); uP(api); }
+      };
+    }
+  },
+  Progress: {
+    name: 'progress',
+    init: (api) => {
+      const p = api.root.querySelector('.yd_progress'); if (!p) return { destroy: ()=>{} };
+      const uPr = () => { p.style.setProperty('--progress', `${api.internal.renderer.getVisualProgress() * 100}%`); };
+      api.internal.events.on(EVENTS.SCROLL, uPr); uPr();
+      return { 
+        destroy: () => api.internal.events.off(EVENTS.SCROLL, uPr),
+        refresh: () => { uPr(); }
+      };
+    }
+  },
+  Wheel: {
+    name: 'wheel',
+    init: (api) => {
+      if(!api.root.classList.contains('wheel')) return { destroy: ()=>{} };
+      let acc=0, tmr; const t = parseInt(api.root.dataset.wheelThreshold)||60;
+      const oW = (e) => {
+        if(api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+        if(!api.options.vertical && Math.abs(e.deltaY)>Math.abs(e.deltaX)) return;
+        const d = api.options.vertical ? e.deltaY : (e.deltaX||e.deltaY);
+        e.preventDefault(); acc+=d;
+        if(Math.abs(acc)>=t){ let w=acc>0; if(api.isRTL && !api.options.vertical) w=!w; w?api.internal.navigation.scrollNext():api.internal.navigation.scrollPrev(); acc=0; }
+        clearTimeout(tmr); tmr = setTimeout(()=>acc=0, 100);
+      };
+      api.root.addEventListener('wheel', oW, {passive:false});
+      return { destroy: () => { clearTimeout(tmr); api.root.removeEventListener('wheel', oW); } };
+    }
+  },
+  Hash: {
+    name: 'hash',
+    init: (api) => {
+      if(!api.root.classList.contains('hash')) return { destroy: ()=>{} };
+      let isSync = false;
+      const oH = () => { if(isSync) return; const h = window.location.hash.replace('#',''); const idx = api.internal.state.dom.originalSlides.findIndex(s=>s.dataset.hash===h); if(idx>-1 && idx!==api.internal.state.index.current){ isSync=true; api.internal.navigation.goToSlide(idx); isSync=false; } };
+      const oS = (a,p) => { if(isSync) return; const h=a.internal.state.dom.originalSlides[p.currentIndex]?.dataset.hash; if(h){ isSync=true; history.replaceState(null,null,`#${h}`); isSync=false; } };
+      window.addEventListener('hashchange', oH); api.internal.events.on(EVENTS.NAV_AFTER, oS); setTimeout(oH, 0);
+      return { destroy: () => { window.removeEventListener('hashchange', oH); api.internal.events.off(EVENTS.NAV_AFTER, oS); } };
+    }
+  },
+  Autoplay: {
+    name: 'autoplay',
+    init: (api) => {
+      if (!api.options.autoplay) return { destroy: ()=>{} };
+      let playTimer, animRaf, isPaused = false, hasStarted = false, permanentlyStopped = false, startTime = 0;
+      let direction = api.root.dataset.autoplayDirection === 'backward' ? -1 : 1;
+      const apProgressEl = api.root.querySelector('.yd_autoplay-progress');
+      if (apProgressEl && !apProgressEl.querySelector('.yd_autoplay-progress-fill')) { const f = document.createElement('div'); f.className = 'yd_autoplay-progress-fill'; apProgressEl.appendChild(f); apProgressEl.style.setProperty('--ap-progress', `0%`); }
+      const resetVisual = () => { if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `0%`); };
+      const loopProgress = () => {
+        if (isPaused || api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+        const pct = Math.min(100, ((Environment.now() - startTime) / api.options.delay) * 100);
+        if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `${pct}%`);
+        if (pct < 100 && typeof requestAnimationFrame === 'function') animRaf = requestAnimationFrame(loopProgress);
+      };
+      const stopPermanent = () => { if (permanentlyStopped) return; permanentlyStopped = true; clearTimeout(playTimer); if (animRaf) cancelAnimationFrame(animRaf); hasStarted = isPaused = false; api.internal.events.emit(EVENTS.AUTOPLAY_STOP); };
+      const pauseTimer = () => { clearTimeout(playTimer); if (animRaf) cancelAnimationFrame(animRaf); };
+      const play = () => {
+        if (permanentlyStopped || api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+        pauseTimer(); if (!hasStarted) { hasStarted = true; api.internal.events.emit(EVENTS.AUTOPLAY_START); } else if (isPaused) { isPaused = false; api.internal.events.emit(EVENTS.AUTOPLAY_RESUME); }
+        
+        if (!api.internal.state.metrics.slideSnaps.length) {
+          playTimer = setTimeout(() => play(), 100);
+          return;
+        }
+
+        if (!(direction === 1 ? api.internal.navigation.canScrollNext() : api.internal.navigation.canScrollPrev())) { 
+          if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `100%`); 
+          stopPermanent(); 
+          return; 
+        }
+
+        startTime = Environment.now(); 
+        loopProgress();
+        playTimer = setTimeout(() => { direction === 1 ? api.internal.navigation.scrollNext() : api.internal.navigation.scrollPrev(); }, api.options.delay);
+      };
+      const stop = () => { pauseTimer(); if (hasStarted && !isPaused && !permanentlyStopped) { isPaused = true; api.internal.events.emit(EVENTS.AUTOPLAY_PAUSE); } };
+      api.autoplayApi = { play: () => { permanentlyStopped = isPaused = false; play(); }, pause: () => { if (hasStarted && !isPaused && !permanentlyStopped) stop(); }, stop: stopPermanent, reset: () => { permanentlyStopped = isPaused = false; if (!hasStarted) play(); }, setDirection: (dir) => { direction = (dir === 'backward' || dir === -1) ? -1 : 1; resetVisual(); if (permanentlyStopped) { permanentlyStopped = isPaused = false; play(); } else if (hasStarted && !isPaused) play(); }, getDirection: () => direction === 1 ? 'forward' : 'backward', getState: () => Object.freeze({ started: hasStarted, paused: isPaused, stopped: permanentlyStopped, direction: direction === 1 ? 'forward' : 'backward' }) };
+      api.resetAutoplay = api.autoplayApi.reset;
+
+      const onSettle = () => { if (hasStarted && !isPaused && !permanentlyStopped) play(); };
+      const onVisChange = () => document.hidden ? stop() : play();
+      const onFocusIn = stop, onFocusOut = play;
+      const onBeforeSelect = () => { pauseTimer(); resetVisual(); };
+      const onDragStart = () => { stop(); resetVisual(); };
+      const onDragEnd = () => { if (hasStarted && isPaused && !permanentlyStopped) { isPaused = false; api.internal.events.emit(EVENTS.AUTOPLAY_RESUME); if (api.internal.state.flags.isSettled) play(); } };
+      const onApiPause = stop;
+      const onApiResume = () => { if (!permanentlyStopped && hasStarted) { isPaused = false; if (api.internal.state.flags.isSettled) play(); } };
+
+      api.internal.events.on(EVENTS.NAV_BEFORE, onBeforeSelect).on(EVENTS.DRAG_START, onDragStart).on(EVENTS.DRAG_END, onDragEnd).on(EVENTS.SETTLE, onSettle).on(EVENTS.PAUSE, onApiPause).on(EVENTS.RESUME, onApiResume).on(EVENTS.FREEZE, onApiPause).on(EVENTS.UNFREEZE, onApiResume);
+      if (api.root.classList.contains('pause-hover')) { api.root.addEventListener('mouseenter', stop); api.root.addEventListener('mouseleave', play); }
+      if (Environment.hasDOM()) document.addEventListener('visibilitychange', onVisChange);
+      api.root.addEventListener('focusin', onFocusIn); api.root.addEventListener('focusout', onFocusOut);
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(play);
+      return { destroy: () => {
+        stop(); if (!permanentlyStopped) api.internal.events.emit(EVENTS.AUTOPLAY_STOP);
+        delete api.autoplayApi; delete api.resetAutoplay;
+        api.internal.events.off(EVENTS.NAV_BEFORE, onBeforeSelect).off(EVENTS.DRAG_START, onDragStart).off(EVENTS.DRAG_END, onDragEnd).off(EVENTS.SETTLE, onSettle).off(EVENTS.PAUSE, onApiPause).off(EVENTS.RESUME, onApiResume).off(EVENTS.FREEZE, onApiPause).off(EVENTS.UNFREEZE, onApiResume);
+        api.root.removeEventListener('mouseenter', stop); api.root.removeEventListener('mouseleave', play);
+        if (Environment.hasDOM()) document.removeEventListener('visibilitychange', onVisChange);
+        api.root.removeEventListener('focusin', onFocusIn); api.root.removeEventListener('focusout', onFocusOut);
+      }};
+    }
+  }
+};
+
+// ==========================================
+// MAIN FACADE: ydCarousel
+// ==========================================
+class ydCarousel {
+  static VERSION = '3.0.0-LTS';
+  static ENGINE = 'ydCarousel-Enterprise';
+  static EVENTS = EVENTS;
+  static SNAP_EPSILON = 0.5;
+  static _autoInitObserver = null;
+
+  static startAutoInit() {
+    if (!Environment.hasDOM()) return;
+    const initAll = () => {
+      document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
+        if (!el.__ydCarousel) {
+          try { new ydCarousel(el); } catch (err) { console.error('[ydCarousel] Auto-init failed:', err); }
+        }
+      });
+    };
+    initAll();
+    if (!this._autoInitObserver && typeof MutationObserver !== 'undefined') {
+      let timeout;
+      this._autoInitObserver = new MutationObserver(() => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          CarouselRegistry._instances.forEach(api => { if (!document.contains(api.root)) api.destroy(); });
+          initAll();
+        }, 100); 
+      });
+      this._autoInitObserver.observe(document.body, { childList: true, subtree: true }); 
+    }
+  }
+  static stopAutoInit() {
+    if (this._autoInitObserver) {
+      this._autoInitObserver.disconnect();
+      this._autoInitObserver = null;
+    }
+  }
+
+  constructor(element) {
+    this.root = element;
+    this.track = this.root ? this.root.querySelector('.yd_container') : null;
+    if (!this.track) throw new Error('[ydCarousel] Missing .yd_container element');
+    this.root.__ydCarousel = this;
+
+    const rM = this.root.dataset.reducedMotion || 'auto';
+    this.reducedMotion = rM === 'true' ? true : (rM === 'false' ? false : (Environment.hasDOM() && window.matchMedia('(prefers-reduced-motion: reduce)').matches));
+    
+    this.options = {
+      loop: this.root.classList.contains('loop'), dragFree: this.root.classList.contains('drag-free'),
+      alignCenter: this.root.classList.contains('align-center'), alignEnd: this.root.classList.contains('align-end'),
+      keyboard: this.root.classList.contains('keyboard'), autoplay: !this.reducedMotion && this.root.classList.contains('autoplay'),
+      direction: this.root.classList.contains('rtl') ? 'rtl' : 'ltr', vertical: this.root.classList.contains('vertical'),
+      autoHeight: this.root.classList.contains('auto-height'), autoVisibility: this.root.dataset.autoVisibility !== 'false', 
+      focusOnChange: this.root.classList.contains('focus-on-change') || this.root.dataset.focusOnChange === 'true',
+      duration: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.duration) || 0.1),
+      friction: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.friction) || 0.92),
+      delay: parseInt(this.root.dataset.delay) || 4000, dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
+      velocityThreshold: parseFloat(this.root.dataset.velocityThreshold) || 0.5, dragInertia: this.reducedMotion ? 0 : (parseFloat(this.root.dataset.dragInertia) || 40),
+      slideSnap: this.root.classList.contains('slide-snap'), groupSnap: this.root.classList.contains('group-snap')
+    };
+    this.isRTL = this.options.direction === 'rtl';
+    this.dir = this.isRTL ? -1 : 1;
+    if (this.options.groupSnap) this.options.slideSnap = false;
+    if (!this.options.slideSnap && !this.options.groupSnap) this.options.slideSnap = true;
+
+    // Instantiate Architecture Layers into a Sandbox
+    const state = new CarouselState();
+    const events = new EventBus(this);
+    const lifecycle = new Lifecycle(this);
+    const measurements = new MeasurementEngine(this);
+    const physics = new PhysicsEngine(this);
+    const renderer = this.options.loop ? new CloneLoopRenderer(this) : new StandardRenderer(this);
+    const drag = new DragModule(this);
+    const keyboard = new KeyboardModule(this);
+    const navigation = new NavigationEngine(this);
+    const observers = new ObserverManager(this);
+    const dynamic = new DynamicContentManager(this);
+    const accessibility = new AccessibilityManager(this);
+    const plugins = new PluginManager(this);
+    const diagnostics = new Diagnostics(this);
+    const modules = new ModuleManager(this);
+    const dependencies = new DependencyManager(this);
+
+    CarouselRegistry.validateRenderer(renderer);
+
+    this.internal = Object.freeze({
+      state, events, lifecycle, measurements, physics, renderer, drag, keyboard,
+      navigation, observers, dynamic, accessibility, plugins, diagnostics, modules, dependencies
+    });
+
+    this.onActivate = () => { CarouselRegistry.activeCarousel = this; }; 
+    this.onDeactivate = (e) => {
+      if (e && e.type === 'focusout' && this.root.contains(e.relatedTarget)) return;
+      if (CarouselRegistry.activeCarousel === this) {
+        const fb = [...CarouselRegistry._instances].find(api => api !== this && !api.internal.state.flags.destroyed && api.options.keyboard);
+        CarouselRegistry.activeCarousel = fb || null; 
+      }
+    };
+
+    this.internal.lifecycle.init();
+    
+    // Bootstrapped safely inside clone boundaries if loop exists
+    if (this.internal.renderer.isLoopActive() && this.internal.state.position.current === 0 && this.internal.state.metrics.slideSnaps.length > 0) {
+      this.internal.state.position.current = this.internal.state.metrics.slideSnaps[0];
+      this.internal.state.position.target = this.internal.state.metrics.slideSnaps[0];
+    }
+  }
+
+  // Facade Public API
+  get currentPos() { return this.internal.state.position.current; }
+  get targetPos() { return this.internal.state.position.target; }
+  get currentIndex() { return this.internal.state.index.current; }
+  get currentGroup() { return this.internal.state.group.current; }
+  
+  pause() { this.internal.lifecycle.pause(); }
+  resume() { this.internal.lifecycle.resume(); }
+  freeze(m=true) { this.internal.lifecycle.freeze(m); }
+  unfreeze(m=true) { this.internal.lifecycle.unfreeze(m); }
+  destroy() { this.internal.lifecycle.destroy(); }
+  
+  goToSlide(i, imm=false, f=false) { this.internal.navigation.goToSlide(i, imm, f); }
+  goToGroup(i, imm=false, f=false) { this.internal.navigation.goToGroup(i, imm, f); }
+  scrollNext(f=false) { this.internal.navigation.scrollNext(f); }
+  scrollPrev(f=false) { this.internal.navigation.scrollPrev(f); }
+  scrollTo(i, imm=false) { this.internal.navigation.goToSlide(i, imm); }
+  
+  refresh(full=false) { if(this.internal.state.flags.destroyed) return; this.internal.measurements.updateMeasurements(); if(full) this.internal.plugins.initPlugins(); }
+  addSlide(h) { this.internal.dynamic.addSlide(h); }
+  removeSlide(i) { this.internal.dynamic.removeSlide(i); }
+  removeAllSlides() { this.internal.dynamic.removeAllSlides(); }
+  
+  slideCount() { return this.internal.state.dom.originalSlides.length; }
+  groupCount() { return this.internal.state.dom.logicalGroups.length; }
+  datasetCount() { return this.internal.state.dom.originalSlides.length; }
+  getSlide(i) { return this.internal.state.dom.originalSlides[i] || null; }
+  activeSlide() { return this.internal.state.dom.originalSlides[this.internal.state.index.current] || null; }
+  slidesInView() { return [...this.internal.state.dom.visibleSlides].sort((a,b)=>a-b); }
+  
+  on(e, cb) { return this.internal.events.on(e, cb); }
+  off(e, cb) { return this.internal.events.off(e, cb); }
+  once(e, cb) { return this.internal.events.once(e, cb); }
+  
+  getTransformValue() { return this.options.vertical ? -this.internal.state.position.current : -this.internal.state.position.current * this.dir; }
+  isPaused() { return this.internal.state.flags.isPaused; }
+  isFrozen() { return this.internal.state.flags.isFrozen; }
+  isDragging() { return this.internal.state.flags.isDraggingActive; }
+  isReady() { return this.root.classList.contains('yd_carousel-ready'); }
+  isDestroyed() { return this.internal.state.flags.destroyed; }
+  
+  stateData() { return this.internal.events.getEventPayload(); }
+  
+  // Diagnostic Proxying
+  selfTest() {
+    const state = this.internal.state;
+    return deepFreeze({
+      initialized: this.isReady(),
+      renderer: !!this.internal.renderer,
+      slides: state.metrics.slideSnaps.length,
+      groups: state.metrics.groupSnaps.length,
+      currentPos: state.position.current,
+      targetPos: state.position.target,
+      hasKeyboard: this.options.keyboard,
+      observers: {
+        resize: !!this.internal.observers.resizeObserver,
+        mutation: !!this.internal.observers.mutationObserver,
+        visibility: !!this.internal.observers.visibilityObserver
+      }
+    });
+  }
+  health() { return this.internal.diagnostics.health(); }
+  xray() { return this.internal.diagnostics.xray(); }
+  compatibilityReport() { return this.internal.diagnostics.compatibilityReport(); }
+  warnings() { return this.internal.diagnostics.warnings(); }
+  performanceStats() { return this.internal.diagnostics.performanceStats(); }
+  pluginHealth() { return this.internal.diagnostics.pluginHealth(); }
+  dependencyReport() { return this.internal.dependencies.dependencyReport(); }
+  capabilities() {
+    return deepFreeze({
+      loop: true, dragFree: true, rtl: true, direction: true, vertical: true, autoHeight: true, autoVisibility: true, dynamicApi: true,
+      autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true, sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
+      once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true, pauseResume: true, freezeUnfreeze: true,
+      warnings: true, compatibilityReport: true, pluginHealth: true, debug: true, plugins: true, events: true, diagnostics: true, dependencies: true, snapshots: true, observers: true, registry: true 
+    });
+  }
+  runtimeCapabilities() {
+    return deepFreeze({
+      loop: this.options.loop, dragFree: this.options.dragFree, rtl: this.isRTL, direction: this.options.direction, vertical: this.options.vertical,
+      autoplay: this.options.autoplay, keyboard: this.options.keyboard, autoHeight: this.options.autoHeight, autoVisibility: this.options.autoVisibility, focusOnChange: this.options.focusOnChange,
+      reducedMotion: this.reducedMotion, alignCenter: this.options.alignCenter, alignEnd: this.options.alignEnd, slideSnap: this.options.slideSnap, groupSnap: this.options.groupSnap
+    });
+  }
+  version() { return ydCarousel.VERSION; }
+  state() {
+    const s = this.internal.state;
+    return deepFreeze({
+      version: this.version(), index: s.index.current, group: s.group.current, previousIndex: s.index.previous,
+      position: s.position.current, target: s.position.target, velocity: s.physics.velocity, progress: this.internal.renderer.getScrollProgress(),
+      visualProgress: this.internal.renderer.getVisualProgress(), dragging: s.flags.isDraggingActive, settled: s.flags.isSettled, looping: this.options.loop,
+      rtl: this.isRTL, direction: this.options.direction, vertical: this.options.vertical, autoHeight: this.options.autoHeight, autoVisibility: this.options.autoVisibility,
+      focusOnChange: this.options.focusOnChange, reducedMotion: this.reducedMotion, paused: s.flags.isPaused, frozen: s.flags.isFrozen, autoFrozen: s.flags.isAutoFrozen,
+      manualFrozen: s.flags.manualFrozen, slideSnap: this.options.slideSnap, groupSnap: this.options.groupSnap
+    });
+  }
+}
+
+if (Environment.hasDOM()) document.addEventListener('DOMContentLoaded', () => ydCarousel.startAutoInit());
