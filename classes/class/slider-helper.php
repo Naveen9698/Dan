@@ -34,7 +34,7 @@
 }
 
 .yd_slide-clone {
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
   -webkit-user-select: none;
 }
