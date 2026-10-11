@@ -90,7 +90,9 @@ class CarouselRegistry {
     const REQUIRED_RENDERER_METHODS = [
       'resolveTarget', 'handleReposition', 'normalizePosition', 'distanceToSnap',
       'getScrollProgress', 'getVisualProgress', 'getSlideProgress',
-      'cloneCount', 'cloneDiagnostics', 'getVisualPrev', 'getVisualNext', 'normalizeIndex'
+      'cloneCount', 'cloneDiagnostics', 'getVisualPrev', 'getVisualNext', 'normalizeIndex',
+      'slideCount', 'getVisibleElement', 'supportsDynamicManipulation',
+      'measureTrack', 'resolveHash', 'getHashByIndex'
     ];
     REQUIRED_RENDERER_METHODS.forEach(method => {
       if (typeof renderer[method] !== 'function') throw new Error(`Renderer missing: ${method}`);
@@ -146,7 +148,7 @@ class EventBus {
       activeSnap: state.index.activeSnap,
       previewIndex: state.preview.index !== undefined ? state.preview.index : state.index.current,
       previewGroup: state.preview.group !== undefined ? state.preview.group : state.group.current,
-      slideCount: state.dom.originalSlides.length,
+      slideCount: this.api.internal.renderer.slideCount(),
       snapCount: this.api.internal.snapEngine.getSnapCount(),
       progress: this.api.internal.renderer.getScrollProgress(),
       visualProgress: this.api.internal.renderer.getVisualProgress(),
@@ -514,10 +516,9 @@ class MeasurementEngine {
         state.index.current = state.dom.originalSlides.indexOf(state.dom._trackedActiveNode);
       }
       
-      // Allow measurement to proceed if VirtualRenderer tells us total slides > 0
-      const virtualTotal = this.api.internal.renderer.totalSlides || 0;
+      const slideCount = this.api.internal.renderer.slideCount();
       
-      if (!state.dom.originalSlides.length && virtualTotal === 0) {
+      if (!state.dom.originalSlides.length && slideCount === 0) {
         state.metrics.snapPoints = state.metrics.slideSizes = state.metrics.relativeOffsets = [];
         state.dom.logicalGroups = []; state.metrics.maxScroll = state.index.current = state.group.current = state.index.activeSnap = state.position.current = state.position.target = 0;
         this.api.track.style.transform = '';
@@ -531,40 +532,9 @@ class MeasurementEngine {
 
       state.dom.originalSlides.forEach((slide, idx) => slide.setAttribute('data-slide-index', idx));
 
-      const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
-      const viewportRect = viewportEl.getBoundingClientRect();
-      state.metrics.viewportSize = this.api.options.vertical ? viewportRect.height : viewportRect.width;
-      
-      if (state.dom.originalSlides.length) {
-        state.metrics.slideSizes = state.dom.originalSlides.map(slide => { const sRect = slide.getBoundingClientRect(); return this.api.options.vertical ? sRect.height : sRect.width; });
-        state.metrics.averageSlideSize = state.metrics.slideSizes.reduce((total, size) => total + size, 0) / state.metrics.slideSizes.length;
-      } else {
-        // Fallback for purely virtual tracking where no standard slides exist yet
-        state.metrics.averageSlideSize = state.metrics.viewportSize; 
-        state.metrics.slideSizes = new Array(virtualTotal).fill(state.metrics.averageSlideSize);
-      }
-      
-      state.metrics.slidesPerView = this.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
+      // Framework cleanly delegates size and offset generation to the active renderer
+      this.api.internal.renderer.measureTrack();
 
-      state.dom.logicalGroups = [];
-      const visible = state.metrics.slidesPerView || 1;
-      const total = virtualTotal || state.dom.originalSlides.length;
-      for (let i = 0; i < total; i += visible) state.dom.logicalGroups.push(i);
-
-      let physicalSize = 0; let loopGap = 0;
-      
-      if (state.dom.originalSlides.length > 0) {
-        const firstRect = state.dom.originalSlides[0].getBoundingClientRect();
-        state.metrics.relativeOffsets = state.dom.originalSlides.map(slide => { const sRect = slide.getBoundingClientRect(); if (this.api.options.vertical) return sRect.top - firstRect.top; return this.api.isRTL ? firstRect.right - sRect.right : sRect.left - firstRect.left; });
-        const lastIdx = state.dom.originalSlides.length - 1; 
-        physicalSize = state.metrics.relativeOffsets[lastIdx] + state.metrics.slideSizes[lastIdx];
-        if (state.dom.originalSlides.length > 1) loopGap = Math.max(0, state.metrics.relativeOffsets[1] - (state.metrics.relativeOffsets[0] + state.metrics.slideSizes[0]));
-      } else if (virtualTotal > 0) {
-        // Virtual relative offsets
-        state.metrics.relativeOffsets = new Array(virtualTotal).fill(0).map((_, i) => i * state.metrics.averageSlideSize);
-      }
-
-      this.api.internal.renderer.setupTrack(physicalSize, loopGap);
       state.metrics.trackSize = this.api.options.vertical ? this.api.track.scrollHeight : this.api.track.scrollWidth;
       state.metrics.maxScroll = Math.max(0, state.metrics.realTrackSize - state.metrics.viewportSize);
 
@@ -700,11 +670,11 @@ class NavigationEngine {
     }
   }
   scrollNext(force = false) {
-    if ((!this.api.internal.state.dom.originalSlides.length && !this.api.internal.renderer.totalSlides) || ((this.api.internal.state.flags.isPaused || this.api.internal.state.flags.isFrozen) && !force)) return;
+    if ((!this.api.internal.renderer.slideCount()) || ((this.api.internal.state.flags.isPaused || this.api.internal.state.flags.isFrozen) && !force)) return;
     if (this.api.internal.snapEngine.canScrollNext()) this.goToSnap(this.api.internal.snapEngine.nextSnap(), false, force);
   }
   scrollPrev(force = false) {
-    if ((!this.api.internal.state.dom.originalSlides.length && !this.api.internal.renderer.totalSlides) || ((this.api.internal.state.flags.isPaused || this.api.internal.state.flags.isFrozen) && !force)) return;
+    if ((!this.api.internal.renderer.slideCount()) || ((this.api.internal.state.flags.isPaused || this.api.internal.state.flags.isFrozen) && !force)) return;
     if (this.api.internal.snapEngine.canScrollPrev()) this.goToSnap(this.api.internal.snapEngine.prevSnap(), false, force);
   }
 }
@@ -735,7 +705,7 @@ class ObserverManager {
           state.flags.ignoreNextMutation = false; 
           return; 
         }
-        if (mutations.some(m => [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)].some(n => n.nodeType === 1 && (n.classList.contains('yd_slide-clone') || n.classList.contains('yd_virtual-slide'))))) return;
+        if (mutations.some(m => [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)].some(n => n.nodeType === 1 && n.classList.contains('yd_slide-clone')))) return;
         
         if (state.timers.mutationRaf) {
           if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
@@ -771,7 +741,7 @@ class ObserverManager {
         entries.forEach(entry => {
           const node = entry.target;
           const idx = parseInt(node.getAttribute('data-slide-index'), 10);
-          const isClone = node.classList.contains('yd_slide-clone') || node.classList.contains('yd_virtual-slide');
+          const isClone = node.classList.contains('yd_slide-clone');
           if (entry.isIntersecting) {
             node.classList.add('in-view'); node.classList.remove('out-view');
             if (!isClone) { node.removeAttribute('aria-hidden'); if (!isNaN(idx)) { this.api.internal.state.dom.visibleSlides.add(idx); this.api.internal.events.emit(EVENTS.SLIDE_ENTER, { index: idx }); } }
@@ -825,6 +795,9 @@ class ObserverManager {
 class DynamicContentManager {
   constructor(api) { this.api = api; }
   batch(callback) {
+    if (!this.api.internal.renderer.supportsDynamicManipulation()) {
+      throw new Error('[ydCarousel] Dynamic DOM manipulation is not supported by the active renderer.');
+    }
     const state = this.api.internal.state;
     if (state.flags.destroyed) return;
     if (state.flags.batchDepth === 0) {
@@ -899,15 +872,15 @@ class AccessibilityManager {
     this._announcer = announcer;
     
     this.announceHandler = (api, payload) => {
-      const total = api.internal.renderer.totalSlides || api.internal.state.dom.originalSlides.length;
-      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${total}`;
+      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.internal.renderer.slideCount()}`;
     };
     this.api.internal.events.on(EVENTS.NAV_AFTER, this.announceHandler);
   }
   updateSlideStates() {
     const state = this.api.internal.state;
-    if (!state.dom.originalSlides.length && !this.api.internal.renderer.totalSlides) return;
-    const total = this.api.internal.renderer.totalSlides || state.dom.originalSlides.length;
+    const total = this.api.internal.renderer.slideCount();
+    if (total === 0) return;
+    
     const prevIdx = this.api.internal.renderer.getVisualPrev(state.index.current);
     const nextIdx = this.api.internal.renderer.getVisualNext(state.index.current);
 
@@ -934,7 +907,7 @@ class AccessibilityManager {
     });
 
     if (this.api.options.focusOnChange && Environment.hasDOM() && this.api.root.contains(document.activeElement)) {
-      const active = state.dom.originalSlides[state.index.current];
+      const active = this.api.internal.renderer.getVisibleElement(state.index.current);
       if (active) {
         if (!active.hasAttribute('tabindex')) active.setAttribute('tabindex', '0');
         try { active.focus({ preventScroll: true }); } catch (err) { active.focus(); }
@@ -943,7 +916,7 @@ class AccessibilityManager {
   }
   updateAutoHeight() {
     if (!this.api.options.autoHeight) return;
-    const slide = this.api.internal.state.dom.originalSlides[this.api.internal.state.index.current];
+    const slide = this.api.internal.renderer.getVisibleElement(this.api.internal.state.index.current);
     if (!slide) return;
     const height = slide.offsetHeight;
     if (height <= 0) return;
@@ -955,6 +928,9 @@ class AccessibilityManager {
   }
 }
 
+// ==========================================
+// LAYER 13: Dependency Manager
+// ==========================================
 class DependencyManager {
   constructor(api) { this.api = api; }
   
@@ -1024,6 +1000,49 @@ class Diagnostics {
     const c = this._pluginErrorTracker.get(name) || { count: 0, lastError: null };
     this._pluginErrorTracker.set(name, { count: c.count + 1, lastError: err ? (err.message || String(err)) : 'Unknown error' });
   }
+  selfTest() {
+    const state = this.api.internal.state;
+    return deepFreeze({
+      initialized: this.api.isReady(),
+      renderer: !!this.api.internal.renderer,
+      slides: state.metrics.snapPoints.length,
+      groups: state.dom.logicalGroups.length,
+      currentPos: state.position.current,
+      targetPos: state.position.target,
+      hasKeyboard: this.api.options.keyboard,
+      observers: {
+        resize: !!this.api.internal.observers.resizeObserver,
+        mutation: !!this.api.internal.observers.mutationObserver,
+        visibility: !!this.api.internal.observers.visibilityObserver
+      }
+    });
+  }
+  capabilities() {
+    return deepFreeze({
+      loop: true, dragFree: true, rtl: true, direction: true, vertical: true, autoHeight: true, autoVisibility: true, dynamicApi: true,
+      autoplay: true, autoplayApi: true, keyboard: true, wheel: true, hash: true, sync: true, creative: true, lazyLoad: true, accessibility: true, focusManagement: true,
+      once: true, stateExportImport: true, reducedMotion: true, eventWildcards: true, eventStats: true, listenerCount: true, pauseResume: true, freezeUnfreeze: true,
+      warnings: true, compatibilityReport: true, pluginHealth: true, debug: true, plugins: true, events: true, diagnostics: true, dependencies: true, snapshots: true, observers: true, registry: true 
+    });
+  }
+  runtimeCapabilities() {
+    return deepFreeze({
+      loop: this.api.options.loop, dragFree: this.api.options.dragFree, rtl: this.api.isRTL, direction: this.api.options.direction, vertical: this.api.options.vertical,
+      autoplay: this.api.options.autoplay, keyboard: this.api.options.keyboard, autoHeight: this.api.options.autoHeight, autoVisibility: this.api.options.autoVisibility, focusOnChange: this.api.options.focusOnChange,
+      reducedMotion: this.api.reducedMotion, alignCenter: this.api.options.alignCenter, alignEnd: this.api.options.alignEnd, slideSnap: this.api.options.slideSnap, groupSnap: this.api.options.groupSnap
+    });
+  }
+  state() {
+    const s = this.api.internal.state;
+    return deepFreeze({
+      version: this.api.version(), index: s.index.current, group: s.group.current, previousIndex: s.index.previous,
+      position: s.position.current, target: s.position.target, velocity: s.physics.velocity, progress: this.api.internal.renderer.getScrollProgress(),
+      visualProgress: this.api.internal.renderer.getVisualProgress(), dragging: s.flags.isDraggingActive, settled: s.flags.isSettled, looping: this.api.options.loop,
+      rtl: this.api.isRTL, direction: this.api.options.direction, vertical: this.api.options.vertical, autoHeight: this.api.options.autoHeight, autoVisibility: this.api.options.autoVisibility,
+      focusOnChange: this.api.options.focusOnChange, reducedMotion: this.api.reducedMotion, paused: s.flags.isPaused, frozen: s.flags.isFrozen, autoFrozen: s.flags.isAutoFrozen,
+      manualFrozen: s.flags.manualFrozen, slideSnap: this.api.options.slideSnap, groupSnap: this.api.options.groupSnap
+    });
+  }
   health() {
     const state = this.api.internal.state;
     if (state.flags.destroyed) return deepFreeze({ status: 'destroyed', issues: ['Instance is destroyed'], timestamp: Date.now() });
@@ -1041,16 +1060,16 @@ class Diagnostics {
     return deepFreeze({
       layoutRecalculations: state.stats.layoutCalcs, lastLayoutDurationMs: parseFloat(state.stats.lastLayoutTime.toFixed(2)), renderTicks: state.stats.renderTicks,
       domNodeCount: this.api.track ? this.api.track.children.length : 0, clonedNodes: this.api.internal.renderer.cloneCount(),
-      originalSlides: state.dom.originalSlides.length, cloneDiagnostics: this.api.internal.renderer.cloneDiagnostics(),
+      originalSlides: this.api.internal.renderer.slideCount(), cloneDiagnostics: this.api.internal.renderer.cloneDiagnostics(),
       activeObservers: state.flags.isFrozen ? 0 : ((this.api.internal.observers.resizeObserver ? 1 : 0) + (this.api.internal.observers.mutationObserver ? 1 : 0) + (this.api.internal.observers.visibilityObserver ? 1 : 0))
     });
   }
   warnings() {
     const list = []; const state = this.api.internal.state;
     if (state.flags.destroyed) { list.push('Instance is destroyed.'); return deepFreeze(list); }
-    if (this.api.options.loop && state.dom.originalSlides.length <= 1) list.push('Loop mode is enabled but requires at least 2 slides.');
+    if (this.api.options.loop && this.api.internal.renderer.slideCount() <= 1) list.push('Loop mode is enabled but requires at least 2 slides.');
     if (this.api.options.vertical && this.api.options.loop && this.api.root.classList.contains('wheel')) list.push('Wheel navigation in vertical loop mode may trap page scrolling.');
-    if (state.dom.originalSlides.length === 0 && !this.api.internal.renderer.totalSlides) list.push('Carousel track contains no original slides.');
+    if (this.api.internal.renderer.slideCount() === 0) list.push('Carousel track contains no slides.');
     const uptimeSecs = Math.max(1, (Environment.now() - state.stats.initTime) / 1000);
     if (state.stats.layoutCalcs > 50 && (state.stats.layoutCalcs / uptimeSecs) > 10) list.push(`High layout recalculation rate (${(state.stats.layoutCalcs / uptimeSecs).toFixed(1)}/sec). Check for frequent DOM mutations.`);
     const depCheck = this.api.internal.dependencies.validateDependencies();
@@ -1074,7 +1093,7 @@ class Diagnostics {
     const state = this.api.internal.state;
     return deepFreeze({
       core: { version: this.api.version(), build: { engine: ydCarousel.ENGINE, version: this.api.version(), build: 'enterprise-production', released: '2026-08' }, extensions: Object.freeze([...Array.from(this.api.internal.extensions.extensions.keys())]), events: Object.freeze(this.api.internal.events), capabilities: this.api.capabilities(), runtimeCapabilities: this.api.runtimeCapabilities(), state: this.api.state() },
-      inspection: { slidesInView: Object.freeze([...state.dom.visibleSlides].sort((a,b)=>a-b)), slidesNotInView: Object.freeze(Array.from({length: state.dom.originalSlides.length}, (_, i) => i).filter(i => !state.dom.visibleSlides.has(i))), activeSlide: state.index.current },
+      inspection: { slidesInView: Object.freeze([...state.dom.visibleSlides].sort((a,b)=>a-b)), slidesNotInView: Object.freeze(Array.from({length: this.api.internal.renderer.slideCount()}, (_, i) => i).filter(i => !state.dom.visibleSlides.has(i))), activeSlide: state.index.current },
       drag: { active: state.drag.active, startIndex: state.drag.startIndex, currentIndex: state.drag.currentIndex },
       health: this.health(), performance: this.performanceStats(), warnings: this.warnings(), compatibility: this.compatibilityReport(),
       plugins: { totalRegistered: this.api.internal.dependencies._getCombinedRegistry().size, totalActive: this.api.internal.extensions.extensions.size, registeredPlugins: Object.freeze(Array.from(this.api.internal.dependencies._getCombinedRegistry().keys())), activePlugins: Object.freeze(Array.from(this.api.internal.extensions.extensions.keys())) },
@@ -1148,9 +1167,7 @@ class ydCarousel {
       friction: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.friction) || 0.92),
       delay: parseInt(this.root.dataset.delay) || 4000, dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
       velocityThreshold: parseFloat(this.root.dataset.velocityThreshold) || 0.5, dragInertia: this.reducedMotion ? 0 : (parseFloat(this.root.dataset.dragInertia) || 40),
-      slideSnap: this.root.classList.contains('slide-snap'), groupSnap: this.root.classList.contains('group-snap'),
-      virtualTotal: parseInt(this.root.dataset.virtualTotal) || 0,
-      virtualRender: null // Must be set externally if used
+      slideSnap: this.root.classList.contains('slide-snap'), groupSnap: this.root.classList.contains('group-snap')
     };
     this.isRTL = this.options.direction === 'rtl';
     this.dir = this.isRTL ? -1 : 1;
@@ -1229,11 +1246,11 @@ class ydCarousel {
   removeSlide(i) { this.internal.dynamic.removeSlide(i); }
   removeAllSlides() { this.internal.dynamic.removeAllSlides(); }
   
-  slideCount() { return this.internal.renderer.totalSlides || this.internal.state.dom.originalSlides.length; }
+  slideCount() { return this.internal.renderer.slideCount(); }
   groupCount() { return this.internal.state.dom.logicalGroups.length; }
   datasetCount() { return this.internal.state.dom.originalSlides.length; }
-  getSlide(i) { return this.internal.state.dom.originalSlides[i] || null; }
-  activeSlide() { return this.internal.state.dom.originalSlides[this.internal.state.index.current] || null; }
+  getSlide(i) { return this.internal.renderer.getVisibleElement(i); }
+  activeSlide() { return this.internal.renderer.getVisibleElement(this.internal.state.index.current); }
   slidesInView() { return [...this.internal.state.dom.visibleSlides].sort((a,b)=>a-b); }
   
   on(e, cb) { return this.internal.events.on(e, cb); }
@@ -1275,7 +1292,7 @@ class BaseRenderer {
   distanceToSnap(point, position) { return Math.abs(point - position); }
   normalizeIndex(index) { return index; }
   getVisualPrev(index) { return Math.max(index - 1, 0); }
-  getVisualNext(index) { const total = this.api.internal.state.dom.originalSlides.length; return total ? Math.min(index + 1, total - 1) : 0; }
+  getVisualNext(index) { const total = this.slideCount(); return total ? Math.min(index + 1, total - 1) : 0; }
   getScrollProgress() {
     const state = this.api.internal.state;
     if (!state.metrics.maxScroll) return 0;
@@ -1304,6 +1321,48 @@ class BaseRenderer {
   }
   resolveTarget(rawTarget, currentTarget) { return rawTarget; }
   handleReposition() {}
+  
+  slideCount() { return this.api.internal.state.dom.originalSlides.length; }
+  getVisibleElement(index) { return this.api.internal.state.dom.originalSlides[index] || null; }
+  supportsDynamicManipulation() { return true; }
+  
+  resolveHash(hash) { return this.api.internal.state.dom.originalSlides.findIndex(s => s.dataset.hash === hash); }
+  getHashByIndex(index) { const s = this.api.internal.state.dom.originalSlides[index]; return s ? s.dataset.hash : null; }
+  
+  measureTrack() {
+    const state = this.api.internal.state;
+    const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
+    const viewportRect = viewportEl.getBoundingClientRect();
+    state.metrics.viewportSize = this.api.options.vertical ? viewportRect.height : viewportRect.width;
+    
+    if (state.dom.originalSlides.length) {
+      state.metrics.slideSizes = state.dom.originalSlides.map(slide => { const sRect = slide.getBoundingClientRect(); return this.api.options.vertical ? sRect.height : sRect.width; });
+      state.metrics.averageSlideSize = state.metrics.slideSizes.reduce((total, size) => total + size, 0) / state.metrics.slideSizes.length;
+    } else {
+      state.metrics.averageSlideSize = state.metrics.viewportSize;
+      state.metrics.slideSizes = [];
+    }
+    
+    state.metrics.slidesPerView = this.api.internal.measurements.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
+
+    state.dom.logicalGroups = [];
+    const total = this.slideCount();
+    for (let i = 0; i < total; i += state.metrics.slidesPerView) state.dom.logicalGroups.push(i);
+
+    let physicalSize = 0; let loopGap = 0;
+    
+    if (state.dom.originalSlides.length > 0) {
+      const firstRect = state.dom.originalSlides[0].getBoundingClientRect();
+      state.metrics.relativeOffsets = state.dom.originalSlides.map(slide => { const sRect = slide.getBoundingClientRect(); if (this.api.options.vertical) return sRect.top - firstRect.top; return this.api.isRTL ? firstRect.right - sRect.right : sRect.left - firstRect.left; });
+      const lastIdx = state.dom.originalSlides.length - 1; 
+      physicalSize = state.metrics.relativeOffsets[lastIdx] + state.metrics.slideSizes[lastIdx];
+      if (state.dom.originalSlides.length > 1) loopGap = Math.max(0, state.metrics.relativeOffsets[1] - (state.metrics.relativeOffsets[0] + state.metrics.slideSizes[0]));
+    } else {
+      state.metrics.relativeOffsets = [];
+    }
+
+    this.setupTrack(physicalSize, loopGap);
+  }
 }
 
 class StandardRenderer extends BaseRenderer {}
@@ -1329,7 +1388,7 @@ class CloneLoopRenderer extends StandardRenderer {
     return Math.min(d1, d2, d3);
   }
   normalizeIndex(index) {
-    const total = this.api.internal.state.dom.originalSlides.length;
+    const total = this.slideCount();
     if (!total) return 0;
     let normalized = index;
     while (normalized < 0) normalized += total;
@@ -1338,12 +1397,12 @@ class CloneLoopRenderer extends StandardRenderer {
   }
   getVisualPrev(index) {
     if (!this.isLoopActive()) return super.getVisualPrev(index);
-    const total = this.api.internal.state.dom.originalSlides.length;
+    const total = this.slideCount();
     return total ? (total + index - 1) % total : 0;
   }
   getVisualNext(index) {
     if (!this.isLoopActive()) return super.getVisualNext(index);
-    const total = this.api.internal.state.dom.originalSlides.length;
+    const total = this.slideCount();
     return total ? (index + 1) % total : 0;
   }
   getScrollProgress() {
@@ -1469,16 +1528,35 @@ class CloneLoopRenderer extends StandardRenderer {
   cloneDiagnostics() { return { cloneNodes: this.cloneCount() }; }
 }
 
-class VirtualRenderer {
+class VirtualRenderer extends BaseRenderer {
   constructor(api) {
-    this.api = api;
+    super(api);
     this.pool = [];
-    this.totalSlides = parseInt(this.api.root.dataset.virtualTotal, 10) || this.api.options.virtualTotal || 0;
-    this.renderCallback = this.api.options.virtualRender || ((idx) => `<div class="yd_virtual-placeholder">Slide ${idx + 1}</div>`);
+    this.totalSlides = parseInt(this.api.root.dataset.virtualTotal, 10) || 0;
+    this.renderCallback = this.api.root.virtualRender || ((idx) => `<div class="yd_virtual-placeholder">Slide ${idx + 1}</div>`);
   }
 
   isLoopActive() { 
     return this.api.options.loop && this.totalSlides > 0; 
+  }
+
+  measureTrack() {
+    const state = this.api.internal.state;
+    const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
+    const viewportRect = viewportEl.getBoundingClientRect();
+    state.metrics.viewportSize = this.api.options.vertical ? viewportRect.height : viewportRect.width;
+    
+    state.metrics.averageSlideSize = state.metrics.viewportSize; 
+    state.metrics.slideSizes = new Array(this.totalSlides).fill(state.metrics.averageSlideSize);
+    
+    state.metrics.slidesPerView = this.api.internal.measurements.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
+
+    state.dom.logicalGroups = [];
+    for (let i = 0; i < this.totalSlides; i += state.metrics.slidesPerView) state.dom.logicalGroups.push(i);
+
+    state.metrics.relativeOffsets = new Array(this.totalSlides).fill(0).map((_, i) => i * state.metrics.averageSlideSize);
+
+    this.setupTrack(0, 0); 
   }
 
   setupTrack(physicalSize, loopGap) {
@@ -1489,22 +1567,25 @@ class VirtualRenderer {
     state.metrics.prependOffset = this.isLoopActive() ? state.metrics.realTrackSize : 0;
     
     const buffer = 2; 
-    const poolSize = Math.min(this.totalSlides, (state.metrics.slidesPerView || 1) + (buffer * 2));
+    const desiredPoolSize = Math.min(this.totalSlides, (state.metrics.slidesPerView || 1) + (buffer * 2));
     
-    this.api.track.innerHTML = '';
-    this.pool = [];
+    if (this.pool.length !== desiredPoolSize) {
+      this.api.track.innerHTML = '';
+      this.pool = [];
+      for (let i = 0; i < desiredPoolSize; i++) {
+        const node = document.createElement('div');
+        node.className = 'yd_slide yd_virtual-slide';
+        node.style.position = 'absolute';
+        node.style.top = '0';
+        node.style.left = '0';
+        this.api.track.appendChild(node);
+        this.pool.push({ node, index: -1 }); 
+      }
+    }
     
-    for (let i = 0; i < poolSize; i++) {
-      const node = document.createElement('div');
-      node.className = 'yd_slide yd_virtual-slide';
-      node.style.position = 'absolute';
-      node.style.top = '0';
-      node.style.left = '0';
-      if (!this.api.options.vertical) node.style.width = `${slideSize}px`;
-      else node.style.height = `${slideSize}px`;
-      
-      this.api.track.appendChild(node);
-      this.pool.push({ node, index: -1 }); 
+    for (let i = 0; i < this.pool.length; i++) {
+       if (!this.api.options.vertical) this.pool[i].node.style.width = `${slideSize}px`;
+       else this.pool[i].node.style.height = `${slideSize}px`;
     }
 
     this._renderVisible();
@@ -1647,6 +1728,22 @@ class VirtualRenderer {
     }
     return Math.max(-1, Math.min(1, distance / (state.metrics.viewportSize || 1)));
   }
+
+  slideCount() { return this.totalSlides; }
+  
+  getVisibleElement(index) { 
+    let match = this.pool.find(p => p.index === index && p.node.style.display !== 'none');
+    if (!match) {
+      this._renderVisible();
+      match = this.pool.find(p => p.index === index && p.node.style.display !== 'none');
+    }
+    return match ? match.node : null; 
+  }
+  
+  supportsDynamicManipulation() { return false; }
+  
+  resolveHash(hash) { return -1; }
+  getHashByIndex(index) { return null; }
 
   cloneCount() { return 0; }
   cloneDiagnostics() { return { cloneNodes: 0 }; }
@@ -2122,8 +2219,8 @@ CarouselRegistry.registerBehavior({
   init: (api) => {
     let isSync = false;
     const hashGroup = api.root.dataset.hashGroup;
-    const oH = () => { if(isSync) return; const h = window.location.hash.replace('#',''); let slideHash = h; if(hashGroup) { if(h.startsWith(`${hashGroup}:`)) slideHash = h.split(':')[1]; else return; } const idx = api.internal.state.dom.originalSlides.findIndex(s=>s.dataset.hash===slideHash); if(idx>-1 && idx!==api.internal.state.index.current){ isSync=true; api.internal.navigation.goToSnap(api.internal.snapEngine.getSnapForSlide(idx)); isSync=false; } };
-    const oS = (a,p) => { if(isSync || a.root.dataset.hashUpdate === 'false') return; const h=a.internal.state.dom.originalSlides[p.currentIndex]?.dataset.hash; if(h){ isSync=true; history.replaceState(null,null,hashGroup ? `#${hashGroup}:${h}` : `#${h}`); isSync=false; } };
+    const oH = () => { if(isSync) return; const h = window.location.hash.replace('#',''); let slideHash = h; if(hashGroup) { if(h.startsWith(`${hashGroup}:`)) slideHash = h.split(':')[1]; else return; } const idx = api.internal.renderer.resolveHash(slideHash); if(idx>-1 && idx!==api.internal.state.index.current){ isSync=true; api.internal.navigation.goToSnap(api.internal.snapEngine.getSnapForSlide(idx)); isSync=false; } };
+    const oS = (a,p) => { if(isSync || a.root.dataset.hashUpdate === 'false') return; const h = a.internal.renderer.getHashByIndex(p.currentIndex); if(h){ isSync=true; history.replaceState(null,null,hashGroup ? `#${hashGroup}:${h}` : `#${h}`); isSync=false; } };
     window.addEventListener('hashchange', oH); api.internal.extensions.on('hash', EVENTS.NAV_AFTER, oS); setTimeout(oH, 0);
     return { destroy: () => { window.removeEventListener('hashchange', oH); } };
   }
