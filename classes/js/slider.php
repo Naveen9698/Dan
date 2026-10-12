@@ -1,11 +1,10 @@
 /**
  * ydCarousel 3.0 - MODULAR FRAMEWORK ARCHITECTURE (PRODUCTION LTS)
- * Core: 100% Inversion of Control (IoC). Zero hardcoded implementations.
- * Modules: HTML-driven dynamic composition via ExtensionManager & ModuleLoader.
+ * Fully annotated for file extraction based on the target folder tree.
  */
 
 // ==========================================
-// CORE START
+// core/events.js START
 // ==========================================
 const EVENTS = Object.freeze({
   INIT: 'init', RESIZE: 'resize', DESTROY: 'destroy',
@@ -23,7 +22,11 @@ const EVENTS = Object.freeze({
   DEBUG_OPEN: 'debug:open', DEBUG_CLOSE: 'debug:close',
   PLUGIN_ENABLED: 'plugin:enabled', PLUGIN_DISABLED: 'plugin:disabled'
 });
+// core/events.js END
 
+// ==========================================
+// core/constants.js START
+// ==========================================
 function deepFreeze(obj, visited = new WeakSet()) {
   if (!obj || typeof obj !== 'object' || visited.has(obj) || Object.isFrozen(obj)) return obj;
   visited.add(obj);
@@ -33,12 +36,20 @@ function deepFreeze(obj, visited = new WeakSet()) {
   });
   return Object.freeze(obj);
 }
+// core/constants.js END
 
+// ==========================================
+// core/environment.js START
+// ==========================================
 class Environment {
   static hasDOM() { return typeof window !== 'undefined' && typeof document !== 'undefined'; }
   static now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
 }
+// core/environment.js END
 
+// ==========================================
+// core/registry.js START
+// ==========================================
 class CarouselRegistry {
   static renderers = new Map();
   static snaps = new Map();
@@ -99,7 +110,11 @@ class CarouselRegistry {
     });
   }
 }
+// core/registry.js END
 
+// ==========================================
+// core/eventbus.js START
+// ==========================================
 class EventBus {
   constructor(api) {
     this.api = api;
@@ -159,7 +174,11 @@ class EventBus {
     };
   }
 }
+// core/eventbus.js END
 
+// ==========================================
+// core/state.js START
+// ==========================================
 class CarouselState {
   constructor() {
     this.position = { current: 0, target: 0 };
@@ -190,7 +209,11 @@ class CarouselState {
     this.stats = { renderTicks: 0, layoutCalcs: 0, lastLayoutTime: 0, initTime: Environment.now() };
   }
 }
+// core/state.js END
 
+// ==========================================
+// core/module-loader.js START
+// ==========================================
 class ModuleLoader {
   static resolveRenderer(api) {
     const explicitRenderer = api.root.getAttribute('data-renderer');
@@ -228,7 +251,11 @@ class ModuleLoader {
     return new SnapClass(api);
   }
 }
+// core/module-loader.js END
 
+// ==========================================
+// core/extension-manager.js START
+// ==========================================
 class ExtensionManager {
   constructor(api) {
     this.api = api; 
@@ -302,7 +329,10 @@ class ExtensionManager {
     const ext = this.extensions.get(name);
     if (ext) { 
       if (ext.listeners) ext.listeners.forEach(l => this.api.internal.events.off(l.event, l.callback));
-      if (ext.def.destroy && ext.instance) ext.def.destroy(this.api, ext.instance); 
+      // THE FIX: Correctly call destroy() on the returned module instance
+      if (ext.instance && typeof ext.instance.destroy === 'function') {
+        ext.instance.destroy(); 
+      }
       this.extensions.delete(name); 
       this.api.internal.events.emit(EVENTS.PLUGIN_DISABLED, { name }); 
     }
@@ -334,9 +364,10 @@ class ExtensionManager {
         if (ext.instance && typeof ext.instance.refresh === 'function') {
           ext.instance.refresh(this.api); 
         } else {
-          if (ext.def.destroy && ext.instance) {
+          // THE FIX: Also apply the correct destroy contract when forcefully refreshing an extension
+          if (ext.instance && typeof ext.instance.destroy === 'function') {
             if (ext.listeners) ext.listeners.forEach(l => this.api.internal.events.off(l.event, l.callback));
-            ext.def.destroy(this.api, ext.instance);
+            ext.instance.destroy();
           }
           ext.listeners = [];
           ext.instance = ext.def.init(this.api);
@@ -350,7 +381,11 @@ class ExtensionManager {
     this.extensions.forEach((ext, name) => this.disable(name));
   }
 }
+// core/extension-manager.js END
 
+// ==========================================
+// core/module-manager.js START
+// ==========================================
 class ModuleManager {
   constructor(api) { this.api = api; }
   initAll() {
@@ -370,7 +405,11 @@ class ModuleManager {
     this.api.internal.renderer._purgeClones();
   }
 }
+// core/module-manager.js END
 
+// ==========================================
+// engine/lifecycle.js START
+// ==========================================
 class Lifecycle {
   constructor(api) { this.api = api; }
   init() {
@@ -495,7 +534,11 @@ class Lifecycle {
     }
   }
 }
+// engine/lifecycle.js END
 
+// ==========================================
+// engine/measurements.js START
+// ==========================================
 class MeasurementEngine {
   constructor(api) { this.api = api; }
   getConfiguredSlidesPerView() {
@@ -525,6 +568,7 @@ class MeasurementEngine {
         const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
         if (this.api.options.autoHeight && viewportEl) viewportEl.style.height = '';
         this.api.internal.observers.resumeTrackObservers();
+        
         state.stats.layoutCalcs++;
         state.stats.lastLayoutTime = Environment.now() - perfStart;
         return;
@@ -532,7 +576,6 @@ class MeasurementEngine {
 
       state.dom.originalSlides.forEach((slide, idx) => slide.setAttribute('data-slide-index', idx));
 
-      // Framework cleanly delegates size and offset generation to the active renderer
       this.api.internal.renderer.measureTrack();
 
       state.metrics.trackSize = this.api.options.vertical ? this.api.track.scrollHeight : this.api.track.scrollWidth;
@@ -548,13 +591,36 @@ class MeasurementEngine {
         const safeSnap = this.api.internal.snapEngine.getSnap(state.index.activeSnap);
         state.position.current = state.position.target = safeSnap;
       }
-      this.api.internal.navigation.goToSnap(state.index.activeSnap, true);
+      
+      const rawSnap = this.api.internal.snapEngine.getSnap(state.index.activeSnap);
+      
+      if (state.flags.isSettled || Math.abs(state.position.target - state.position.current) < 0.1) {
+        state.position.current = rawSnap;
+        state.position.target = rawSnap;
+        
+        const transformVal = this.api.getTransformValue();
+        this.api.track.style.transform = this.api.options.vertical 
+          ? `translate3d(0, ${transformVal}px, 0)` 
+          : `translate3d(${transformVal}px, 0, 0)`;
+          
+      } else {
+        state.position.target = this.api.internal.renderer.resolveTarget(rawSnap, state.position.current);
+      }
+
+      // THE FIX: Ensure performance statistics update on the successful measurement path
+      state.stats.layoutCalcs++;
+      state.stats.lastLayoutTime = Environment.now() - perfStart;
+      
     } finally {
       state.flags.layoutPending = false;
     }
   }
 }
+// engine/measurements.js END
 
+// ==========================================
+// engine/physics.js START
+// ==========================================
 class PhysicsEngine {
   constructor(api) { this.api = api; this.tick = this.tick.bind(this); }
   startPhysicsLoop() {
@@ -567,8 +633,6 @@ class PhysicsEngine {
     const state = this.api.internal.state;
     if (state.flags.destroyed || state.flags.isPaused || state.flags.isFrozen) { state.timers.rafId = null; return; }
     state.stats.renderTicks++;
-
-    this.api.internal.renderer.handleReposition();
 
     if (this.api.options.dragFree && Math.abs(state.physics.inertia) > 0.1 && !state.flags.isDraggingActive) {
       state.physics.inertia *= this.api.options.friction;
@@ -592,8 +656,13 @@ class PhysicsEngine {
       state.timers.rafId = null;
     } else {
       state.flags.isSettled = false;
+      
+      // THE FIX: Move coordinates BEFORE reposition evaluation
       state.position.current += diff * this.api.options.duration;
     }
+
+    // THE FIX: Normalize safely after physics moves us, preventing 1-frame visual overshoots
+    this.api.internal.renderer.handleReposition();
 
     const transformVal = this.api.options.vertical ? -state.position.current : -state.position.current * this.api.dir;
     if (this.api.options.vertical) this.api.track.style.transform = `translate3d(0, ${transformVal}px, 0)`;
@@ -603,7 +672,11 @@ class PhysicsEngine {
     if (!state.flags.isSettled && typeof requestAnimationFrame === 'function') state.timers.rafId = requestAnimationFrame(this.tick);
   }
 }
+// engine/physics.js END
 
+// ==========================================
+// engine/navigation.js START
+// ==========================================
 class NavigationEngine {
   constructor(api) { this.api = api; }
   goToSnap(snapIndex, immediate = false, force = false) {
@@ -646,7 +719,9 @@ class NavigationEngine {
     
     const rawTarget = this.api.internal.snapEngine.getSnap(state.index.activeSnap);
     state.physics.inertia = 0; 
-    state.position.target = immediate ? rawTarget : this.api.internal.renderer.resolveTarget(rawTarget, state.position.target);
+    
+    // THE FIX: Calculate shortest path using the actual physical location, not the future target location
+    state.position.target = immediate ? rawTarget : this.api.internal.renderer.resolveTarget(rawTarget, state.position.current);
 
     if (immediate) {
       state.physics.inertia = state.physics.velocity = 0;
@@ -678,7 +753,11 @@ class NavigationEngine {
     if (this.api.internal.snapEngine.canScrollPrev()) this.goToSnap(this.api.internal.snapEngine.prevSnap(), false, force);
   }
 }
+// engine/navigation.js END
 
+// ==========================================
+// engine/observers.js START
+// ==========================================
 class ObserverManager {
   constructor(api) {
     this.api = api;
@@ -791,7 +870,11 @@ class ObserverManager {
     this.resizeObserver = this.mutationObserver = this.visibilityObserver = this.rootVisibilityObserver = null;
   }
 }
+// engine/observers.js END
 
+// ==========================================
+// engine/dynamic.js START
+// ==========================================
 class DynamicContentManager {
   constructor(api) { this.api = api; }
   batch(callback) {
@@ -847,7 +930,11 @@ class DynamicContentManager {
     });
   }
 }
+// engine/dynamic.js END
 
+// ==========================================
+// engine/accessibility.js START
+// ==========================================
 class AccessibilityManager {
   constructor(api) { this.api = api; this._announcer = null; this.announceHandler = null; }
   setupAccessibility() {
@@ -927,9 +1014,10 @@ class AccessibilityManager {
     if (this.announceHandler) this.api.internal.events.off(EVENTS.NAV_AFTER, this.announceHandler);
   }
 }
+// engine/accessibility.js END
 
 // ==========================================
-// LAYER 13: Dependency Manager
+// engine/dependencies.js START
 // ==========================================
 class DependencyManager {
   constructor(api) { this.api = api; }
@@ -993,7 +1081,11 @@ class DependencyManager {
     return Object.freeze({ valid: missingDependencies.length === 0 && circular.length === 0, plugins: Object.freeze(report), missingDependencies: Object.freeze(missingDependencies), circularDependencies: circular });
   }
 }
+// engine/dependencies.js END
 
+// ==========================================
+// engine/diagnostics.js START
+// ==========================================
 class Diagnostics {
   constructor(api) { this.api = api; this._pluginErrorTracker = new Map(); }
   _recordPluginError(name, err) {
@@ -1104,12 +1196,10 @@ class Diagnostics {
     });
   }
 }
-// ==========================================
-// CORE END
-// ==========================================
+// engine/diagnostics.js END
 
 // ==========================================
-// FACADE START
+// facade/ydCarousel.js START
 // ==========================================
 class ydCarousel {
   static VERSION = '3.0.0-LTS';
@@ -1278,12 +1368,10 @@ class ydCarousel {
   version() { return ydCarousel.VERSION; }
   state() { return this.internal.diagnostics.state(); }
 }
-// ==========================================
-// FACADE END
-// ==========================================
+// facade/ydCarousel.js END
 
 // ==========================================
-// RENDERERS START
+// renderers/base-renderer.js START
 // ==========================================
 class BaseRenderer {
   constructor(api) { this.api = api; }
@@ -1364,10 +1452,94 @@ class BaseRenderer {
     this.setupTrack(physicalSize, loopGap);
   }
 }
+// renderers/base-renderer.js END
 
+// ==========================================
+// renderers/standard.js START
+// ==========================================
 class StandardRenderer extends BaseRenderer {}
+CarouselRegistry.registerRenderer({ name: 'standard', classRef: StandardRenderer });
+// renderers/standard.js END
 
+// ==========================================
+// renderers/loop.js START
+// ==========================================
 class CloneLoopRenderer extends StandardRenderer {
+  setupTrack(physicalSize, loopGap) {
+    const state = this.api.internal.state;
+    state.metrics.gap = loopGap;
+    state.metrics.realTrackSize = physicalSize + loopGap;
+    
+    if (state.dom.originalSlides.length > 1 && state.metrics.realTrackSize > 0) {
+      let clonedSize = 0;
+      let setsNeeded = 2; 
+      clonedSize = state.metrics.realTrackSize * setsNeeded;
+
+      while (clonedSize < (state.metrics.viewportSize * 5) && setsNeeded < 6 && (state.dom.originalSlides.length * (setsNeeded + 1) * 2) <= CarouselRegistry.MAX_LOOP_CLONES) {
+        clonedSize += state.metrics.realTrackSize;
+        setsNeeded++;
+      }
+      
+      setsNeeded = Math.max(1, setsNeeded);
+      state.metrics.prependOffset = state.metrics.realTrackSize * setsNeeded;
+      
+      if (setsNeeded > 0) {
+        for (let i = 0; i < setsNeeded; i++) {
+          const clonesBefore = state.dom.originalSlides.map(s => this.createClone(s));
+          const clonesAfter = state.dom.originalSlides.map(s => this.createClone(s));
+          const firstOriginal = state.dom.originalSlides[0];
+          clonesBefore.forEach(c => this.api.track.insertBefore(c, firstOriginal));
+          clonesAfter.forEach(c => this.api.track.appendChild(c));
+        }
+      }
+    } else {
+      state.metrics.prependOffset = 0;
+    }
+  }
+
+  handleReposition() {
+    if (!this.isLoopActive()) return;
+    const state = this.api.internal.state;
+    
+    // THE FIX: Safe SSR check for debug flag
+    if (typeof window !== 'undefined' && window.ydDebugLoop) {
+      console.log('[LOOP]', {
+        current: state.position.current,
+        target: state.position.target,
+        prepend: state.metrics.prependOffset,
+        real: state.metrics.realTrackSize
+      });
+    }
+    
+    const firstBoundary = state.metrics.prependOffset;
+    const lastBoundary = state.metrics.prependOffset + state.metrics.realTrackSize;
+
+    if (state.position.current < firstBoundary) {
+      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'start' });
+      const originalFrom = state.position.current;
+      
+      state.position.current += state.metrics.realTrackSize;
+      state.position.target += state.metrics.realTrackSize;
+
+      const delta = state.position.current - originalFrom;
+
+      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
+      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'end' });
+    } 
+    else if (state.position.current >= lastBoundary) {
+      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'end' });
+      const originalFrom = state.position.current;
+      
+      state.position.current -= state.metrics.realTrackSize;
+      state.position.target -= state.metrics.realTrackSize;
+
+      const delta = state.position.current - originalFrom;
+
+      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
+      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'start' });
+    }
+  }
+
   isLoopActive() {
     const state = this.api.internal.state;
     return this.api.options.loop && state.metrics.snapPoints.length > 0 && state.metrics.realTrackSize > 0;
@@ -1428,32 +1600,6 @@ class CloneLoopRenderer extends StandardRenderer {
     }
     return Math.max(-1, Math.min(1, distance / (state.metrics.viewportSize || 1)));
   }
-
-  setupTrack(physicalSize, loopGap) {
-    const state = this.api.internal.state;
-    state.metrics.gap = loopGap;
-    state.metrics.realTrackSize = physicalSize + loopGap;
-    state.metrics.prependOffset = state.metrics.realTrackSize;
-    
-    if (state.dom.originalSlides.length > 1 && state.metrics.realTrackSize > 0) {
-      let clonedSize = 0;
-      let setsNeeded = 0;
-      while (clonedSize < (state.metrics.viewportSize * 3) && setsNeeded < 4 && (state.dom.originalSlides.length * (setsNeeded + 1) * 2) <= CarouselRegistry.MAX_LOOP_CLONES) {
-        clonedSize += state.metrics.realTrackSize;
-        setsNeeded++;
-      }
-      setsNeeded = Math.max(0, setsNeeded);
-      if (setsNeeded > 0) {
-        for (let i = 0; i < setsNeeded; i++) {
-          const clonesBefore = state.dom.originalSlides.map(s => this.createClone(s));
-          const clonesAfter = state.dom.originalSlides.map(s => this.createClone(s));
-          const firstOriginal = state.dom.originalSlides[0];
-          clonesBefore.forEach(c => this.api.track.insertBefore(c, firstOriginal));
-          clonesAfter.forEach(c => this.api.track.appendChild(c));
-        }
-      }
-    }
-  }
   resolveTarget(rawTarget, currentTarget) {
     if (!this.isLoopActive()) return rawTarget;
     const state = this.api.internal.state;
@@ -1464,45 +1610,6 @@ class CloneLoopRenderer extends StandardRenderer {
     if (minDist === Math.abs(distForward)) return rawTarget + state.metrics.realTrackSize;
     if (minDist === Math.abs(distBackward)) return rawTarget - state.metrics.realTrackSize;
     return rawTarget;
-  }
-  handleReposition() {
-    if (!this.isLoopActive()) return;
-    const state = this.api.internal.state;
-    const firstSnap = state.metrics.prependOffset;
-    const lastSnap = state.metrics.prependOffset + state.metrics.realTrackSize;
-    const buffer = state.metrics.realTrackSize * 0.02;
-
-    if (state.position.target < firstSnap - buffer) {
-      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'start' });
-      const originalFrom = state.position.current;
-      state.position.current += state.metrics.realTrackSize;
-      state.position.target += state.metrics.realTrackSize;
-      
-      state.position.current = this.normalizePosition(state.position.current);
-      state.position.target = this.normalizePosition(state.position.target);
-
-      const normalizedTo = state.position.current;
-      const delta = normalizedTo - originalFrom;
-
-      if (!state.flags.isDraggingActive) state.physics.inertia *= 0.5;
-      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: normalizedTo, delta });
-      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'end' });
-    } else if (state.position.target > lastSnap + buffer) {
-      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'end' });
-      const originalFrom = state.position.current;
-      state.position.current -= state.metrics.realTrackSize;
-      state.position.target -= state.metrics.realTrackSize;
-
-      state.position.current = this.normalizePosition(state.position.current);
-      state.position.target = this.normalizePosition(state.position.target);
-
-      const normalizedTo = state.position.current;
-      const delta = normalizedTo - originalFrom;
-
-      if (!state.flags.isDraggingActive) state.physics.inertia *= 0.5;
-      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: normalizedTo, delta });
-      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'start' });
-    }
   }
   createClone(slide) {
     const clone = slide.cloneNode(true);
@@ -1527,13 +1634,22 @@ class CloneLoopRenderer extends StandardRenderer {
   cloneCount() { return this.api.track ? this.api.track.querySelectorAll('.yd_slide-clone').length : 0; }
   cloneDiagnostics() { return { cloneNodes: this.cloneCount() }; }
 }
+CarouselRegistry.registerRenderer({ name: 'loop', classRef: CloneLoopRenderer });
+// renderers/loop.js END
 
+// ==========================================
+// renderers/virtual.js START
+// ==========================================
 class VirtualRenderer extends BaseRenderer {
   constructor(api) {
     super(api);
     this.pool = [];
     this.totalSlides = parseInt(this.api.root.dataset.virtualTotal, 10) || 0;
-    this.renderCallback = this.api.root.virtualRender || ((idx) => `<div class="yd_virtual-placeholder">Slide ${idx + 1}</div>`);
+    
+    // THE FIX: Strict SSR safety for global function lookup
+    this.renderCallback = this.api.root.virtualRender || 
+      (typeof window !== 'undefined' && this.api.root.dataset.virtualRender ? window[this.api.root.dataset.virtualRender] : null) || 
+      ((idx) => `<div class="yd_virtual-placeholder">Slide ${idx + 1}</div>`);
   }
 
   isLoopActive() { 
@@ -1564,12 +1680,13 @@ class VirtualRenderer extends BaseRenderer {
     state.metrics.gap = loopGap;
     const slideSize = state.metrics.averageSlideSize || state.metrics.viewportSize;
     state.metrics.realTrackSize = this.totalSlides * (slideSize + loopGap);
-    state.metrics.prependOffset = this.isLoopActive() ? state.metrics.realTrackSize : 0;
+    state.metrics.prependOffset = this.isLoopActive() ? (state.metrics.realTrackSize * 2) : 0;
     
     const buffer = 2; 
     const desiredPoolSize = Math.min(this.totalSlides, (state.metrics.slidesPerView || 1) + (buffer * 2));
     
     if (this.pool.length !== desiredPoolSize) {
+      this.api.internal.observers.suspendTrackObservers();
       this.api.track.innerHTML = '';
       this.pool = [];
       for (let i = 0; i < desiredPoolSize; i++) {
@@ -1581,6 +1698,7 @@ class VirtualRenderer extends BaseRenderer {
         this.api.track.appendChild(node);
         this.pool.push({ node, index: -1 }); 
       }
+      this.api.internal.observers.resumeTrackObservers();
     }
     
     for (let i = 0; i < this.pool.length; i++) {
@@ -1628,26 +1746,46 @@ class VirtualRenderer extends BaseRenderer {
   }
 
   handleReposition() {
-    if (this.isLoopActive()) {
-      const state = this.api.internal.state;
-      const firstSnap = state.metrics.prependOffset;
-      const lastSnap = state.metrics.prependOffset + state.metrics.realTrackSize;
-      const buffer = state.metrics.realTrackSize * 0.02;
+    if (!this.isLoopActive()) return;
+    const state = this.api.internal.state;
 
-      if (state.position.target < firstSnap - buffer) {
-        state.position.current += state.metrics.realTrackSize;
-        state.position.target += state.metrics.realTrackSize;
-        state.position.current = this.normalizePosition(state.position.current);
-        state.position.target = this.normalizePosition(state.position.target);
-        if (!state.flags.isDraggingActive) state.physics.inertia *= 0.5;
-      } else if (state.position.target > lastSnap + buffer) {
-        state.position.current -= state.metrics.realTrackSize;
-        state.position.target -= state.metrics.realTrackSize;
-        state.position.current = this.normalizePosition(state.position.current);
-        state.position.target = this.normalizePosition(state.position.target);
-        if (!state.flags.isDraggingActive) state.physics.inertia *= 0.5;
-      }
+    if (typeof window !== 'undefined' && window.ydDebugLoop) {
+      console.log('[LOOP VIRTUAL]', {
+        current: state.position.current,
+        target: state.position.target,
+        prepend: state.metrics.prependOffset,
+        real: state.metrics.realTrackSize
+      });
     }
+    
+    const firstBoundary = state.metrics.prependOffset;
+    const lastBoundary = state.metrics.prependOffset + state.metrics.realTrackSize;
+
+    if (state.position.current < firstBoundary) {
+      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'start' });
+      const originalFrom = state.position.current;
+      
+      state.position.current += state.metrics.realTrackSize;
+      state.position.target += state.metrics.realTrackSize;
+
+      const delta = state.position.current - originalFrom;
+
+      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
+      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'end' });
+    } 
+    else if (state.position.current >= lastBoundary) {
+      this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'end' });
+      const originalFrom = state.position.current;
+      
+      state.position.current -= state.metrics.realTrackSize;
+      state.position.target -= state.metrics.realTrackSize;
+
+      const delta = state.position.current - originalFrom;
+
+      this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
+      this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'start' });
+    }
+    
     this._renderVisible();
   }
 
@@ -1749,16 +1887,11 @@ class VirtualRenderer extends BaseRenderer {
   cloneDiagnostics() { return { cloneNodes: 0 }; }
   _purgeClones() {}
 }
-
-CarouselRegistry.registerRenderer({ name: 'standard', classRef: StandardRenderer });
-CarouselRegistry.registerRenderer({ name: 'loop', classRef: CloneLoopRenderer });
 CarouselRegistry.registerRenderer({ name: 'virtual', classRef: VirtualRenderer });
-// ==========================================
-// RENDERERS END
-// ==========================================
+// renderers/virtual.js END
 
 // ==========================================
-// SNAPS START
+// snaps/base-snap.js START
 // ==========================================
 class BaseSnapEngine {
   constructor(api) { this.api = api; }
@@ -1812,7 +1945,11 @@ class BaseSnapEngine {
   getGroupForSnap(snapIndex) { return 0; }
   getSnapForGroup(groupIndex) { return 0; }
 }
+// snaps/base-snap.js END
 
+// ==========================================
+// snaps/slide.js START
+// ==========================================
 class SlideSnapEngine extends BaseSnapEngine {
   computeSnaps() {
     const state = this.api.internal.state;
@@ -1848,7 +1985,12 @@ class SlideSnapEngine extends BaseSnapEngine {
     return this.getSnapForSlide(slideIndex);
   }
 }
+CarouselRegistry.registerSnap({ name: 'slide-snap', classRef: SlideSnapEngine });
+// snaps/slide.js END
 
+// ==========================================
+// snaps/group.js START
+// ==========================================
 class GroupSnapEngine extends BaseSnapEngine {
   computeSnaps() {
     const state = this.api.internal.state;
@@ -1888,15 +2030,11 @@ class GroupSnapEngine extends BaseSnapEngine {
   getGroupForSnap(snapIndex) { return snapIndex; }
   getSnapForGroup(groupIndex) { return groupIndex; }
 }
-
-CarouselRegistry.registerSnap({ name: 'slide-snap', classRef: SlideSnapEngine });
 CarouselRegistry.registerSnap({ name: 'group-snap', classRef: GroupSnapEngine });
-// ==========================================
-// SNAPS END
-// ==========================================
+// snaps/group.js END
 
 // ==========================================
-// INPUTS START
+// inputs/drag.js START
 // ==========================================
 CarouselRegistry.registerInput({
   name: 'drag',
@@ -1917,7 +2055,11 @@ CarouselRegistry.registerInput({
       const closestIndex = api.internal.snapEngine.findNearestSnap(state.position.target);
   
       if (api.options.dragFree) {
-         state.position.target = api.internal.snapEngine.getSnap(closestIndex);
+         const rawSnap = api.internal.snapEngine.getSnap(closestIndex);
+         
+         // THE FIX: Route the raw snap through the renderer's continuous spatial mapping
+         state.position.target = api.internal.renderer.resolveTarget(rawSnap, state.position.current);
+         
          if (immediate) {
            state.position.current = state.position.target;
            const transformVal = api.getTransformValue();
@@ -2080,7 +2222,11 @@ CarouselRegistry.registerInput({
     };
   }
 });
+// inputs/drag.js END
 
+// ==========================================
+// inputs/keyboard.js START
+// ==========================================
 CarouselRegistry.registerInput({
   name: 'keyboard',
   init: (api) => {
@@ -2136,7 +2282,11 @@ CarouselRegistry.registerInput({
     };
   }
 });
+// inputs/keyboard.js END
 
+// ==========================================
+// inputs/wheel.js START
+// ==========================================
 CarouselRegistry.registerInput({
   name: 'wheel',
   init: (api) => {
@@ -2153,12 +2303,10 @@ CarouselRegistry.registerInput({
     return { destroy: () => { clearTimeout(tmr); api.root.removeEventListener('wheel', oW); } };
   }
 });
-// ==========================================
-// INPUTS END
-// ==========================================
+// inputs/wheel.js END
 
 // ==========================================
-// BEHAVIORS START
+// behaviors/autoplay.js START
 // ==========================================
 CarouselRegistry.registerBehavior({
   name: 'autoplay',
@@ -2213,7 +2361,11 @@ CarouselRegistry.registerBehavior({
     }};
   }
 });
+// behaviors/autoplay.js END
 
+// ==========================================
+// behaviors/hash.js START
+// ==========================================
 CarouselRegistry.registerBehavior({
   name: 'hash',
   init: (api) => {
@@ -2225,12 +2377,10 @@ CarouselRegistry.registerBehavior({
     return { destroy: () => { window.removeEventListener('hashchange', oH); } };
   }
 });
-// ==========================================
-// BEHAVIORS END
-// ==========================================
+// behaviors/hash.js END
 
 // ==========================================
-// PLUGINS START
+// plugins/controls.js START
 // ==========================================
 CarouselRegistry.registerPlugin({
   name: 'controls',
@@ -2243,7 +2393,11 @@ CarouselRegistry.registerPlugin({
     return { destroy: () => { if(p) p.removeEventListener('click', hP); if(n) n.removeEventListener('click', hN); } };
   }
 });
+// plugins/controls.js END
 
+// ==========================================
+// plugins/dots.js START
+// ==========================================
 CarouselRegistry.registerPlugin({
   name: 'dots',
   init: (api) => {
@@ -2278,7 +2432,11 @@ CarouselRegistry.registerPlugin({
     };
   }
 });
+// plugins/dots.js END
 
+// ==========================================
+// plugins/counter.js START
+// ==========================================
 CarouselRegistry.registerPlugin({
   name: 'counter',
   init: (api) => {
@@ -2293,7 +2451,11 @@ CarouselRegistry.registerPlugin({
     return { destroy: () => {}, refresh: () => { uC(api, api.internal.events.getEventPayload()); } };
   }
 });
+// plugins/counter.js END
 
+// ==========================================
+// plugins/scrollbar.js START
+// ==========================================
 CarouselRegistry.registerPlugin({
   name: 'scrollbar',
   init: (api) => {
@@ -2310,7 +2472,11 @@ CarouselRegistry.registerPlugin({
     return { destroy: () => { s.style.display = pD; }, refresh: () => { uS(); uP(api); } };
   }
 });
+// plugins/scrollbar.js END
 
+// ==========================================
+// plugins/progress.js START
+// ==========================================
 CarouselRegistry.registerPlugin({
   name: 'progress',
   init: (api) => {
@@ -2320,11 +2486,10 @@ CarouselRegistry.registerPlugin({
     return { destroy: () => {}, refresh: () => { uPr(); } };
   }
 });
-// ==========================================
-// PLUGINS END
-// ==========================================
+// plugins/progress.js END
 
 // ==========================================
-// AUTO-INIT
+// index.js START
 // ==========================================
 if (Environment.hasDOM()) document.addEventListener('DOMContentLoaded', () => ydCarousel.startAutoInit());
+// index.js END
