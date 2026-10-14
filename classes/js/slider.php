@@ -56,27 +56,23 @@ class CarouselRegistry {
   static inputs = new Map();
   static behaviors = new Map();
   static plugins = new Map();
-
   static MAX_LOOP_CLONES = 120;
   static activeCarousel = null; 
   static _keyboardInitialized = false; 
   static _keyboardUsers = 0; 
   static _instances = new Set(); 
-
   static _globalKeyDownHandler(e) {
     const active = CarouselRegistry.activeCarousel;
     if (active && active.options.keyboard) {
       active.internal.events.emit('internal:keydown', { originalEvent: e });
     }
   }
-
   static register(api) {
     this._instances.add(api);
     if (!this.activeCarousel || this.activeCarousel.internal.state.flags.destroyed || (api.options.keyboard && !this.activeCarousel.options.keyboard)) {
       this.activeCarousel = api;
     }
   }
-
   static unregister(api) {
     this._instances.delete(api);
     if (this.activeCarousel === api) {
@@ -90,13 +86,12 @@ class CarouselRegistry {
       }
     }
   }
-
   static registerRenderer(def) { if (!def.name) throw new Error('[ydCarousel] Renderer must have a name'); this.renderers.set(def.name, def); }
   static registerSnap(def) { if (!def.name) throw new Error('[ydCarousel] SnapEngine must have a name'); this.snaps.set(def.name, def); }
   static registerInput(def) { if (!def.name) throw new Error('[ydCarousel] Input must have a name'); this.inputs.set(def.name, def); }
   static registerBehavior(def) { if (!def.name) throw new Error('[ydCarousel] Behavior must have a name'); this.behaviors.set(def.name, def); }
   static registerPlugin(def) { if (!def.name) throw new Error('[ydCarousel] Plugin must have a name'); this.plugins.set(def.name, def); }
-  
+
   static validateRenderer(renderer) {
     const REQUIRED_RENDERER_METHODS = [
       'resolveTarget', 'handleReposition', 'normalizePosition', 'distanceToSnap',
@@ -192,7 +187,8 @@ class CarouselState {
       _lastIntersectionState: true,
       isClickSuppressed: false, ignoreNextMutation: false, isDynamicRefreshing: false,
       _generatedRootId: false, _generatedTrackId: false, _keyboardRegistered: false, batchDepth: 0,
-      layoutPending: false, mutationUsingRAF: false, extensionRefreshUsingRAF: false
+      layoutPending: false, mutationUsingRAF: false, extensionRefreshUsingRAF: false,
+      _isReceivingSync: false 
     };
     this.drag = {
       active: false, startPointer: 0, startTargetPos: 0,
@@ -221,31 +217,28 @@ class ModuleLoader {
       const RendererClass = CarouselRegistry.renderers.get(explicitRenderer)?.classRef;
       return new RendererClass(api);
     }
-
     const classList = api.root.classList;
     let selected = 'standard'; 
     for (const name of CarouselRegistry.renderers.keys()) {
       if (classList.contains(name)) selected = name;
     }
-    
+
     const RendererClass = CarouselRegistry.renderers.get(selected)?.classRef;
     if (!RendererClass) throw new Error(`[ydCarousel] Renderer '${selected}' not registered.`);
     return new RendererClass(api);
   }
-
   static resolveSnapEngine(api) {
     const explicitSnap = api.root.getAttribute('data-snap');
     if (explicitSnap && CarouselRegistry.snaps.has(explicitSnap)) {
       const SnapClass = CarouselRegistry.snaps.get(explicitSnap)?.classRef;
       return new SnapClass(api);
     }
-
     const classList = api.root.classList;
     let selected = 'slide-snap';
     for (const name of CarouselRegistry.snaps.keys()) {
       if (classList.contains(name)) selected = name;
     }
-    
+
     const SnapClass = CarouselRegistry.snaps.get(selected)?.classRef;
     if (!SnapClass) throw new Error(`[ydCarousel] SnapEngine '${selected}' not registered.`);
     return new SnapClass(api);
@@ -265,21 +258,17 @@ class ExtensionManager {
     this.api.internal.events.on(EVENTS.DOM_CHANGED, (api, payload) => {
       if (payload.structureChanged) this.scheduleRefresh();
     });
-
     const rootClasses = this.api.root.classList;
-
     CarouselRegistry.inputs.forEach((def, name) => {
       if ((name === 'drag' && !rootClasses.contains('no-drag')) || rootClasses.contains(name) || (name === 'keyboard' && this.api.options.keyboard)) {
         this.enable(CarouselRegistry.inputs, name, 'input');
       }
     });
-
     CarouselRegistry.behaviors.forEach((def, name) => {
       if (rootClasses.contains(name) || (name === 'autoplay' && this.api.options.autoplay)) {
         this.enable(CarouselRegistry.behaviors, name, 'behavior');
       }
     });
-
     CarouselRegistry.plugins.forEach((def, name) => {
       let autoDiscover = false;
       if (name === 'controls' && (this.api.root.querySelector('.yd_prev') || this.api.root.querySelector('.yd_next'))) autoDiscover = true;
@@ -287,7 +276,7 @@ class ExtensionManager {
       if (name === 'counter' && this.api.root.querySelector('.yd_counter')) autoDiscover = true;
       if (name === 'scrollbar' && this.api.root.querySelector('.yd_scrollbar')) autoDiscover = true;
       if (name === 'progress' && this.api.root.querySelector('.yd_progress')) autoDiscover = true;
-      
+
       if (rootClasses.contains(name) || autoDiscover) {
         this.enable(CarouselRegistry.plugins, name, 'plugin');
       }
@@ -307,7 +296,7 @@ class ExtensionManager {
     if (this.extensions.has(name)) return;
     const def = registryMap.get(name);
     if (!def) return;
-    
+
     const deps = def.dependencies || def.requires || [];
     deps.forEach(dep => {
       let depMap = CarouselRegistry.plugins.has(dep) ? CarouselRegistry.plugins : null;
@@ -315,7 +304,6 @@ class ExtensionManager {
       if (!depMap) depMap = CarouselRegistry.inputs.has(dep) ? CarouselRegistry.inputs : null;
       if (depMap) this.enable(depMap, dep, 'auto');
     }); 
-
     try { 
       const listeners = [];
       this.extensions.set(name, { def, instance: null, listeners, type });
@@ -329,9 +317,13 @@ class ExtensionManager {
     const ext = this.extensions.get(name);
     if (ext) { 
       if (ext.listeners) ext.listeners.forEach(l => this.api.internal.events.off(l.event, l.callback));
-      // THE FIX: Correctly call destroy() on the returned module instance
-      if (ext.instance && typeof ext.instance.destroy === 'function') {
-        ext.instance.destroy(); 
+      try {
+        if (ext.instance && typeof ext.instance.destroy === 'function') {
+          ext.instance.destroy(); 
+        }
+      } catch(err) {
+        this.api.internal.diagnostics._recordPluginError(name, err);
+        console.error(`[ydCarousel] Plugin '${name}' threw error during destroy. Listeners forcibly detached.`, err);
       }
       this.extensions.delete(name); 
       this.api.internal.events.emit(EVENTS.PLUGIN_DISABLED, { name }); 
@@ -340,7 +332,7 @@ class ExtensionManager {
   scheduleRefresh() {
     const state = this.api.internal.state;
     if (state.timers.extensionRefreshRaf) return;
-    
+
     const refreshFn = () => {
       try {
         state.timers.extensionRefreshRaf = null;
@@ -349,7 +341,6 @@ class ExtensionManager {
         state.flags.extensionRefreshUsingRAF = false;
       }
     };
-
     if (typeof requestAnimationFrame === 'function') {
       state.flags.extensionRefreshUsingRAF = true;
       state.timers.extensionRefreshRaf = requestAnimationFrame(refreshFn);
@@ -364,10 +355,13 @@ class ExtensionManager {
         if (ext.instance && typeof ext.instance.refresh === 'function') {
           ext.instance.refresh(this.api); 
         } else {
-          // THE FIX: Also apply the correct destroy contract when forcefully refreshing an extension
-          if (ext.instance && typeof ext.instance.destroy === 'function') {
-            if (ext.listeners) ext.listeners.forEach(l => this.api.internal.events.off(l.event, l.callback));
-            ext.instance.destroy();
+          try {
+            if (ext.instance && typeof ext.instance.destroy === 'function') {
+              if (ext.listeners) ext.listeners.forEach(l => this.api.internal.events.off(l.event, l.callback));
+              ext.instance.destroy();
+            }
+          } catch(err) {
+            console.error(`[ydCarousel] Plugin '${name}' threw error during refresh teardown.`, err);
           }
           ext.listeners = [];
           ext.instance = ext.def.init(this.api);
@@ -393,7 +387,7 @@ class ModuleManager {
     this.api.internal.observers.setupObservers();
     this.api.internal.measurements.updateMeasurements();
     this.api.internal.extensions.initAll(); 
-    
+
     if (!this.api.internal.state.flags.isSettled) {
       this.api.internal.physics.startPhysicsLoop();
     }
@@ -412,6 +406,7 @@ class ModuleManager {
 // ==========================================
 class Lifecycle {
   constructor(api) { this.api = api; }
+  
   init() {
     const state = this.api.internal.state;
     state.flags.destroyed = false;
@@ -422,6 +417,7 @@ class Lifecycle {
     this.api.root.classList.add('yd_carousel-ready');
     this.api.internal.events.emit(EVENTS.INIT);
   }
+
   pause() {
     const state = this.api.internal.state;
     if (state.flags.destroyed || state.flags.isPaused) return;
@@ -430,6 +426,7 @@ class Lifecycle {
     this.api.internal.events.emit('internal:abort-drag'); 
     this.api.internal.events.emit(EVENTS.PAUSE);
   }
+
   resume() {
     const state = this.api.internal.state;
     if (state.flags.destroyed || !state.flags.isPaused) return;
@@ -437,6 +434,7 @@ class Lifecycle {
     if (!state.flags.isFrozen) this._wake();
     this.api.internal.events.emit(EVENTS.RESUME);
   }
+
   freeze(isManual = true) {
     const state = this.api.internal.state;
     if (state.flags.destroyed) return;
@@ -444,7 +442,6 @@ class Lifecycle {
     if (state.flags.isFrozen) return;
     state.flags.isFrozen = true;
     state.flags.layoutPending = false;
-
     if (state.timers.rafId) { cancelAnimationFrame(state.timers.rafId); state.timers.rafId = null; }
     if (state.timers.mutationRaf) { 
       if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
@@ -456,11 +453,11 @@ class Lifecycle {
       else clearTimeout(state.timers.extensionRefreshRaf); 
       state.timers.extensionRefreshRaf = null; 
     }
-
     this.api.internal.events.emit('internal:abort-drag');
     this.api.internal.observers.disconnectAll();
     this.api.internal.events.emit(EVENTS.FREEZE, { reason: isManual ? 'manual' : 'visibility' });
   }
+
   unfreeze(isManual = true) {
     const state = this.api.internal.state;
     if (state.flags.destroyed) return;
@@ -468,22 +465,21 @@ class Lifecycle {
     else if (state.flags.manualFrozen) return;
     if (!state.flags.isFrozen) return;
     state.flags.isFrozen = false;
-
     this.api.internal.observers.reconnectAll();
     this.api.internal.measurements.updateMeasurements();
-    
+
     if (Math.abs(state.position.target - state.position.current) > 0.1 || Math.abs(state.physics.inertia) > 0.1) {
       this._wake();
     }
     this.api.internal.events.emit(EVENTS.UNFREEZE, { reason: isManual ? 'manual' : 'visibility' });
   }
+
   destroy() {
     const state = this.api.internal.state;
     if (state.flags.destroyed) return;
     this.api.internal.events.emit(EVENTS.DESTROY);
     state.flags.destroyed = true;
     state.flags.layoutPending = false;
-
     if (state.timers.rafId) cancelAnimationFrame(state.timers.rafId);
     if (state.timers.mutationRaf) { 
       if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
@@ -494,19 +490,25 @@ class Lifecycle {
       else clearTimeout(state.timers.extensionRefreshRaf); 
     }
     state.timers.rafId = state.timers.mutationRaf = state.timers.extensionRefreshRaf = null;
-
     this.api.root.removeAttribute('data-direction');
     if (state.flags._generatedRootId) this.api.root.removeAttribute('id');
     if (state.flags._generatedTrackId) this.api.track.removeAttribute('id');
+    
+    if (this.api.root.dataset.syncRole === 'thumbnail') {
+      this.api.track.removeAttribute('role');
+      this.api.track.removeAttribute('aria-orientation');
+    }
 
     this.api.internal.modules.destroyAll();
     this.api.root.classList.remove('yd_carousel-ready');
     this.api.track.style.transform = '';
-
+    
     if (this.api.track) {
       this.api.track.querySelectorAll('[data-slide-index]').forEach(slide => {
         slide.classList.remove('active', 'prev', 'next', 'in-view', 'out-view');
         slide.removeAttribute('aria-current');
+        slide.removeAttribute('aria-selected');
+        slide.removeAttribute('aria-pressed');
         slide.removeAttribute('tabindex');
         slide.removeAttribute('aria-hidden');
         slide.removeAttribute('role');
@@ -514,17 +516,15 @@ class Lifecycle {
         slide.removeAttribute('aria-label');
       });
     }
-
     if (this.api.root.__ydCarousel === this.api) delete this.api.root.__ydCarousel;
     CarouselRegistry.unregister(this.api);
-
     this.api.internal.events.listeners = {};
     this.api.internal.events._eventStats = {};
     this.api.internal.diagnostics._pluginErrorTracker.clear();
-
     state.dom.originalSlides = [];
     state.dom.visibleSlides.clear();
   }
+
   _wake() {
     const state = this.api.internal.state;
     if (state.flags.isPaused || state.flags.isFrozen) return;
@@ -550,17 +550,16 @@ class MeasurementEngine {
     const perfStart = Environment.now();
     try {
       state.dom.visibleSlides.clear();
-
       this.api.internal.observers.suspendTrackObservers();
       this.api.internal.renderer._purgeClones(); 
       state.dom.originalSlides = Array.from(this.api.track.children).filter(el => !el.classList.contains('yd_virtual-slide'));
-      
+
       if (state.flags.isDynamicRefreshing && state.dom._trackedActiveNode && state.dom.originalSlides.includes(state.dom._trackedActiveNode)) {
         state.index.current = state.dom.originalSlides.indexOf(state.dom._trackedActiveNode);
       }
-      
+
       const slideCount = this.api.internal.renderer.slideCount();
-      
+
       if (!state.dom.originalSlides.length && slideCount === 0) {
         state.metrics.snapPoints = state.metrics.slideSizes = state.metrics.relativeOffsets = [];
         state.dom.logicalGroups = []; state.metrics.maxScroll = state.index.current = state.group.current = state.index.activeSnap = state.position.current = state.position.target = 0;
@@ -568,49 +567,42 @@ class MeasurementEngine {
         const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
         if (this.api.options.autoHeight && viewportEl) viewportEl.style.height = '';
         this.api.internal.observers.resumeTrackObservers();
-        
+
         state.stats.layoutCalcs++;
         state.stats.lastLayoutTime = Environment.now() - perfStart;
         return;
       }
-
       state.dom.originalSlides.forEach((slide, idx) => slide.setAttribute('data-slide-index', idx));
-
       this.api.internal.renderer.measureTrack();
-
       state.metrics.trackSize = this.api.options.vertical ? this.api.track.scrollHeight : this.api.track.scrollWidth;
       state.metrics.maxScroll = Math.max(0, state.metrics.realTrackSize - state.metrics.viewportSize);
-
       this.api.internal.snapEngine.computeSnaps();
       this.api.internal.snapEngine.clampState();
-
       this.api.internal.observers.resumeTrackObservers();
       this.api.internal.events.emit(EVENTS.RESIZE);
-      
+
       if (this.api.internal.renderer.isLoopActive() && state.position.current === 0 && state.metrics.snapPoints.length > 0) {
         const safeSnap = this.api.internal.snapEngine.getSnap(state.index.activeSnap);
         state.position.current = state.position.target = safeSnap;
       }
-      
+
       const rawSnap = this.api.internal.snapEngine.getSnap(state.index.activeSnap);
-      
+
       if (state.flags.isSettled || Math.abs(state.position.target - state.position.current) < 0.1) {
         state.position.current = rawSnap;
         state.position.target = rawSnap;
-        
+
         const transformVal = this.api.getTransformValue();
         this.api.track.style.transform = this.api.options.vertical 
           ? `translate3d(0, ${transformVal}px, 0)` 
           : `translate3d(${transformVal}px, 0, 0)`;
-          
+
       } else {
         state.position.target = this.api.internal.renderer.resolveTarget(rawSnap, state.position.current);
       }
-
-      // THE FIX: Ensure performance statistics update on the successful measurement path
       state.stats.layoutCalcs++;
       state.stats.lastLayoutTime = Environment.now() - perfStart;
-      
+
     } finally {
       state.flags.layoutPending = false;
     }
@@ -633,7 +625,6 @@ class PhysicsEngine {
     const state = this.api.internal.state;
     if (state.flags.destroyed || state.flags.isPaused || state.flags.isFrozen) { state.timers.rafId = null; return; }
     state.stats.renderTicks++;
-
     if (this.api.options.dragFree && Math.abs(state.physics.inertia) > 0.1 && !state.flags.isDraggingActive) {
       state.physics.inertia *= this.api.options.friction;
       state.position.target += state.physics.inertia;
@@ -645,7 +636,6 @@ class PhysicsEngine {
       if (state.position.target < 0) state.position.target = 0;
       if (state.position.target > state.metrics.maxScroll) state.position.target = state.metrics.maxScroll;
     }
-
     const diff = state.position.target - state.position.current;
     if (Math.abs(diff) < 0.1 && Math.abs(state.physics.inertia) < 0.1) {
       state.position.current = state.position.target;
@@ -656,18 +646,12 @@ class PhysicsEngine {
       state.timers.rafId = null;
     } else {
       state.flags.isSettled = false;
-      
-      // THE FIX: Move coordinates BEFORE reposition evaluation
       state.position.current += diff * this.api.options.duration;
     }
-
-    // THE FIX: Normalize safely after physics moves us, preventing 1-frame visual overshoots
     this.api.internal.renderer.handleReposition();
-
     const transformVal = this.api.options.vertical ? -state.position.current : -state.position.current * this.api.dir;
     if (this.api.options.vertical) this.api.track.style.transform = `translate3d(0, ${transformVal}px, 0)`;
     else this.api.track.style.transform = `translate3d(${transformVal}px, 0, 0)`;
-
     this.api.internal.events.emit(EVENTS.SCROLL);
     if (!state.flags.isSettled && typeof requestAnimationFrame === 'function') state.timers.rafId = requestAnimationFrame(this.tick);
   }
@@ -683,21 +667,20 @@ class NavigationEngine {
     const state = this.api.internal.state;
     if (!state.metrics.snapPoints.length || ((state.flags.isPaused || state.flags.isFrozen) && !force)) return;
     const targetSnap = Math.max(0, Math.min(snapIndex, this.api.internal.snapEngine.maxReachableSnap()));
-    
+
     const changed = (state.index.activeSnap !== targetSnap);
     const targetSlide = this.api.internal.snapEngine.getSlideForSnap(targetSnap);
     const targetGroup = this.api.internal.snapEngine.getGroupForSnap(targetSnap);
-    
+
     const slideChanged = (state.index.current !== targetSlide);
     const groupChanged = (state.group.current !== targetGroup);
-
     if (changed) {
       this.api.internal.events.emit(EVENTS.NAV_BEFORE, { currentIndex: state.index.current, targetIndex: targetSlide });
       if (slideChanged) this.api.internal.events.emit(EVENTS.SELECT_BEFORE, { currentIndex: state.index.current, targetIndex: targetSlide });
-      
+
       state.index.previousSnap = state.index.activeSnap;
       state.index.activeSnap = targetSnap;
-      
+
       if (slideChanged) {
         state.index.previous = state.index.current;
         state.index.current = targetSlide;
@@ -706,23 +689,20 @@ class NavigationEngine {
         state.group.previous = state.group.current;
         state.group.current = targetGroup;
       }
-      
+
       this.api.internal.events.emit(EVENTS.NAV, { currentIndex: state.index.current, previousIndex: state.index.previous });
       this.api.internal.events.emit(EVENTS.SNAP_CHANGE, { currentSnap: state.index.activeSnap, previousSnap: state.index.previousSnap });
-      
+
       if (slideChanged) this.api.internal.events.emit(EVENTS.SLIDE_ACTIVE_CHANGE, { currentIndex: state.index.current, previousIndex: state.index.previous });
       if (groupChanged) this.api.internal.events.emit(EVENTS.GROUP_ACTIVE_CHANGE, { currentGroup: state.group.current, previousGroup: state.group.previous });
     }
-
     state.preview.index = targetSlide;
     state.preview.group = targetGroup;
-    
+
     const rawTarget = this.api.internal.snapEngine.getSnap(state.index.activeSnap);
     state.physics.inertia = 0; 
-    
-    // THE FIX: Calculate shortest path using the actual physical location, not the future target location
-    state.position.target = immediate ? rawTarget : this.api.internal.renderer.resolveTarget(rawTarget, state.position.current);
 
+    state.position.target = immediate ? rawTarget : this.api.internal.renderer.resolveTarget(rawTarget, state.position.current);
     if (immediate) {
       state.physics.inertia = state.physics.velocity = 0;
       state.position.current = state.position.target;
@@ -732,10 +712,8 @@ class NavigationEngine {
     } else {
       if (!state.flags.isPaused && !state.flags.isFrozen && state.flags.isSettled) { state.flags.isSettled = false; this.api.internal.physics.startPhysicsLoop(); }
     }
-
     this.api.internal.accessibility.updateSlideStates();
     this.api.internal.accessibility.updateAutoHeight();
-
     if (changed) { 
       if (slideChanged) {
         this.api.internal.events.emit(EVENTS.SELECT); 
@@ -785,13 +763,12 @@ class ObserverManager {
           return; 
         }
         if (mutations.some(m => [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)].some(n => n.nodeType === 1 && n.classList.contains('yd_slide-clone')))) return;
-        
+
         if (state.timers.mutationRaf) {
           if (state.flags.mutationUsingRAF) cancelAnimationFrame(state.timers.mutationRaf);
           else clearTimeout(state.timers.mutationRaf);
           state.timers.mutationRaf = null;
         }
-
         const runMutationRefresh = () => {
           try {
             state.timers.mutationRaf = null;
@@ -803,7 +780,7 @@ class ObserverManager {
             state.flags.layoutPending = false;
           }
         };
-        
+
         state.flags.layoutPending = true;
         if (typeof requestAnimationFrame === 'function') {
           state.flags.mutationUsingRAF = true;
@@ -830,7 +807,6 @@ class ObserverManager {
           }
         });
       }, { root: viewport, threshold: 0.01 });
-
       if (this.api.options.autoVisibility) {
         this.rootVisibilityObserver = new IntersectionObserver((entries) => {
           this.api.internal.state.flags._lastIntersectionState = entries[0].isIntersecting;
@@ -936,17 +912,36 @@ class DynamicContentManager {
 // engine/accessibility.js START
 // ==========================================
 class AccessibilityManager {
-  constructor(api) { this.api = api; this._announcer = null; this.announceHandler = null; }
+  constructor(api) {
+    this.api = api;
+    this._announcer = null;
+    this.announceHandler = null;
+    this.stateUpdateHandler = null;
+  }
+
   setupAccessibility() {
     if (!Environment.hasDOM()) return;
     const state = this.api.internal.state;
+    const isThumb = this.api.root.dataset.syncRole === 'thumbnail';
+
     this.api.root.setAttribute('role', 'region');
     this.api.root.setAttribute('aria-roledescription', 'carousel');
-    
-    if (!this.api.root.id) { this.api.root.id = `yd_carousel_${Math.random().toString(36).slice(2, 11)}`; state.flags._generatedRootId = true; }
-    if (!this.api.track.id) { this.api.track.id = `${this.api.root.id}_track`; state.flags._generatedTrackId = true; }
-    this.api.track.setAttribute('aria-live', 'polite');
-    
+
+    if (!this.api.root.id) {
+      this.api.root.id = `yd_carousel_${Math.random().toString(36).slice(2, 11)}`;
+      state.flags._generatedRootId = true;
+    }
+    if (!this.api.track.id) {
+      this.api.track.id = `${this.api.root.id}_track`;
+      state.flags._generatedTrackId = true;
+    }
+
+    this.api.track.setAttribute('aria-live', this.api.options.autoplay ? 'off' : 'polite');
+    if (isThumb) {
+      this.api.track.setAttribute('role', 'tablist');
+      this.api.track.setAttribute('aria-orientation', this.api.options.vertical ? 'vertical' : 'horizontal');
+    }
+
     let announcer = this.api.root.querySelector('.yd_carousel-announcer');
     if (!announcer) {
       announcer = document.createElement('div');
@@ -957,36 +952,70 @@ class AccessibilityManager {
       this.api.root.appendChild(announcer);
     }
     this._announcer = announcer;
-    
+
     this.announceHandler = (api, payload) => {
-      announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.internal.renderer.slideCount()}`;
+      if (!this._announcer) return;
+      this._announcer.textContent = `Slide ${payload.currentIndex + 1} of ${api.internal.renderer.slideCount()}`;
     };
+    this.stateUpdateHandler = () => this.updateSlideStates();
+
     this.api.internal.events.on(EVENTS.NAV_AFTER, this.announceHandler);
+    this.api.internal.events.on(EVENTS.NAV_AFTER, this.stateUpdateHandler);
+    this.api.internal.events.on(EVENTS.RESIZE, this.stateUpdateHandler);
   }
+
   updateSlideStates() {
     const state = this.api.internal.state;
     const total = this.api.internal.renderer.slideCount();
-    if (total === 0) return;
-    
-    const prevIdx = this.api.internal.renderer.getVisualPrev(state.index.current);
-    const nextIdx = this.api.internal.renderer.getVisualNext(state.index.current);
+    if (total === 0 || state.flags.destroyed) return;
 
-    this.api.track.querySelectorAll('[data-slide-index]').forEach(slide => {
+    const currentIdx = state.index.current;
+    const prevIdx = this.api.internal.renderer.getVisualPrev(currentIdx);
+    const nextIdx = this.api.internal.renderer.getVisualNext(currentIdx);
+
+    this.api.track.querySelectorAll('.yd_slide').forEach(slide => {
+      if (!slide.hasAttribute('data-slide-index')) return;
+
       const idx = parseInt(slide.getAttribute('data-slide-index'), 10);
       const isClone = slide.classList.contains('yd_slide-clone');
 
-      slide.classList.remove('active', 'prev', 'next');
-      slide.removeAttribute('aria-current');
-      
+      const isActive = idx === currentIdx;
+      const isPrev = idx === prevIdx;
+      const isNext = idx === nextIdx;
+
+      slide.classList.toggle('active', isActive);
+      slide.classList.toggle('prev', isPrev);
+      slide.classList.toggle('next', isNext);
+
       if (!isClone) {
-        if (idx === state.index.current) { slide.classList.add('active'); slide.setAttribute('aria-current', 'true'); slide.setAttribute('tabindex', '0'); }
-        else { 
-          if (idx === prevIdx) slide.classList.add('prev'); else if (idx === nextIdx) slide.classList.add('next'); 
-          slide.setAttribute('tabindex', '-1'); 
+        const isThumb = this.api.root.dataset.syncRole === 'thumbnail';
+
+        if (isThumb) {
+          slide.setAttribute('role', 'tab');
+          slide.setAttribute('tabindex', isActive ? '0' : '-1'); 
+          slide.setAttribute('aria-label', `Thumbnail ${idx + 1} of ${total}`);
+          slide.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          slide.removeAttribute('aria-current');
+        } else {
+          slide.setAttribute('role', 'group');
+          slide.setAttribute('aria-roledescription', 'slide');
+          slide.setAttribute('tabindex', isActive ? '0' : '-1');
+          slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
+          if (isActive) slide.setAttribute('aria-current', 'true');
+          else slide.removeAttribute('aria-current');
+          slide.removeAttribute('aria-selected');
         }
-        slide.setAttribute('role', 'group');
-        slide.setAttribute('aria-roledescription', 'slide');
-        slide.setAttribute('aria-label', `${idx + 1} of ${total}`);
+
+        if (!isThumb) {
+          const focusables = slide.querySelectorAll('a, button, input, select, textarea, [tabindex]');
+          focusables.forEach(node => {
+            if (!node.hasAttribute('data-original-tabindex') && node.getAttribute('tabindex') !== '-1') {
+              node.setAttribute('data-original-tabindex', node.getAttribute('tabindex') || '0');
+            }
+            const orig = node.getAttribute('data-original-tabindex') || '0';
+            node.setAttribute('tabindex', isActive ? orig : '-1');
+          });
+        }
       } else {
         slide.setAttribute('aria-hidden', 'true');
         slide.setAttribute('tabindex', '-1');
@@ -994,13 +1023,18 @@ class AccessibilityManager {
     });
 
     if (this.api.options.focusOnChange && Environment.hasDOM() && this.api.root.contains(document.activeElement)) {
-      const active = this.api.internal.renderer.getVisibleElement(state.index.current);
-      if (active) {
-        if (!active.hasAttribute('tabindex')) active.setAttribute('tabindex', '0');
-        try { active.focus({ preventScroll: true }); } catch (err) { active.focus(); }
+      const activeEl = document.activeElement;
+      const isInputTag = activeEl && ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'].includes(activeEl.tagName);
+      if (!(isInputTag || (activeEl && activeEl.isContentEditable))) {
+        const active = this.api.internal.renderer.getVisibleElement(currentIdx);
+        if (active) {
+          if (!active.hasAttribute('tabindex')) active.setAttribute('tabindex', '0');
+          try { active.focus({ preventScroll: true }); } catch (err) { active.focus(); }
+        }
       }
     }
   }
+
   updateAutoHeight() {
     if (!this.api.options.autoHeight) return;
     const slide = this.api.internal.renderer.getVisibleElement(this.api.internal.state.index.current);
@@ -1010,8 +1044,21 @@ class AccessibilityManager {
     const viewport = this.api.root.querySelector('.yd_viewport') || this.api.root;
     viewport.style.height = height + 'px';
   }
+
   destroy() {
-    if (this.announceHandler) this.api.internal.events.off(EVENTS.NAV_AFTER, this.announceHandler);
+    if (this.announceHandler) {
+      this.api.internal.events.off(EVENTS.NAV_AFTER, this.announceHandler);
+      this.announceHandler = null;
+    }
+    if (this.stateUpdateHandler) {
+      this.api.internal.events.off(EVENTS.NAV_AFTER, this.stateUpdateHandler);
+      this.api.internal.events.off(EVENTS.RESIZE, this.stateUpdateHandler);
+      this.stateUpdateHandler = null;
+    }
+    if (this._announcer && this._announcer.parentNode) {
+      this._announcer.parentNode.removeChild(this._announcer);
+      this._announcer = null;
+    }
   }
 }
 // engine/accessibility.js END
@@ -1021,7 +1068,7 @@ class AccessibilityManager {
 // ==========================================
 class DependencyManager {
   constructor(api) { this.api = api; }
-  
+
   _getCombinedRegistry() {
     return new Map([
       ...CarouselRegistry.plugins,
@@ -1029,7 +1076,6 @@ class DependencyManager {
       ...CarouselRegistry.inputs
     ]);
   }
-
   circularDetection() {
     const registry = this._getCombinedRegistry();
     const cycles = []; const visited = new Map(); const path = [];
@@ -1206,36 +1252,16 @@ class ydCarousel {
   static ENGINE = 'ydCarousel-Enterprise';
   static EVENTS = EVENTS;
   static SNAP_EPSILON = 0.5;
-  static _autoInitObserver = null;
 
   static startAutoInit() {
     if (!Environment.hasDOM()) return;
-    const initAll = () => {
-      document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
-        if (!el.__ydCarousel) {
-          try { new ydCarousel(el); } catch (err) { console.error('[ydCarousel] Auto-init failed:', err); }
-        }
-      });
-    };
-    initAll();
-    if (!this._autoInitObserver && typeof MutationObserver !== 'undefined') {
-      let timeout;
-      this._autoInitObserver = new MutationObserver(() => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          CarouselRegistry._instances.forEach(api => { if (!document.contains(api.root)) api.destroy(); });
-          initAll();
-        }, 100); 
-      });
-      this._autoInitObserver.observe(document.body, { childList: true, subtree: true }); 
-    }
+    document.querySelectorAll('.yd_carousel:not(.yd_carousel-ready)').forEach(el => {
+      if (!el.__ydCarousel) {
+        try { new ydCarousel(el); } catch (err) { console.error('[ydCarousel] Auto-init failed:', err); }
+      }
+    });
   }
-  static stopAutoInit() {
-    if (this._autoInitObserver) {
-      this._autoInitObserver.disconnect();
-      this._autoInitObserver = null;
-    }
-  }
+  static stopAutoInit() {} 
 
   constructor(element) {
     this.root = element;
@@ -1255,7 +1281,8 @@ class ydCarousel {
       focusOnChange: this.root.classList.contains('focus-on-change') || this.root.dataset.focusOnChange === 'true',
       duration: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.duration) || 0.1),
       friction: this.reducedMotion ? 1 : (parseFloat(this.root.dataset.friction) || 0.92),
-      delay: parseInt(this.root.dataset.delay) || 4000, dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
+      delay: parseInt(this.root.dataset.delay) || 4000, 
+      dragThreshold: parseInt(this.root.dataset.dragThreshold) || 5,
       velocityThreshold: parseFloat(this.root.dataset.velocityThreshold) || 0.5, dragInertia: this.reducedMotion ? 0 : (parseFloat(this.root.dataset.dragInertia) || 40),
       slideSnap: this.root.classList.contains('slide-snap'), groupSnap: this.root.classList.contains('group-snap')
     };
@@ -1264,7 +1291,6 @@ class ydCarousel {
     if (this.options.groupSnap) this.options.slideSnap = false;
     if (!this.options.slideSnap && !this.options.groupSnap) this.options.slideSnap = true;
 
-    // Phase 1: Core Instantiation
     const state = new CarouselState();
     const events = new EventBus(this);
     const lifecycle = new Lifecycle(this);
@@ -1275,11 +1301,9 @@ class ydCarousel {
     const dynamic = new DynamicContentManager(this);
     const accessibility = new AccessibilityManager(this);
     
-    // Phase 2: Dynamic Resolution (Inversion of Control)
     const renderer = ModuleLoader.resolveRenderer(this);
     const snapEngine = ModuleLoader.resolveSnapEngine(this);
 
-    // Phase 3: Extension Management
     const extensions = new ExtensionManager(this);
     const dependencies = new DependencyManager(this);
     const diagnostics = new Diagnostics(this);
@@ -1303,7 +1327,6 @@ class ydCarousel {
 
     this.internal.lifecycle.init();
     
-    // Bootstrapped safely inside clone boundaries if loop exists
     if (this.internal.renderer.isLoopActive() && this.internal.state.position.current === 0 && this.internal.state.metrics.snapPoints.length > 0) {
       const safeSnap = this.internal.snapEngine.getSnap(0);
       this.internal.state.position.current = safeSnap;
@@ -1313,7 +1336,6 @@ class ydCarousel {
     }
   }
 
-  // Facade Public API
   get currentPos() { return this.internal.state.position.current; }
   get targetPos() { return this.internal.state.position.target; }
   get currentIndex() { return this.internal.state.index.current; }
@@ -1400,7 +1422,7 @@ class BaseRenderer {
   _purgeClones() {}
   cloneCount() { return 0; }
   cloneDiagnostics() { return { cloneNodes: 0 }; }
-  
+
   setupTrack(physicalSize, loopGap) {
     const state = this.api.internal.state;
     state.metrics.gap = loopGap;
@@ -1409,46 +1431,53 @@ class BaseRenderer {
   }
   resolveTarget(rawTarget, currentTarget) { return rawTarget; }
   handleReposition() {}
-  
+
   slideCount() { return this.api.internal.state.dom.originalSlides.length; }
   getVisibleElement(index) { return this.api.internal.state.dom.originalSlides[index] || null; }
   supportsDynamicManipulation() { return true; }
-  
+
   resolveHash(hash) { return this.api.internal.state.dom.originalSlides.findIndex(s => s.dataset.hash === hash); }
   getHashByIndex(index) { const s = this.api.internal.state.dom.originalSlides[index]; return s ? s.dataset.hash : null; }
-  
+
   measureTrack() {
     const state = this.api.internal.state;
     const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
     const viewportRect = viewportEl.getBoundingClientRect();
     state.metrics.viewportSize = this.api.options.vertical ? viewportRect.height : viewportRect.width;
-    
-    if (state.dom.originalSlides.length) {
-      state.metrics.slideSizes = state.dom.originalSlides.map(slide => { const sRect = slide.getBoundingClientRect(); return this.api.options.vertical ? sRect.height : sRect.width; });
+
+    let physicalSize = 0; 
+    let loopGap = 0;
+
+    if (state.dom.originalSlides.length > 0) {
+      const slideRects = state.dom.originalSlides.map(slide => slide.getBoundingClientRect());
+      
+      state.metrics.slideSizes = slideRects.map(rect => this.api.options.vertical ? rect.height : rect.width);
       state.metrics.averageSlideSize = state.metrics.slideSizes.reduce((total, size) => total + size, 0) / state.metrics.slideSizes.length;
+      
+      state.metrics.slidesPerView = this.api.internal.measurements.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
+      state.dom.logicalGroups = [];
+      const total = this.slideCount();
+      for (let i = 0; i < total; i += state.metrics.slidesPerView) state.dom.logicalGroups.push(i);
+
+      const firstRect = slideRects[0];
+      state.metrics.relativeOffsets = slideRects.map(rect => { 
+        if (this.api.options.vertical) return rect.top - firstRect.top; 
+        return this.api.isRTL ? firstRect.right - rect.right : rect.left - firstRect.left; 
+      });
+      
+      const lastIdx = state.dom.originalSlides.length - 1; 
+      physicalSize = state.metrics.relativeOffsets[lastIdx] + state.metrics.slideSizes[lastIdx];
+      if (state.dom.originalSlides.length > 1) {
+        loopGap = Math.max(0, state.metrics.relativeOffsets[1] - (state.metrics.relativeOffsets[0] + state.metrics.slideSizes[0]));
+      }
     } else {
       state.metrics.averageSlideSize = state.metrics.viewportSize;
       state.metrics.slideSizes = [];
-    }
-    
-    state.metrics.slidesPerView = this.api.internal.measurements.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
-
-    state.dom.logicalGroups = [];
-    const total = this.slideCount();
-    for (let i = 0; i < total; i += state.metrics.slidesPerView) state.dom.logicalGroups.push(i);
-
-    let physicalSize = 0; let loopGap = 0;
-    
-    if (state.dom.originalSlides.length > 0) {
-      const firstRect = state.dom.originalSlides[0].getBoundingClientRect();
-      state.metrics.relativeOffsets = state.dom.originalSlides.map(slide => { const sRect = slide.getBoundingClientRect(); if (this.api.options.vertical) return sRect.top - firstRect.top; return this.api.isRTL ? firstRect.right - sRect.right : sRect.left - firstRect.left; });
-      const lastIdx = state.dom.originalSlides.length - 1; 
-      physicalSize = state.metrics.relativeOffsets[lastIdx] + state.metrics.slideSizes[lastIdx];
-      if (state.dom.originalSlides.length > 1) loopGap = Math.max(0, state.metrics.relativeOffsets[1] - (state.metrics.relativeOffsets[0] + state.metrics.slideSizes[0]));
-    } else {
       state.metrics.relativeOffsets = [];
+      state.metrics.slidesPerView = 1;
+      state.dom.logicalGroups = [];
     }
-
+    
     this.setupTrack(physicalSize, loopGap);
   }
 }
@@ -1469,20 +1498,19 @@ class CloneLoopRenderer extends StandardRenderer {
     const state = this.api.internal.state;
     state.metrics.gap = loopGap;
     state.metrics.realTrackSize = physicalSize + loopGap;
-    
+
     if (state.dom.originalSlides.length > 1 && state.metrics.realTrackSize > 0) {
       let clonedSize = 0;
       let setsNeeded = 2; 
       clonedSize = state.metrics.realTrackSize * setsNeeded;
-
       while (clonedSize < (state.metrics.viewportSize * 5) && setsNeeded < 6 && (state.dom.originalSlides.length * (setsNeeded + 1) * 2) <= CarouselRegistry.MAX_LOOP_CLONES) {
         clonedSize += state.metrics.realTrackSize;
         setsNeeded++;
       }
-      
+
       setsNeeded = Math.max(1, setsNeeded);
       state.metrics.prependOffset = state.metrics.realTrackSize * setsNeeded;
-      
+
       if (setsNeeded > 0) {
         for (let i = 0; i < setsNeeded; i++) {
           const clonesBefore = state.dom.originalSlides.map(s => this.createClone(s));
@@ -1496,12 +1524,10 @@ class CloneLoopRenderer extends StandardRenderer {
       state.metrics.prependOffset = 0;
     }
   }
-
   handleReposition() {
     if (!this.isLoopActive()) return;
     const state = this.api.internal.state;
-    
-    // THE FIX: Safe SSR check for debug flag
+
     if (typeof window !== 'undefined' && window.ydDebugLoop) {
       console.log('[LOOP]', {
         current: state.position.current,
@@ -1510,36 +1536,30 @@ class CloneLoopRenderer extends StandardRenderer {
         real: state.metrics.realTrackSize
       });
     }
-    
+
     const firstBoundary = state.metrics.prependOffset;
     const lastBoundary = state.metrics.prependOffset + state.metrics.realTrackSize;
-
     if (state.position.current < firstBoundary) {
       this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'start' });
       const originalFrom = state.position.current;
-      
+
       state.position.current += state.metrics.realTrackSize;
       state.position.target += state.metrics.realTrackSize;
-
       const delta = state.position.current - originalFrom;
-
       this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
       this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'end' });
     } 
     else if (state.position.current >= lastBoundary) {
       this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'end' });
       const originalFrom = state.position.current;
-      
+
       state.position.current -= state.metrics.realTrackSize;
       state.position.target -= state.metrics.realTrackSize;
-
       const delta = state.position.current - originalFrom;
-
       this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
       this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'start' });
     }
   }
-
   isLoopActive() {
     const state = this.api.internal.state;
     return this.api.options.loop && state.metrics.snapPoints.length > 0 && state.metrics.realTrackSize > 0;
@@ -1620,6 +1640,8 @@ class CloneLoopRenderer extends StandardRenderer {
     clone.setAttribute('tabindex', '-1');
     if ('inert' in clone) clone.inert = true;
     clone.removeAttribute('aria-current');
+    clone.removeAttribute('aria-selected');
+    clone.removeAttribute('aria-pressed');
     clone.classList.remove('active', 'prev', 'next');
     const nodes = [clone, ...clone.querySelectorAll('*')];
     nodes.forEach(node => {
@@ -1645,46 +1667,38 @@ class VirtualRenderer extends BaseRenderer {
     super(api);
     this.pool = [];
     this.totalSlides = parseInt(this.api.root.dataset.virtualTotal, 10) || 0;
-    
-    // THE FIX: Strict SSR safety for global function lookup
     this.renderCallback = this.api.root.virtualRender || 
       (typeof window !== 'undefined' && this.api.root.dataset.virtualRender ? window[this.api.root.dataset.virtualRender] : null) || 
       ((idx) => `<div class="yd_virtual-placeholder">Slide ${idx + 1}</div>`);
   }
-
   isLoopActive() { 
     return this.api.options.loop && this.totalSlides > 0; 
   }
-
   measureTrack() {
     const state = this.api.internal.state;
     const viewportEl = this.api.root.querySelector('.yd_viewport') || this.api.root;
     const viewportRect = viewportEl.getBoundingClientRect();
     state.metrics.viewportSize = this.api.options.vertical ? viewportRect.height : viewportRect.width;
-    
+
     state.metrics.averageSlideSize = state.metrics.viewportSize; 
     state.metrics.slideSizes = new Array(this.totalSlides).fill(state.metrics.averageSlideSize);
-    
-    state.metrics.slidesPerView = this.api.internal.measurements.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
 
+    state.metrics.slidesPerView = this.api.internal.measurements.getConfiguredSlidesPerView() ?? Math.max(1, Math.round(state.metrics.viewportSize / (state.metrics.averageSlideSize + state.metrics.gap)));
     state.dom.logicalGroups = [];
     for (let i = 0; i < this.totalSlides; i += state.metrics.slidesPerView) state.dom.logicalGroups.push(i);
-
     state.metrics.relativeOffsets = new Array(this.totalSlides).fill(0).map((_, i) => i * state.metrics.averageSlideSize);
-
     this.setupTrack(0, 0); 
   }
-
   setupTrack(physicalSize, loopGap) {
     const state = this.api.internal.state;
     state.metrics.gap = loopGap;
     const slideSize = state.metrics.averageSlideSize || state.metrics.viewportSize;
     state.metrics.realTrackSize = this.totalSlides * (slideSize + loopGap);
     state.metrics.prependOffset = this.isLoopActive() ? (state.metrics.realTrackSize * 2) : 0;
-    
+
     const buffer = 2; 
     const desiredPoolSize = Math.min(this.totalSlides, (state.metrics.slidesPerView || 1) + (buffer * 2));
-    
+
     if (this.pool.length !== desiredPoolSize) {
       this.api.internal.observers.suspendTrackObservers();
       this.api.track.innerHTML = '';
@@ -1700,30 +1714,24 @@ class VirtualRenderer extends BaseRenderer {
       }
       this.api.internal.observers.resumeTrackObservers();
     }
-    
+
     for (let i = 0; i < this.pool.length; i++) {
        if (!this.api.options.vertical) this.pool[i].node.style.width = `${slideSize}px`;
        else this.pool[i].node.style.height = `${slideSize}px`;
     }
-
     this._renderVisible();
   }
-
   _renderVisible() {
     const state = this.api.internal.state;
     if (!this.totalSlides || this.pool.length === 0) return;
-
     const slideSize = state.metrics.averageSlideSize + state.metrics.gap;
     let startPos = state.position.current - state.metrics.prependOffset;
     if (this.isLoopActive()) startPos = ((startPos % state.metrics.realTrackSize) + state.metrics.realTrackSize) % state.metrics.realTrackSize;
-
     let startIndex = Math.floor(startPos / slideSize) - 1;
-
     for (let i = 0; i < this.pool.length; i++) {
       let logicalIndex = startIndex + i;
       let physicalIndex = logicalIndex;
       let offsetPos = logicalIndex * slideSize;
-
       if (this.isLoopActive()) {
         physicalIndex = ((logicalIndex % this.totalSlides) + this.totalSlides) % this.totalSlides;
       } else {
@@ -1732,23 +1740,20 @@ class VirtualRenderer extends BaseRenderer {
           continue;
         }
       }
-
       this.pool[i].node.style.display = '';
       if (this.pool[i].index !== physicalIndex) {
         this.pool[i].index = physicalIndex;
         this.pool[i].node.innerHTML = this.renderCallback(physicalIndex);
         this.pool[i].node.setAttribute('data-slide-index', physicalIndex);
       }
-
       const transformVal = this.api.options.vertical ? `translate3d(0, ${offsetPos}px, 0)` : `translate3d(${this.api.isRTL ? -offsetPos : offsetPos}px, 0, 0)`;
       this.pool[i].node.style.transform = transformVal;
     }
   }
-
   handleReposition() {
     if (!this.isLoopActive()) return;
     const state = this.api.internal.state;
-
+    
     if (typeof window !== 'undefined' && window.ydDebugLoop) {
       console.log('[LOOP VIRTUAL]', {
         current: state.position.current,
@@ -1757,38 +1762,32 @@ class VirtualRenderer extends BaseRenderer {
         real: state.metrics.realTrackSize
       });
     }
-    
+
     const firstBoundary = state.metrics.prependOffset;
     const lastBoundary = state.metrics.prependOffset + state.metrics.realTrackSize;
-
     if (state.position.current < firstBoundary) {
       this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'start' });
       const originalFrom = state.position.current;
-      
+
       state.position.current += state.metrics.realTrackSize;
       state.position.target += state.metrics.realTrackSize;
-
       const delta = state.position.current - originalFrom;
-
       this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
       this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'end' });
     } 
     else if (state.position.current >= lastBoundary) {
       this.api.internal.events.emit(EVENTS.LOOP_ENTER, { position: 'end' });
       const originalFrom = state.position.current;
-      
+
       state.position.current -= state.metrics.realTrackSize;
       state.position.target -= state.metrics.realTrackSize;
-
       const delta = state.position.current - originalFrom;
-
       this.api.internal.events.emit(EVENTS.LOOP_REPOSITION, { from: originalFrom, to: state.position.current, delta });
       this.api.internal.events.emit(EVENTS.LOOP_EXIT, { position: 'start' });
     }
-    
+
     this._renderVisible();
   }
-
   normalizePosition(position) {
     const state = this.api.internal.state;
     if (!state.metrics.realTrackSize || !this.isLoopActive()) return position;
@@ -1796,7 +1795,6 @@ class VirtualRenderer extends BaseRenderer {
     rel = ((rel % state.metrics.realTrackSize) + state.metrics.realTrackSize) % state.metrics.realTrackSize;
     return rel + state.metrics.prependOffset;
   }
-
   distanceToSnap(point, position) {
     const state = this.api.internal.state;
     const d1 = Math.abs(point - position);
@@ -1805,7 +1803,6 @@ class VirtualRenderer extends BaseRenderer {
     const d3 = Math.abs((point - state.metrics.realTrackSize) - position);
     return Math.min(d1, d2, d3);
   }
-
   normalizeIndex(index) {
     if (!this.totalSlides) return 0;
     let normalized = index;
@@ -1813,7 +1810,6 @@ class VirtualRenderer extends BaseRenderer {
     while (normalized >= this.totalSlides) normalized -= this.totalSlides;
     return normalized;
   }
-
   resolveTarget(rawTarget, currentTarget) {
     if (!this.isLoopActive()) return rawTarget;
     const state = this.api.internal.state;
@@ -1825,17 +1821,14 @@ class VirtualRenderer extends BaseRenderer {
     if (minDist === Math.abs(distBackward)) return rawTarget - state.metrics.realTrackSize;
     return rawTarget;
   }
-
   getVisualPrev(index) {
     if (!this.isLoopActive()) return Math.max(index - 1, 0);
     return this.totalSlides ? (this.totalSlides + index - 1) % this.totalSlides : 0;
   }
-
   getVisualNext(index) {
     if (!this.isLoopActive()) return this.totalSlides ? Math.min(index + 1, this.totalSlides - 1) : 0;
     return this.totalSlides ? (index + 1) % this.totalSlides : 0;
   }
-
   getScrollProgress() {
     const state = this.api.internal.state;
     if (!state.metrics.maxScroll) return 0;
@@ -1846,18 +1839,16 @@ class VirtualRenderer extends BaseRenderer {
     }
     return Math.max(0, Math.min(1, state.position.current / state.metrics.maxScroll));
   }
-
   getVisualProgress() {
     const p = this.getScrollProgress();
     return (this.api.isRTL && !this.api.options.vertical) ? 1 - p : p;
   }
-
   getSlideProgress(index) {
     const state = this.api.internal.state;
     const slideSize = state.metrics.averageSlideSize + state.metrics.gap;
     const offset = (index * slideSize) + state.metrics.prependOffset;
     let distance = state.position.current - offset;
-    
+
     if (this.isLoopActive() && state.metrics.realTrackSize > 0) {
       const distFwd = distance - state.metrics.realTrackSize;
       const distBwd = distance + state.metrics.realTrackSize;
@@ -1866,9 +1857,8 @@ class VirtualRenderer extends BaseRenderer {
     }
     return Math.max(-1, Math.min(1, distance / (state.metrics.viewportSize || 1)));
   }
-
   slideCount() { return this.totalSlides; }
-  
+
   getVisibleElement(index) { 
     let match = this.pool.find(p => p.index === index && p.node.style.display !== 'none');
     if (!match) {
@@ -1877,12 +1867,10 @@ class VirtualRenderer extends BaseRenderer {
     }
     return match ? match.node : null; 
   }
-  
+
   supportsDynamicManipulation() { return false; }
-  
   resolveHash(hash) { return -1; }
   getHashByIndex(index) { return null; }
-
   cloneCount() { return 0; }
   cloneDiagnostics() { return { cloneNodes: 0 }; }
   _purgeClones() {}
@@ -2040,26 +2028,21 @@ CarouselRegistry.registerInput({
   name: 'drag',
   init: (api) => {
     let _dragSurface = null;
-
     const onLoopReposition = (api, payload) => {
       const state = api.internal.state;
       if (state.flags.isDraggingActive) {
         state.drag.startCurrentPos += payload.delta;
       }
     };
-
     const getPointerPos = (e) => api.options.vertical ? e.clientY : e.clientX;
-
     const snapToClosest = (immediate = false, force = false) => {
       const state = api.internal.state;
       const closestIndex = api.internal.snapEngine.findNearestSnap(state.position.target);
-  
+
       if (api.options.dragFree) {
          const rawSnap = api.internal.snapEngine.getSnap(closestIndex);
-         
-         // THE FIX: Route the raw snap through the renderer's continuous spatial mapping
          state.position.target = api.internal.renderer.resolveTarget(rawSnap, state.position.current);
-         
+
          if (immediate) {
            state.position.current = state.position.target;
            const transformVal = api.getTransformValue();
@@ -2072,19 +2055,18 @@ CarouselRegistry.registerInput({
          api.internal.navigation.goToSnap(closestIndex, immediate, force);
       }
     };
-
     const onPointerDown = (e) => {
       const state = api.internal.state;
       if (e.button !== 0 || state.flags.isPaused || state.flags.isFrozen) return; 
       state.flags.isDraggingActive = true; state.drag.active = true;
       state.drag.startPointer = getPointerPos(e); state.drag.startTargetPos = state.position.target;
       state.drag.activePointerId = e.pointerId; state.flags.isClickSuppressed = false;
-  
+
       state.position.target = state.position.current;
       state.drag.startPos = getPointerPos(e); state.drag.startCurrentPos = state.position.current;
       state.drag.lastPointerPos = getPointerPos(e); state.drag.lastPointerTime = Environment.now();
       state.physics.velocity = 0; state.physics.inertia = 0; 
-      
+
       try { if (_dragSurface) _dragSurface.setPointerCapture(e.pointerId); } catch (err) {}
       api.track.style.cursor = 'grabbing';
       if (Environment.hasDOM()) {
@@ -2096,7 +2078,6 @@ CarouselRegistry.registerInput({
       api.internal.events.emit(EVENTS.DRAG_START);
       e.preventDefault(); 
     };
-
     const onPointerMove = (e) => {
       const state = api.internal.state;
       if (!state.flags.isDraggingActive) return;
@@ -2104,7 +2085,7 @@ CarouselRegistry.registerInput({
       let dragDistance = state.drag.startPos - currentPointer;
       if (!api.options.vertical) dragDistance *= api.dir;
       if (Math.abs(dragDistance) > api.options.dragThreshold) state.flags.isClickSuppressed = true;
-  
+
       const now = Environment.now();
       const dt = now - state.drag.lastPointerTime;
       if (dt > 0) {
@@ -2113,7 +2094,7 @@ CarouselRegistry.registerInput({
         state.physics.velocity = rawVel;
       }
       state.drag.lastPointerPos = currentPointer; state.drag.lastPointerTime = now;
-  
+
       let newTarget = state.drag.startCurrentPos + dragDistance;
       if (!api.internal.renderer.isLoopActive()) {
         if (newTarget < 0) newTarget *= 0.3;
@@ -2124,7 +2105,7 @@ CarouselRegistry.registerInput({
         const nearestSnap = api.internal.snapEngine.findNearestSnap(state.position.target);
         const nearestSlide = api.internal.snapEngine.getSlideForSnap(nearestSnap);
         const nearestGroup = api.internal.snapEngine.getGroupForSnap(nearestSnap);
-        
+
         if (nearestSlide !== state.preview.index || nearestGroup !== state.preview.group) {
           state.preview.index = nearestSlide;
           state.preview.group = nearestGroup;
@@ -2134,24 +2115,23 @@ CarouselRegistry.registerInput({
       if (state.flags.isSettled) { state.flags.isSettled = false; api.internal.physics.startPhysicsLoop(); }
       api.internal.events.emit(EVENTS.DRAG_MOVE);
     };
-
     const onPointerUp = (e) => {
       const state = api.internal.state;
       if (!state.flags.isDraggingActive) return;
       state.flags.isDraggingActive = false; state.drag.active = false;
       setTimeout(() => { state.flags.isClickSuppressed = false; }, 50);
-  
+
       const pid = e && e.pointerId !== undefined ? e.pointerId : state.drag.activePointerId;
       if (pid !== undefined) { try { if (_dragSurface) _dragSurface.releasePointerCapture(pid); } catch(err) {} }
       state.drag.activePointerId = undefined; api.track.style.cursor = '';
-  
+
       if (Environment.hasDOM()) {
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
         window.removeEventListener('pointercancel', onPointerUp);
       }
       api.internal.events.emit(EVENTS.DRAG_END);
-  
+
       if (api.reducedMotion) {
         state.physics.inertia = 0;
         snapToClosest();
@@ -2167,9 +2147,7 @@ CarouselRegistry.registerInput({
         }
       }
     };
-
     const onClick = (e) => { if (api.internal.state.flags.isClickSuppressed) { e.preventDefault(); e.stopPropagation(); } };
-
     const abortDrag = () => {
       const state = api.internal.state;
       state.flags.isDraggingActive = false; state.drag.active = false; state.flags.isClickSuppressed = false; api.track.style.cursor = '';
@@ -2185,21 +2163,18 @@ CarouselRegistry.registerInput({
       api.internal.events.emit(EVENTS.DRAG_END);
       snapToClosest(true, true);
     };
-
     const viewport = api.root.querySelector('.yd_viewport') || api.root;
     _dragSurface = viewport;
     _dragSurface.addEventListener('pointerdown', onPointerDown);
     api.track.addEventListener('click', onClick, { capture: true });
-    
+
     api.root.addEventListener('mouseenter', api.onActivate);
     api.root.addEventListener('focusin', api.onActivate);
     api.root.addEventListener('mouseleave', api.onDeactivate);
     api.root.addEventListener('focusout', api.onDeactivate);
     _dragSurface.addEventListener('pointerdown', api.onActivate);
-
     api.internal.events.on(EVENTS.LOOP_REPOSITION, onLoopReposition);
     api.internal.events.on('internal:abort-drag', abortDrag);
-
     return {
       destroy: () => {
         api.internal.events.off(EVENTS.LOOP_REPOSITION, onLoopReposition);
@@ -2232,7 +2207,6 @@ CarouselRegistry.registerInput({
   init: (api) => {
     const state = api.internal.state;
     if (!api.options.keyboard) return { destroy: () => {} };
-
     if (!state.flags._keyboardRegistered) {
       CarouselRegistry._keyboardUsers++;
       state.flags._keyboardRegistered = true;
@@ -2242,7 +2216,6 @@ CarouselRegistry.registerInput({
       CarouselRegistry._keyboardInitialized = true;
     }
     api.root.setAttribute('tabindex', '0');
-
     const onKeyDown = (api, payload) => {
       const e = payload.originalEvent;
       if ((CarouselRegistry.activeCarousel && CarouselRegistry.activeCarousel !== api) || state.flags.isPaused || state.flags.isFrozen) return;
@@ -2253,7 +2226,7 @@ CarouselRegistry.registerInput({
       }
       const keys = ['Home', 'End', 'PageDown', 'PageUp', 'ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'];
       if (keys.includes(e.key)) e.preventDefault();
-  
+
       const isVert = api.options.vertical;
       if (e.key === 'Home') api.internal.navigation.goToSnap(0);
       if (e.key === 'End') api.internal.navigation.goToSnap(api.internal.snapEngine.maxReachableSnap());
@@ -2264,9 +2237,7 @@ CarouselRegistry.registerInput({
       if (e.key === 'ArrowDown' && isVert) api.internal.navigation.scrollNext();
       if (e.key === 'ArrowUp' && isVert) api.internal.navigation.scrollPrev();
     };
-
     api.internal.events.on('internal:keydown', onKeyDown);
-
     return {
       destroy: () => {
         api.internal.events.off('internal:keydown', onKeyDown);
@@ -2327,17 +2298,15 @@ CarouselRegistry.registerBehavior({
     const play = () => {
       if (permanentlyStopped || api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
       pauseTimer(); if (!hasStarted) { hasStarted = true; api.internal.events.emit(EVENTS.AUTOPLAY_START); } else if (isPaused) { isPaused = false; api.internal.events.emit(EVENTS.AUTOPLAY_RESUME); }
-      
+
       if (!api.internal.state.metrics.snapPoints.length) { playTimer = setTimeout(() => play(), 100); return; }
       if (!(direction === 1 ? api.internal.snapEngine.canScrollNext() : api.internal.snapEngine.canScrollPrev())) { if (apProgressEl) apProgressEl.style.setProperty('--ap-progress', `100%`); stopPermanent(); return; }
-
       startTime = Environment.now(); loopProgress();
       playTimer = setTimeout(() => { direction === 1 ? api.internal.navigation.scrollNext() : api.internal.navigation.scrollPrev(); }, api.options.delay);
     };
     const stop = () => { pauseTimer(); if (hasStarted && !isPaused && !permanentlyStopped) { isPaused = true; api.internal.events.emit(EVENTS.AUTOPLAY_PAUSE); } };
     api.autoplayApi = { play: () => { permanentlyStopped = isPaused = false; play(); }, pause: () => { if (hasStarted && !isPaused && !permanentlyStopped) stop(); }, stop: stopPermanent, reset: () => { permanentlyStopped = isPaused = false; if (!hasStarted) play(); }, setDirection: (dir) => { direction = (dir === 'backward' || dir === -1) ? -1 : 1; resetVisual(); if (permanentlyStopped) { permanentlyStopped = isPaused = false; play(); } else if (hasStarted && !isPaused) play(); }, getDirection: () => direction === 1 ? 'forward' : 'backward', getState: () => Object.freeze({ started: hasStarted, paused: isPaused, stopped: permanentlyStopped, direction: direction === 1 ? 'forward' : 'backward' }) };
     api.resetAutoplay = api.autoplayApi.reset;
-
     const onSettle = () => { if (hasStarted && !isPaused && !permanentlyStopped) play(); };
     const onVisChange = () => document.hidden ? stop() : play();
     const onFocusIn = stop, onFocusOut = play;
@@ -2346,7 +2315,6 @@ CarouselRegistry.registerBehavior({
     const onDragEnd = () => { if (hasStarted && isPaused && !permanentlyStopped) { isPaused = false; api.internal.events.emit(EVENTS.AUTOPLAY_RESUME); if (api.internal.state.flags.isSettled) play(); } };
     const onApiPause = stop;
     const onApiResume = () => { if (!permanentlyStopped && hasStarted) { isPaused = false; if (api.internal.state.flags.isSettled) play(); } };
-
     api.internal.extensions.on('autoplay', EVENTS.NAV_BEFORE, onBeforeSelect); api.internal.extensions.on('autoplay', EVENTS.DRAG_START, onDragStart); api.internal.extensions.on('autoplay', EVENTS.DRAG_END, onDragEnd); api.internal.extensions.on('autoplay', EVENTS.SETTLE, onSettle); api.internal.extensions.on('autoplay', EVENTS.PAUSE, onApiPause); api.internal.extensions.on('autoplay', EVENTS.RESUME, onApiResume); api.internal.extensions.on('autoplay', EVENTS.FREEZE, onApiPause); api.internal.extensions.on('autoplay', EVENTS.UNFREEZE, onApiResume);
     if (api.root.classList.contains('pause-hover')) { api.root.addEventListener('mouseenter', stop); api.root.addEventListener('mouseleave', play); }
     if (Environment.hasDOM()) document.addEventListener('visibilitychange', onVisChange);
@@ -2380,6 +2348,183 @@ CarouselRegistry.registerBehavior({
 // behaviors/hash.js END
 
 // ==========================================
+// behaviors/sync.js START
+// ==========================================
+CarouselRegistry.registerBehavior({
+  name: 'sync',
+  init: (api) => {
+    const targetSelector = api.root.dataset.sync;
+    const syncGroup = api.root.dataset.syncGroup;
+    const syncBy = api.root.dataset.syncBy || 'slide'; 
+    const syncRole = api.root.dataset.syncRole; 
+
+    const getTargets = () => {
+      const targetSet = new Set();
+      
+      if (targetSelector) {
+        let selector = targetSelector;
+        if (!selector.startsWith('#') && !selector.startsWith('.') && !selector.startsWith('[')) {
+          selector = `#${selector}`;
+        }
+        try {
+          document.querySelectorAll(selector).forEach(el => {
+            if (el && el.__ydCarousel && el.__ydCarousel !== api) {
+              targetSet.add(el.__ydCarousel);
+            }
+          });
+        } catch (err) {
+          console.warn(`[ydCarousel] Invalid sync selector: ${selector}`);
+        }
+      }
+      
+      if (syncGroup) {
+        CarouselRegistry._instances.forEach(instance => {
+          if (instance !== api && instance.root.dataset.syncGroup === syncGroup) {
+            targetSet.add(instance);
+          }
+        });
+      }
+      
+      return [...targetSet];
+    };
+
+    const onNav = (sourceApi, payload) => {
+      if (sourceApi.internal.state.flags._isReceivingSync) return;
+      
+      const targets = getTargets();
+      if (!targets.length) return;
+
+      sourceApi.internal.events.emit(EVENTS.SYNC_START);
+
+      targets.forEach(t => {
+        try {
+          t.internal.state.flags._isReceivingSync = true;
+          t.internal.events.emit(EVENTS.SYNC_UPDATE, { source: sourceApi });
+          
+          const maxSlide = Math.max(0, t.slideCount() - 1);
+          const safeIndex = Math.min(payload.currentIndex, maxSlide);
+
+          if (syncBy === 'group') {
+            const targetSnap = t.internal.snapEngine.getSnapForSlide(safeIndex);
+            const targetGroup = t.internal.snapEngine.getGroupForSnap(targetSnap);
+            t.goToGroup(targetGroup);
+          } else {
+            t.goToSlide(safeIndex);
+          }
+        } finally {
+          t.internal.state.flags._isReceivingSync = false;
+        }
+      });
+
+      sourceApi.internal.events.emit(EVENTS.SYNC_STOP);
+    };
+
+    const onThumbnailClick = (e) => {
+      if (api.internal.state.flags.isClickSuppressed) return;
+      
+      const slideEl = e.target.closest('.yd_slide');
+      if (!slideEl) return;
+      
+      const idx = parseInt(slideEl.getAttribute('data-slide-index'), 10);
+      if (isNaN(idx)) return;
+      
+      const master = getTargets().find(t => t !== api && t.root.dataset.syncRole !== 'thumbnail');
+      if (master) {
+        master.goToSlide(idx);
+        const originalSlide = api.internal.renderer.getVisibleElement(idx);
+        if (originalSlide) {
+          originalSlide.focus({ preventScroll: true });
+        }
+      }
+    };
+
+    const onThumbnailKeydown = (e) => {
+      const slideEl = e.target.closest('.yd_slide');
+      if (!slideEl || slideEl.classList.contains('yd_slide-clone')) return;
+      
+      const idx = parseInt(slideEl.getAttribute('data-slide-index'), 10);
+      if (isNaN(idx)) return;
+      
+      const isVert = api.options.vertical;
+      const isRTL = api.isRTL;
+      const total = api.internal.renderer.slideCount();
+      let nextIdx = idx;
+      let handled = false;
+
+      switch (e.key) {
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          slideEl.click();
+          handled = true;
+          break;
+        case 'ArrowLeft':
+          if (!isVert) { nextIdx = isRTL ? idx + 1 : idx - 1; handled = true; }
+          break;
+        case 'ArrowRight':
+          if (!isVert) { nextIdx = isRTL ? idx - 1 : idx + 1; handled = true; }
+          break;
+        case 'ArrowUp':
+          if (isVert) { nextIdx = idx - 1; handled = true; }
+          break;
+        case 'ArrowDown':
+          if (isVert) { nextIdx = idx + 1; handled = true; }
+          break;
+        case 'Home':
+          nextIdx = 0; handled = true;
+          break;
+        case 'End':
+          nextIdx = total - 1; handled = true;
+          break;
+      }
+
+      if (handled && e.key !== 'Enter' && e.key !== ' ') {
+        e.preventDefault();
+        nextIdx = Math.max(0, Math.min(nextIdx, total - 1));
+        
+        if (nextIdx !== idx) {
+          const master = getTargets().find(t => t !== api && t.root.dataset.syncRole !== 'thumbnail');
+          if (master) {
+            master.goToSlide(nextIdx);
+            const nextSlide = api.internal.renderer.getVisibleElement(nextIdx);
+            if (nextSlide) nextSlide.focus({ preventScroll: true });
+          }
+        }
+      }
+    };
+
+    api.internal.extensions.on('sync', EVENTS.NAV, onNav);
+
+    if (syncRole === 'thumbnail') {
+      api.track.addEventListener('click', onThumbnailClick, { capture: true });
+      api.track.addEventListener('keydown', onThumbnailKeydown);
+      api.root.classList.add('yd_carousel-thumbnail-mode');
+
+      const bootSync = () => {
+        const master = getTargets().find(t => t !== api && t.root.dataset.syncRole !== 'thumbnail');
+        if (master) {
+          api.goToSlide(master.internal.state.index.current, true);
+        }
+      };
+
+      if (api.isReady()) bootSync();
+      else api.internal.events.once(EVENTS.INIT, bootSync);
+    }
+    
+    return {
+      destroy: () => {
+        if (syncRole === 'thumbnail') {
+          api.track.removeEventListener('click', onThumbnailClick, { capture: true });
+          api.track.removeEventListener('keydown', onThumbnailKeydown);
+          api.root.classList.remove('yd_carousel-thumbnail-mode');
+        }
+      }
+    };
+  }
+});
+// behaviors/sync.js END
+
+// ==========================================
 // plugins/controls.js START
 // ==========================================
 CarouselRegistry.registerPlugin({
@@ -2404,31 +2549,66 @@ CarouselRegistry.registerPlugin({
     const c = api.root.querySelector('.yd_dots'); if (!c) return { destroy: ()=>{} };
     let t = c.querySelector('.yd_dot'); 
     const originalTemplate = t ? t.cloneNode(true) : null;
-    c.setAttribute('role', 'tablist'); c.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
+    c.setAttribute('role', 'tablist'); 
+    c.setAttribute('aria-orientation', api.options.vertical ? 'vertical' : 'horizontal');
+
+    const onDotClick = (e) => {
+      if (api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+      const dot = e.target.closest('[data-dot-index]');
+      if (!dot) return;
+      const idx = parseInt(dot.getAttribute('data-dot-index'), 10);
+      if (!isNaN(idx)) api.internal.navigation.goToSnap(idx);
+    };
+    c.addEventListener('click', onDotClick);
+
     let lastTotal = 0;
+
     const build = () => {
       c.innerHTML = '';
       const total = api.internal.snapEngine.getSnapCount();
+      const fragment = document.createDocumentFragment();
       new Array(total).fill(0).forEach((_, i) => {
-        let d = originalTemplate ? originalTemplate.cloneNode(true) : document.createElement('button'); if(!originalTemplate) d.className='yd_dot';
-        d.setAttribute('role','tab'); d.setAttribute('aria-controls', api.track.id); d.setAttribute('aria-label', `Go ${i+1}`);
-        d.addEventListener('click', () => { if(api.internal.state.flags.isPaused||api.internal.state.flags.isFrozen) return; api.internal.navigation.goToSnap(i); });
-        c.appendChild(d);
+        let d = originalTemplate ? originalTemplate.cloneNode(true) : document.createElement('button'); 
+        if(!originalTemplate) d.className='yd_dot';
+        d.setAttribute('role','tab'); 
+        d.setAttribute('aria-controls', api.track.id); 
+        d.setAttribute('aria-label', `Go ${i+1}`);
+        d.setAttribute('data-dot-index', i);
+        fragment.appendChild(d);
       });
+      c.appendChild(fragment);
     };
+
     const uD = () => {
       const aI = api.internal.state.index.activeSnap;
-      Array.from(c.children).forEach((d, i) => { const a = i === aI; d.classList.toggle('active', a); d.setAttribute('aria-selected', a); d.setAttribute('tabindex', a?'0':'-1'); });
+      Array.from(c.children).forEach((d, i) => { 
+        const a = i === aI; 
+        d.classList.toggle('active', a); 
+        d.setAttribute('aria-selected', a); 
+        d.setAttribute('tabindex', a?'0':'-1'); 
+      });
     };
-    api.internal.extensions.on('dots', EVENTS.NAV_AFTER, uD); api.internal.extensions.on('dots', EVENTS.SNAP_CHANGE, uD); api.internal.extensions.on('dots', EVENTS.PREVIEW_UPDATE, uD); 
-    lastTotal = api.internal.snapEngine.getSnapCount();
-    build(); uD();
-    return { 
-      destroy: () => {}, 
-      refresh: () => { 
-        const total = api.internal.snapEngine.getSnapCount();
-        if (total !== lastTotal) { build(); lastTotal = total; } uD(); 
+
+    const rebuildIfNeeded = () => {
+      const total = api.internal.snapEngine.getSnapCount();
+      if (total !== lastTotal) { 
+        build(); 
+        lastTotal = total; 
       }
+      uD();
+    };
+
+    api.internal.extensions.on('dots', EVENTS.NAV_AFTER, uD); 
+    api.internal.extensions.on('dots', EVENTS.SNAP_CHANGE, uD); 
+    api.internal.extensions.on('dots', EVENTS.RESIZE, rebuildIfNeeded); 
+
+    lastTotal = api.internal.snapEngine.getSnapCount();
+    build(); 
+    uD();
+
+    return { 
+      destroy: () => { c.removeEventListener('click', onDotClick); }, 
+      refresh: () => { rebuildIfNeeded(); }
     };
   }
 });
@@ -2442,13 +2622,26 @@ CarouselRegistry.registerPlugin({
   init: (api) => {
     const c = api.root.querySelector('.yd_counter'); if (!c) return { destroy: ()=>{} };
     const cu = c.querySelector('.yd_current'), t = c.querySelector('.yd_total');
-    const uC = (a, p) => {
-      const cur = Math.min((p.previewIndex!==undefined?a.internal.snapEngine.findNearestSnap(a.internal.state.position.target):a.internal.state.index.activeSnap)+1, a.internal.snapEngine.getSnapCount());
-      const tot = a.internal.snapEngine.getSnapCount();
-      if(cu&&t) { cu.textContent=cur; t.textContent=tot; } else c.textContent=`${cur} / ${tot}`;
+
+    const uC = () => {
+      const state = api.internal.state;
+      const tot = Math.max(1, api.internal.snapEngine.getSnapCount());
+      const cur = Math.min(state.index.activeSnap + 1, tot);
+
+      if (cu && t) { 
+        cu.textContent = cur; 
+        t.textContent = tot; 
+      } else { 
+        c.textContent = `${cur} / ${tot}`; 
+      }
     };
-    api.internal.extensions.on('counter', EVENTS.NAV_AFTER, uC); api.internal.extensions.on('counter', EVENTS.PREVIEW_UPDATE, uC); uC(api, api.internal.events.getEventPayload());
-    return { destroy: () => {}, refresh: () => { uC(api, api.internal.events.getEventPayload()); } };
+    api.internal.extensions.on('counter', EVENTS.NAV_AFTER, uC); 
+    api.internal.extensions.on('counter', EVENTS.SNAP_CHANGE, uC); 
+    api.internal.extensions.on('counter', EVENTS.RESIZE, uC); 
+
+    uC();
+
+    return { destroy: () => {}, refresh: () => { uC(); } };
   }
 });
 // plugins/counter.js END
