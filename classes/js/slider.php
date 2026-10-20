@@ -122,6 +122,17 @@ class EventBus {
     if (state.flags.destroyed && event !== EVENTS.DESTROY) return;
     this._eventStats[event] = (this._eventStats[event] || 0) + 1;
     const payload = { ...this.getEventPayload(), ...customData };
+    this._dispatch(event, payload);
+  }
+  // THE FIX: High-performance emit for RAF-bound events, bypassing payload generation
+  emitFast(event, customData = null) {
+    if (!this.api.internal) return;
+    const state = this.api.internal.state;
+    if (state.flags.destroyed && event !== EVENTS.DESTROY) return;
+    this._eventStats[event] = (this._eventStats[event] || 0) + 1;
+    this._dispatch(event, customData);
+  }
+  _dispatch(event, payload) {
     if (this.listeners[event]) [...this.listeners[event]].forEach(cb => { try { cb(this.api, payload); } catch (err) { console.error(err); } });
     if (this.listeners['*']) [...this.listeners['*']].forEach(cb => { try { cb(event, this.api, payload); } catch (err) { console.error(err); } });
   }
@@ -371,8 +382,11 @@ class ExtensionManager {
       }
     });
   }
-  destroyAll() {
-    this.extensions.forEach((ext, name) => this.disable(name));
+destroyAll() {
+    // THE FIX: Clone keys to an array to safely iterate while the underlying Map is being mutated by disable()
+    for (const name of [...this.extensions.keys()]) {
+      this.disable(name);
+    }
   }
 }
 // core/extension-manager.js END
@@ -2397,12 +2411,13 @@ CarouselRegistry.registerBehavior({
       sourceApi.internal.events.emit(EVENTS.SYNC_START);
 
       targets.forEach(t => {
-        try {
+try {
           t.internal.state.flags._isReceivingSync = true;
           t.internal.events.emit(EVENTS.SYNC_UPDATE, { source: sourceApi });
           
           const maxSlide = Math.max(0, t.slideCount() - 1);
-          const safeIndex = Math.min(payload.currentIndex, maxSlide);
+          // THE FIX: Floor clamped to 0 to prevent bizarre negative indexing edge-cases
+          const safeIndex = Math.max(0, Math.min(payload.currentIndex, maxSlide));
 
           if (syncBy === 'group') {
             const targetSnap = t.internal.snapEngine.getSnapForSlide(safeIndex);
@@ -2652,17 +2667,186 @@ CarouselRegistry.registerPlugin({
 CarouselRegistry.registerPlugin({
   name: 'scrollbar',
   init: (api) => {
-    const s = api.root.querySelector('.yd_scrollbar'); if (!s) return { destroy: ()=>{} };
+    const s = api.root.querySelector('.yd_scrollbar'); 
+    if (!s) return { destroy: ()=>{} };
+    
     const pD = s.style.display;
-    if (api.options.loop) { s.style.display = 'none'; return { destroy: () => { s.style.display = pD; } }; }
-    let th = s.querySelector('.yd_scrollbar-thumb'); if(!th){ th = document.createElement('div'); th.className = 'yd_scrollbar-thumb'; s.appendChild(th); }
+    if (api.options.loop) { 
+      s.style.display = 'none'; 
+      return { destroy: () => { s.style.display = pD; } }; 
+    }
+    
+    let th = s.querySelector('.yd_scrollbar-thumb'); 
+    if (!th) { 
+      th = document.createElement('div'); 
+      th.className = 'yd_scrollbar-thumb'; 
+      s.appendChild(th); 
+    }
+
+    // THE FIX: ARIA Slider Semantics & Keyboard Focus
+    th.setAttribute('role', 'slider');
+    th.setAttribute('aria-valuemin', '0');
+    th.setAttribute('aria-valuemax', '100');
+    th.setAttribute('tabindex', '0');
+    th.setAttribute('aria-label', 'Carousel Scrollbar');
+
+    let maxThumbScroll = 0;
+    
     const uS = () => {
-      if(api.internal.state.metrics.realTrackSize <= api.internal.state.metrics.viewportSize){ s.classList.add('disabled'); th.style.transform='translate3d(0,0,0)'; }
-      else { s.classList.remove('disabled'); const r=api.internal.state.metrics.viewportSize/(api.internal.state.metrics.realTrackSize||1); const p=`${Math.max(10, Math.min(100, r*100))}%`; if(api.options.vertical) th.style.height=p; else th.style.width=p; }
+      if (api.internal.state.metrics.realTrackSize <= api.internal.state.metrics.viewportSize) { 
+        s.classList.add('disabled'); 
+        th.style.transform = 'translate3d(0,0,0)'; 
+      } else { 
+        s.classList.remove('disabled'); 
+        const r = api.internal.state.metrics.viewportSize / (api.internal.state.metrics.realTrackSize || 1); 
+        const p = `${Math.max(10, Math.min(100, r * 100))}%`; 
+        if (api.options.vertical) th.style.height = p; 
+        else th.style.width = p; 
+      }
     };
-    const uP = (a) => { if(s.classList.contains('disabled')) return; const m = a.options.vertical ? s.offsetHeight-th.offsetHeight : s.offsetWidth-th.offsetWidth; let v = a.internal.renderer.getScrollProgress(); if(a.isRTL && !a.options.vertical) v=1-v; if(a.options.vertical) th.style.transform=`translate3d(0,${v*m}px,0)`; else th.style.transform=`translate3d(${v*m}px,0,0)`; };
-    api.internal.extensions.on('scrollbar', EVENTS.RESIZE, uS); api.internal.extensions.on('scrollbar', EVENTS.SCROLL, uP); uS(); uP(api);
-    return { destroy: () => { s.style.display = pD; }, refresh: () => { uS(); uP(api); } };
+
+    // THE FIX: rAF Throttling for High-Frequency Layout Updates
+    let pending = false;
+    const uP = () => { 
+      if (s.classList.contains('disabled') || pending) return; 
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        if (api.internal.state.flags.destroyed) return;
+        
+        maxThumbScroll = api.options.vertical ? s.offsetHeight - th.offsetHeight : s.offsetWidth - th.offsetWidth; 
+        
+        let v = api.internal.renderer.getScrollProgress(); 
+        let visualV = v;
+        if (api.isRTL && !api.options.vertical) visualV = 1 - v; 
+
+        // THE FIX: ARIA valuenow synchronization
+        th.setAttribute('aria-valuenow', Math.round(v * 100));
+
+        if (api.options.vertical) th.style.transform = `translate3d(0,${visualV * maxThumbScroll}px,0)`; 
+        else th.style.transform = `translate3d(${visualV * maxThumbScroll}px,0,0)`; 
+      });
+    };
+
+    // THE FIX: Interactive Mouse/Touch Scrubbing Variables
+    let dragging = false;
+    let dragStart = 0;
+    let thumbStart = 0;
+
+    const onPointerDown = (e) => {
+      if (e.button !== 0 || api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+      e.preventDefault();
+      dragging = true;
+      
+      maxThumbScroll = api.options.vertical ? s.offsetHeight - th.offsetHeight : s.offsetWidth - th.offsetWidth;
+      dragStart = api.options.vertical ? e.clientY : e.clientX;
+      
+      let v = api.internal.renderer.getScrollProgress();
+      if (api.isRTL && !api.options.vertical) v = 1 - v;
+      thumbStart = v * maxThumbScroll;
+      
+      th.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerMove = (e) => {
+      if (!dragging) return;
+      
+      const currentPointer = api.options.vertical ? e.clientY : e.clientX;
+      const delta = currentPointer - dragStart;
+      
+      let newThumbPos = thumbStart + delta;
+      newThumbPos = Math.max(0, Math.min(newThumbPos, maxThumbScroll));
+
+      let ratio = maxThumbScroll > 0 ? newThumbPos / maxThumbScroll : 0;
+      if (api.isRTL && !api.options.vertical) ratio = 1 - ratio;
+
+      // Update physical target and wake the physics engine for smooth scrubbing
+      const targetPos = ratio * api.internal.state.metrics.maxScroll;
+      api.internal.state.position.target = targetPos;
+      
+      if (api.internal.state.flags.isSettled) {
+        api.internal.state.flags.isSettled = false;
+        api.internal.physics.startPhysicsLoop();
+      }
+    };
+
+    const onPointerUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      th.releasePointerCapture(e.pointerId);
+      
+      // THE FIX: Snap to closest valid layout position on release
+      const nearestSnap = api.internal.snapEngine.findNearestSnap(api.internal.state.position.target);
+      api.internal.navigation.goToSnap(nearestSnap);
+    };
+
+    const onTrackClick = (e) => {
+      if (e.target === th || dragging || api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+      
+      const sRect = s.getBoundingClientRect();
+      const clickPos = api.options.vertical ? (e.clientY - sRect.top) : (e.clientX - sRect.left);
+      const thSize = api.options.vertical ? th.offsetHeight : th.offsetWidth;
+      
+      maxThumbScroll = api.options.vertical ? s.offsetHeight - th.offsetHeight : s.offsetWidth - th.offsetWidth;
+      let newThumbPos = clickPos - (thSize / 2);
+      newThumbPos = Math.max(0, Math.min(newThumbPos, maxThumbScroll));
+      
+      let ratio = maxThumbScroll > 0 ? newThumbPos / maxThumbScroll : 0;
+      if (api.isRTL && !api.options.vertical) ratio = 1 - ratio;
+
+      const targetPos = ratio * api.internal.state.metrics.maxScroll;
+      const nearestSnap = api.internal.snapEngine.findNearestSnap(targetPos);
+      api.internal.navigation.goToSnap(nearestSnap);
+    };
+
+    const onThumbKeydown = (e) => {
+      if (api.internal.state.flags.isPaused || api.internal.state.flags.isFrozen) return;
+      const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+      if (!keys.includes(e.key)) return;
+      e.preventDefault();
+      
+      const isVert = api.options.vertical;
+      const isRTL = api.isRTL;
+      
+      if (e.key === 'Home') api.internal.navigation.goToSnap(0);
+      if (e.key === 'End') api.internal.navigation.goToSnap(api.internal.snapEngine.maxReachableSnap());
+      if (e.key === 'ArrowRight' && !isVert) isRTL ? api.internal.navigation.scrollPrev() : api.internal.navigation.scrollNext();
+      if (e.key === 'ArrowLeft' && !isVert) isRTL ? api.internal.navigation.scrollNext() : api.internal.navigation.scrollPrev();
+      if (e.key === 'ArrowDown' && isVert) api.internal.navigation.scrollNext();
+      if (e.key === 'ArrowUp' && isVert) api.internal.navigation.scrollPrev();
+    };
+
+    api.internal.extensions.on('scrollbar', EVENTS.RESIZE, uS); 
+    api.internal.extensions.on('scrollbar', EVENTS.SCROLL, uP); 
+    
+    // Wire up interactions
+    th.addEventListener('pointerdown', onPointerDown);
+    th.addEventListener('pointermove', onPointerMove);
+    th.addEventListener('pointerup', onPointerUp);
+    th.addEventListener('pointercancel', onPointerUp);
+    th.addEventListener('keydown', onThumbKeydown);
+    s.addEventListener('click', onTrackClick);
+    
+    uS(); 
+    uP();
+
+    return { 
+      destroy: () => { 
+        s.style.display = pD; 
+        th.removeEventListener('pointerdown', onPointerDown);
+        th.removeEventListener('pointermove', onPointerMove);
+        th.removeEventListener('pointerup', onPointerUp);
+        th.removeEventListener('pointercancel', onPointerUp);
+        th.removeEventListener('keydown', onThumbKeydown);
+        s.removeEventListener('click', onTrackClick);
+        th.removeAttribute('role');
+        th.removeAttribute('aria-valuemin');
+        th.removeAttribute('aria-valuemax');
+        th.removeAttribute('aria-valuenow');
+        th.removeAttribute('tabindex');
+      }, 
+      refresh: () => { uS(); uP(); } 
+    };
   }
 });
 // plugins/scrollbar.js END

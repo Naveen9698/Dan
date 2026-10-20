@@ -58,30 +58,14 @@
 </div>
 
 
-<!-- ==========================================
-       GLOBAL QA HELPERS (SCRIPTS)
-  =========================================== -->
-<script>
-  // 1. Virtual Renderer Callback
-  window.qaVirtualRender = function(idx) {
-    const hue = (idx * 25) % 360;
-    return `<div class="slide" style="background-color: hsl(${hue}, 70%, 85%); color: #333; border-color: hsl(${hue}, 70%, 60%)">${idx + 1}</div>`;
-  };
+<!-- REQUIRED CSS FOR THUMBNAIL HIGHLIGHTING -->
+<style>
+  .yd_carousel-thumbnail-mode .yd_slide { transition: opacity 0.2s; opacity: 0.4; cursor: pointer; }
+  .yd_carousel-thumbnail-mode .yd_slide:hover { opacity: 0.8; }
+  .yd_carousel-thumbnail-mode .yd_slide.active { opacity: 1; transform: scale(1.02); transition: transform 0.2s; }
+  .yd_carousel-thumbnail-mode .yd_slide.active .slide { border-color: currentColor; background-color: #f0f0f0; }
+</style>
 
-  // 2. Stress Test DOM Populator
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-inject-slides]').forEach(el => {
-      const count = parseInt(el.getAttribute('data-inject-slides'), 10);
-      let html = '';
-      for (let i = 0; i < count; i++) html += `<div class="yd_slide"><div class="slide">${i+1}</div></div>`;
-      el.innerHTML = html;
-    });
-  });
-</script>
-
-<!-- ==========================================
-     SECTION 01: CORE NAVIGATION
-=========================================== -->
 <h2 class="section-title">SECTION 01: Core Navigation</h2>
 
 <h3 class="test-title">TEST-001: Slide Snap (Default)</h3>
@@ -126,9 +110,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 02: DIRECTION & LAYOUT
-=========================================== -->
+
 <h2 class="section-title">SECTION 02: Direction & Layout</h2>
 
 <h3 class="test-title">TEST-007: RTL</h3>
@@ -166,9 +148,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 03: ALIGNMENT
-=========================================== -->
+
 <h2 class="section-title">SECTION 03: Alignment</h2>
 
 <h3 class="test-title">TEST-012: Align Start (Default)</h3>
@@ -213,9 +193,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 04: LOOP SYSTEM
-=========================================== -->
+
 <h2 class="section-title">SECTION 04: Loop System</h2>
 
 <h3 class="test-title">TEST-018: Loop</h3>
@@ -253,9 +231,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 05: INPUTS
-=========================================== -->
+
 <h2 class="section-title">SECTION 05: Inputs</h2>
 
 <h3 class="test-title">TEST-023: Drag (Default)</h3>
@@ -300,9 +276,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 06: BEHAVIORS
-=========================================== -->
+
 <h2 class="section-title">SECTION 06: Behaviors</h2>
 
 <h3 class="test-title">TEST-029: Focus On Change</h3>
@@ -337,7 +311,6 @@
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm" data-inject-slides="6"></div>
   </div>
-  <p style="font-size: 12px; color: #666;">Hover over the slider to pause.</p>
 </div>
 
 <h3 class="test-title">TEST-033: Autoplay Backward</h3>
@@ -352,16 +325,14 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="mt-sm flex-x">
+  <div class="yd_controles mt-sm flex-x">
     <button onclick="document.getElementById('test-034').__ydCarousel.autoplayApi.play()">Play</button>
     <button onclick="document.getElementById('test-034').__ydCarousel.autoplayApi.pause()">Pause</button>
     <button onclick="document.getElementById('test-034').__ydCarousel.autoplayApi.stop()">Stop</button>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 07: PLUGINS
-=========================================== -->
+
 <h2 class="section-title">SECTION 07: Plugins</h2>
 
 <h3 class="test-title">TEST-035: Controls</h3>
@@ -369,7 +340,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
 <h3 class="test-title">TEST-036: Dots</h3>
@@ -377,7 +348,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="yd_dots"></div>
+  <div class="yd_controles mt-sm"><div class="yd_dots flex-x"></div></div>
 </div>
 
 <h3 class="test-title">TEST-037: Counter</h3>
@@ -385,7 +356,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="yd_counter mt-sm"></div>
+  <div class="yd_controles mt-sm"><div class="yd_counter"><span class="yd_current"></span> / <span class="yd_total"></span></div></div>
 </div>
 
 <h3 class="test-title">TEST-038: Progress</h3>
@@ -393,18 +364,22 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="yd_progress mt-sm">
-    <div class="yd_progress-fill"></div>
+  <div class="yd_controles mt-sm">
+    <div class="yd_progress" style="width: 100%; height: 4px; background: #eee;">
+      <div class="yd_progress-fill" style="height: 100%; background: #333; width: var(--progress);"></div>
+    </div>
   </div>
 </div>
 
-<h3 class="test-title">TEST-039: Scrollbar</h3>
+<h3 class="test-title">TEST-039: Interactive Scrollbar</h3>
 <div class="yd_carousel" id="test-039">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="6"></div>
   </div>
-  <div class="yd_scrollbar mt-sm">
-    <div class="yd_scrollbar-thumb"></div>
+  <div class="yd_controles mt-sm">
+    <div class="yd_scrollbar" style="width: 100%; height: 8px; background: #eee; border-radius: 4px; position:relative; cursor:pointer;">
+      <div class="yd_scrollbar-thumb" style="height: 100%; background: #666; border-radius: 4px; position:absolute; top:0; left:0; cursor:grab;"></div>
+    </div>
   </div>
 </div>
 
@@ -413,274 +388,189 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="6"></div>
   </div>
-  <div class="mt-sm flex-x"><button class="yd_prev">Prev</button><button class="yd_next">Next</button>
-    <div class="yd_dots"></div>
-    <div class="yd_counter" style="margin-top:0; margin-left: 10px; line-height:35px;"></div>
+  <div class="yd_controles mt-sm flex-x">
+    <button class="yd_prev">Prev</button><button class="yd_next">Next</button>
+    <div class="yd_dots flex-x ml-sm"></div>
+    <div class="yd_counter ml-sm"><span class="yd_current"></span> / <span class="yd_total"></span></div>
   </div>
-  <div class="yd_progress mt-sm">
-    <div class="yd_progress-fill"></div>
+  <div class="yd_controles mt-sm">
+    <div class="yd_progress" style="width: 100%; height: 4px; background: #eee;"><div class="yd_progress-fill" style="height: 100%; background: #333; width: var(--progress);"></div></div>
   </div>
-  <div class="yd_scrollbar mt-sm">
-    <div class="yd_scrollbar-thumb"></div>
+  <div class="yd_controles mt-sm">
+    <div class="yd_scrollbar" style="width: 100%; height: 8px; background: #eee; border-radius: 4px; position:relative; cursor:pointer;">
+      <div class="yd_scrollbar-thumb" style="height: 100%; background: #666; border-radius: 4px; position:absolute; top:0; left:0;"></div>
+    </div>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 08: HASH
-=========================================== -->
+
 <h2 class="section-title">SECTION 08: Hash</h2>
 
 <h3 class="test-title">TEST-041: Hash Basic</h3>
 <div class="yd_carousel hash" id="test-041">
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide" data-hash="h1">
-        <div class="slide">#h1</div>
-      </div>
-      <div class="yd_slide" data-hash="h2">
-        <div class="slide">#h2</div>
-      </div>
-      <div class="yd_slide" data-hash="h3">
-        <div class="slide">#h3</div>
-      </div>
+      <div class="yd_slide ac:blur-md" data-hash="h1"><h2 class="slide">#h1</h2></div>
+      <div class="yd_slide ac:blur-md" data-hash="h2"><h2 class="slide">#h2</h2></div>
+      <div class="yd_slide ac:blur-md" data-hash="h3"><h2 class="slide">#h3</h2></div>
     </div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
 <h3 class="test-title">TEST-042: Hash Groups</h3>
 <div class="yd_carousel hash" data-hash-group="gallery" id="test-042">
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide" data-hash="img1">
-        <div class="slide">#gallery:img1</div>
-      </div>
-      <div class="yd_slide" data-hash="img2">
-        <div class="slide">#gallery:img2</div>
-      </div>
-      <div class="yd_slide" data-hash="img3">
-        <div class="slide">#gallery:img3</div>
-      </div>
+      <div class="yd_slide ac:blur-md" data-hash="img1"><h2 class="slide">#gallery:img1</h2></div>
+      <div class="yd_slide ac:blur-md" data-hash="img2"><h2 class="slide">#gallery:img2</h2></div>
+      <div class="yd_slide ac:blur-md" data-hash="img3"><h2 class="slide">#gallery:img3</h2></div>
     </div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
-<!-- ==========================================
-     SECTION 09: SYNC
-=========================================== -->
+
 <h2 class="section-title">SECTION 09: Sync (Microkernel Architecture)</h2>
-<p style="font-size: 14px; color: #666;">
-  All synchronization is now handled purely via <code>data-sync</code> attributes. No manual JavaScript event mapping is required.
-</p>
 
-<style>
-  /* Optional: Make the hero slide stand out visually */
-  .slide.hero { height: 250px; font-size: 32px; background: #cfe2ff; color: #084298; border-color: #0d6efd; }
-
-  /* 
-   * THUMBNAIL SYNC STYLING
-   * We rely completely on the framework's native .active class applied by the AccessibilityManager 
-   */
-  .yd_carousel-thumbnail-mode .yd_slide { 
-    cursor: pointer; 
-    opacity: 0.4; 
-    transition: opacity 0.2s ease, transform 0.2s ease; 
-  }
-  
-  .yd_carousel-thumbnail-mode .yd_slide:hover {
-    opacity: 0.8;
-  }
-
-  .yd_carousel-thumbnail-mode .yd_slide.active { 
-    opacity: 1; 
-    transform: scale(1.03);
-  }
-
-  .yd_carousel-thumbnail-mode .yd_slide.active .slide { 
-    background: #198754; 
-    color: white; 
-    border-color: #146c43; 
-  }
-</style>
-
-<h3 class="test-title">TEST-043: Swiper-Style Thumbnail Gallery (Bidirectional)</h3>
-<p style="font-size: 13px; color: #666;">
-  <strong>Hero:</strong> Drives the thumbnails when swiped/navigated.<br>
-  <strong>Thumbnails:</strong> Drives the Hero when clicked or activated via Keyboard (Tab + Enter/Space).
-</p>
-
+<h3 class="test-title" id="test-043">TEST-043: Swiper-Style Thumbnail Gallery (Bidirectional)</h3>
 <!-- MASTER HERO -->
-<div class="yd_carousel sync loop drag-free keyboard mb-md" 
-     id="test-hero" 
-     data-sync="#test-thumbs">
+<div class="yd_carousel sync loop drag-free keyboard" data-sync-group="qa-gallery-1">
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide"><div class="slide hero">Image 1</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 2</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 3</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 4</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 5</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 6</div></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Hero 1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Hero 2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Hero 3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Hero 4</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Hero 5</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Hero 6</h2></div>
     </div>
-  </div>
-  <div class="mt-sm">
-    <button class="yd_prev">Prev</button> 
-    <button class="yd_next">Next</button>
   </div>
 </div>
 
 <!-- THUMBNAIL SLAVE -->
-<div class="yd_carousel sync loop align-center" 
-     id="test-thumbs" 
-     data-sync="#test-hero" 
-     data-sync-role="thumbnail">
+<div class="yd_carousel sync loop align-center mt-sm" data-sync-group="qa-gallery-1" data-sync-role="thumbnail">
   <div class="yd_viewport">
     <div class="yd_container slides-4 gap-sm">
-      <div class="yd_slide"><div class="slide">Thumb 1</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 2</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 3</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 4</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 5</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 6</div></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide fz-14">Thumb 1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide fz-14">Thumb 2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide fz-14">Thumb 3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide fz-14">Thumb 4</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide fz-14">Thumb 5</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide fz-14">Thumb 6</h2></div>
     </div>
   </div>
 </div>
 
-<hr style="margin: 40px 0; border: 1px solid #eee;">
-<!-- MASTER CAROUSEL -->
-<div class="yd_carousel sync loop keyboard mb-md" 
-     data-sync-group="product-gallery">
+<br>
+
+<h3 class="test-title" id="test-044">TEST-044: Standard Slide Sync (1:1 Bidirectional)</h3>
+<div id="master-slide" class="yd_carousel loop keyboard sync" data-sync="#slave-slide" data-sync-by="slide">
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide"><div class="slide hero">Image 1</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 2</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 3</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 4</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 5</div></div>
-      <div class="yd_slide"><div class="slide hero">Image 6</div></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">4</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">5</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">6</h2></div>
+    </div>
+  </div>
+  <div class="yd_controles mt-sm">
+    <button class="yd_prev">Prev</button>
+    <button class="yd_next">Next</button>
+    <div class="yd_counter"><span class="yd_current"></span> / <span class="yd_total"></span></div>
+  </div>
+</div>
+
+<div id="slave-slide" class="yd_carousel loop sync mt-sm" data-sync="#master-slide" data-sync-by="slide">
+  <div class="yd_viewport">
+    <div class="yd_container slides-3 gap-sm">
+      <div class="yd_slide ac:blur-md"><h2 class="slide">1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">4</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">5</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">6</h2></div>
     </div>
   </div>
 </div>
 
-<!-- THUMBNAIL CAROUSEL -->
-<div class="yd_carousel sync loop align-center" 
-     data-sync-group="product-gallery" 
-     data-sync-role="thumbnail">
-  <div class="yd_viewport">
-    <div class="yd_container slides-4 gap-sm">
-      <div class="yd_slide"><div class="slide">Thumb 1</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 2</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 3</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 4</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 5</div></div>
-      <div class="yd_slide"><div class="slide">Thumb 6</div></div>
-    </div>
-  </div>
-</div>
+<br>
 
-<h3 class="test-title">TEST-044: Standard Slide Sync (1:1 Bidirectional)</h3>
-<p style="font-size: 13px; color: #666;">Both carousels follow each other's physical navigations identically.</p>
-
-<div id="master-slide" class="yd_carousel sync loop keyboard mb-md" data-sync="#slave-slide" data-sync-by="slide">
-  <div class="yd_viewport">
-    <div class="yd_container slides-1 gap-sm" data-inject-slides="6"></div>
-  </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
-</div>
-
-<div id="slave-slide" class="yd_carousel sync loop" data-sync="#master-slide" data-sync-by="slide">
-  <div class="yd_viewport">
-    <div class="yd_container slides-3 gap-sm" data-inject-slides="6"></div>
-  </div>
-</div>
-
-<hr style="margin: 40px 0; border: 1px solid #eee;">
-
-<h3 class="test-title">TEST-045: Group Sync (Cross-Layout Translation)</h3>
-<p style="font-size: 13px; color: #666;">
-  Master moves 1 slide at a time. Slave automatically calculates which logical group contains that slide and jumps entire pages.
-</p>
-
-<div id="master-group" class="yd_carousel sync loop keyboard mb-md" data-sync="#slave-group" data-sync-by="group">
+<h3 class="test-title" id="test-045">TEST-045: Group Sync (Cross-Layout)</h3>
+<div id="master-group" class="yd_carousel loop keyboard sync" data-sync="#slave-group" data-sync-by="group">
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm" data-inject-slides="9"></div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm">
+    <button class="yd_prev">Prev</button>
+    <button class="yd_next">Next</button>
+  </div>
 </div>
 
-<div id="slave-group" class="yd_carousel sync loop group-snap" data-sync="#master-group">
+<div id="slave-group" class="yd_carousel loop sync group-snap mt-sm" data-sync="#master-group">
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm" data-inject-slides="9"></div>
   </div>
-  <div class="yd_counter mt-sm"></div>
 </div>
 
-<hr style="margin: 40px 0; border: 1px solid #eee;">
+<br>
 
-<h3 class="test-title">TEST-046: Global Sync Group</h3>
-<p style="font-size: 13px; color: #666;">Multiple completely disconnected carousels grouped by a shared data attribute.</p>
-
-<div class="yd_carousel sync loop keyboard mb-md" data-sync-group="gallery">
+<h3 class="test-title" id="test-046">TEST-046: Global Sync Group</h3>
+<div class="yd_carousel loop sync keyboard" data-sync-group="global-gallery">
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide"><div class="slide bg-main">A-1</div></div>
-      <div class="yd_slide"><div class="slide bg-main">A-2</div></div>
-      <div class="yd_slide"><div class="slide bg-main">A-3</div></div>
-      <div class="yd_slide"><div class="slide bg-main">A-4</div></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">A1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">A2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">A3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">A4</h2></div>
     </div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
-<div class="yd_carousel sync loop mb-md" data-sync-group="gallery">
+<div class="yd_carousel loop sync mt-sm" data-sync-group="global-gallery">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm">
-      <div class="yd_slide"><div class="slide bg-sub">B-1</div></div>
-      <div class="yd_slide"><div class="slide bg-sub">B-2</div></div>
-      <div class="yd_slide"><div class="slide bg-sub">B-3</div></div>
-      <div class="yd_slide"><div class="slide bg-sub">B-4</div></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">B1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">B2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">B3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">B4</h2></div>
     </div>
   </div>
 </div>
 
-<div class="yd_carousel sync loop" data-sync-group="gallery">
+<div class="yd_carousel loop sync mt-sm" data-sync-group="global-gallery">
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm">
-      <div class="yd_slide"><div class="slide bg-acnt">C-1</div></div>
-      <div class="yd_slide"><div class="slide bg-acnt">C-2</div></div>
-      <div class="yd_slide"><div class="slide bg-acnt">C-3</div></div>
-      <div class="yd_slide"><div class="slide bg-acnt">C-4</div></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">C1</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">C2</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">C3</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">C4</h2></div>
     </div>
   </div>
 </div>
 
 
-<!-- ==========================================
-     SECTION 10: DYNAMIC API
-=========================================== -->
 <h2 class="section-title">SECTION 10: Dynamic API</h2>
 
-<h3 class="test-title">TEST-048 to 054: addSlide, remove, batch</h3>
-<div class="yd_carousel loop" id="test-dynamic">
+<h3 class="test-title" id="test-dynamic">TEST-048 to 054: addSlide, remove, batch</h3>
+<div class="yd_carousel loop" id="test-dynamic-target">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm">
-      <div class="yd_slide">
-        <div class="slide">Start</div>
-      </div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Start</h2></div>
     </div>
   </div>
-  <div class="mt-sm flex-x">
-    <button onclick="document.getElementById('test-dynamic').__ydCarousel.addSlide(`<div class='yd_slide'><div class='slide bg-acnt'>Add</div></div>`)">Add</button>
-    <button onclick="document.getElementById('test-dynamic').__ydCarousel.removeSlide(0)">Remove Idx 0</button>
-    <button onclick="document.getElementById('test-dynamic').__ydCarousel.removeAllSlides()">Clear</button>
-    <button onclick="const api = document.getElementById('test-dynamic').__ydCarousel; api.batch(() => { api.addSlide(`<div class='yd_slide'><div class='slide'>B1</div></div>`); api.addSlide(`<div class='yd_slide'><div class='slide'>B2</div></div>`); })">Batch 2</button>
+  <div class="yd_controles mt-sm flex-x">
+    <button onclick="document.getElementById('test-dynamic-target').__ydCarousel.addSlide(`<div class='yd_slide ac:blur-md'><h2 class='slide'>Add</h2></div>`)">Add</button>
+    <button onclick="document.getElementById('test-dynamic-target').__ydCarousel.removeSlide(0)">Remove Idx 0</button>
+    <button onclick="document.getElementById('test-dynamic-target').__ydCarousel.removeAllSlides()">Clear</button>
+    <button onclick="const api = document.getElementById('test-dynamic-target').__ydCarousel; api.batch(() => { api.addSlide(`<div class='yd_slide ac:blur-md'><h2 class='slide'>B1</h2></div>`); api.addSlide(`<div class='yd_slide ac:blur-md'><h2 class='slide'>B2</h2></div>`); })">Batch 2</button>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 11: LIFECYCLE
-=========================================== -->
+
 <h2 class="section-title">SECTION 11: Lifecycle</h2>
 
 <h3 class="test-title">TEST-055 to 060: Pause, Resume, Freeze</h3>
@@ -688,7 +578,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="mt-sm flex-x">
+  <div class="yd_controles mt-sm flex-x">
     <button onclick="document.getElementById('test-lifecycle').__ydCarousel.pause()">Pause</button>
     <button onclick="document.getElementById('test-lifecycle').__ydCarousel.resume()">Resume</button>
     <button onclick="document.getElementById('test-lifecycle').__ydCarousel.freeze()">Freeze</button>
@@ -696,28 +586,24 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 12: DIAGNOSTICS
-=========================================== -->
+
 <h2 class="section-title">SECTION 12: Diagnostics</h2>
 
-<h3 class="test-title">TEST-061 to 069: Console Prints</h3>
-<div class="yd_carousel" id="test-diag">
+<h3 class="test-title" id="test-diag">TEST-061 to 069: Console Prints</h3>
+<div class="yd_carousel" id="test-diag-target">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="3"></div>
   </div>
-  <div class="mt-sm flex-x f-wrap">
-    <button onclick="console.log(document.getElementById('test-diag').__ydCarousel.health())">Health</button>
-    <button onclick="console.log(document.getElementById('test-diag').__ydCarousel.state())">State</button>
-    <button onclick="console.log(document.getElementById('test-diag').__ydCarousel.performanceStats())">Perf</button>
-    <button onclick="console.log(document.getElementById('test-diag').__ydCarousel.dependencyReport())">Deps</button>
-    <button onclick="console.log(document.getElementById('test-diag').__ydCarousel.xray())">X-Ray (Check Console)</button>
+  <div class="yd_controles mt-sm flex-x f-wrap">
+    <button onclick="console.log(document.getElementById('test-diag-target').__ydCarousel.health())">Health</button>
+    <button onclick="console.log(document.getElementById('test-diag-target').__ydCarousel.state())">State</button>
+    <button onclick="console.log(document.getElementById('test-diag-target').__ydCarousel.performanceStats())">Perf</button>
+    <button onclick="console.log(document.getElementById('test-diag-target').__ydCarousel.dependencyReport())">Deps</button>
+    <button onclick="console.log(document.getElementById('test-diag-target').__ydCarousel.xray())">X-Ray (Check Console)</button>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 13: DESTROY
-=========================================== -->
+
 <h2 class="section-title">SECTION 13: Destroy</h2>
 
 <h3 class="test-title">TEST-070 to 073: Destroy & Cleanup</h3>
@@ -725,12 +611,12 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <button class="mt-sm" onclick="document.getElementById('test-destroy').__ydCarousel.destroy(); this.innerText='Destroyed!'">Destroy Engine</button>
+  <div class="yd_controles mt-sm">
+    <button onclick="document.getElementById('test-destroy').__ydCarousel.destroy(); this.innerText='Destroyed!'">Destroy Engine</button>
+  </div>
 </div>
 
-<!-- ==========================================
-     SECTION 14: STATE APIS
-=========================================== -->
+
 <h2 class="section-title">SECTION 14: State APIs</h2>
 
 <h3 class="test-title">TEST-074 to 077: Export/Import/ReInit</h3>
@@ -738,7 +624,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-1 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="mt-sm flex-x">
+  <div class="yd_controles mt-sm flex-x">
     <button class="yd_prev">Prev</button> <button class="yd_next">Next</button>
     <button onclick="window.ydTmpState = document.getElementById('test-state-api').__ydCarousel.stateData(); alert('Exported Idx: ' + window.ydTmpState.currentIndex)">Export</button>
     <button onclick="document.getElementById('test-state-api').__ydCarousel.goToSlide(window.ydTmpState.currentIndex, true)">Import (Go To)</button>
@@ -746,9 +632,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 15: MIXED COMBINATIONS
-=========================================== -->
+
 <h2 class="section-title">SECTION 15: Mixed Combinations</h2>
 
 <h3 class="test-title">TEST-078: Loop + DragFree + Autoplay</h3>
@@ -776,15 +660,9 @@
 <div class="yd_carousel loop drag-free auto-height" id="test-081">
   <div class="yd_viewport" style="transition: height 0.3s">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide">
-        <div class="slide" style="height: 100px;">100px</div>
-      </div>
-      <div class="yd_slide">
-        <div class="slide" style="height: 250px;">250px</div>
-      </div>
-      <div class="yd_slide">
-        <div class="slide" style="height: 150px;">150px</div>
-      </div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height: 100px;">100px</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height: 250px;">250px</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height: 150px;">150px</h2></div>
     </div>
   </div>
 </div>
@@ -793,17 +671,15 @@
 <div class="yd_carousel loop autoplay focus-on-change keyboard" id="test-082">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm">
-      <div class="yd_slide"><button class="slide" style="width:100%">1</button></div>
-      <div class="yd_slide"><button class="slide" style="width:100%">2</button></div>
-      <div class="yd_slide"><button class="slide" style="width:100%">3</button></div>
-      <div class="yd_slide"><button class="slide" style="width:100%">4</button></div>
+      <div class="yd_slide ac:blur-md"><button class="slide" style="width:100%">1</button></div>
+      <div class="yd_slide ac:blur-md"><button class="slide" style="width:100%">2</button></div>
+      <div class="yd_slide ac:blur-md"><button class="slide" style="width:100%">3</button></div>
+      <div class="yd_slide ac:blur-md"><button class="slide" style="width:100%">4</button></div>
     </div>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 16: MISSING AREAS (CRITICAL)
-=========================================== -->
+
 <h2 class="section-title" style="color: #dc3545;">SECTION 16: Empty & Single States</h2>
 
 <h3 class="test-title">TEST-083: Empty Carousel (0 Slides)</h3>
@@ -831,9 +707,7 @@
 <div class="yd_carousel" id="test-086">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm">
-      <div class="yd_slide">
-        <div class="slide">Solo</div>
-      </div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Solo</h2></div>
     </div>
   </div>
 </div>
@@ -842,129 +716,95 @@
 <div class="yd_carousel loop" id="test-087">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm">
-      <div class="yd_slide">
-        <div class="slide">Solo</div>
-      </div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide">Solo</h2></div>
     </div>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 17: AUTO HEIGHT
-=========================================== -->
+
 <h2 class="section-title">SECTION 17: Auto Height</h2>
 
 <h3 class="test-title">TEST-090: Auto Height Basic</h3>
 <div class="yd_carousel auto-height" id="test-090">
   <div class="yd_viewport" style="transition: height 0.3s">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide">
-        <div class="slide" style="height:100px;">100</div>
-      </div>
-      <div class="yd_slide">
-        <div class="slide" style="height:200px;">200</div>
-      </div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height:100px;">100</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height:200px;">200</h2></div>
     </div>
   </div>
-  <button class="yd_next mt-sm">Next</button>
+  <div class="yd_controles mt-sm"><button class="yd_next">Next</button></div>
 </div>
 
 <h3 class="test-title">TEST-091: Auto Height + Loop</h3>
 <div class="yd_carousel loop auto-height" id="test-091">
   <div class="yd_viewport" style="transition: height 0.3s">
     <div class="yd_container slides-1 gap-sm">
-      <div class="yd_slide">
-        <div class="slide" style="height:150px;">150</div>
-      </div>
-      <div class="yd_slide">
-        <div class="slide" style="height:300px;">300</div>
-      </div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height:150px;">150</h2></div>
+      <div class="yd_slide ac:blur-md"><h2 class="slide" style="height:300px;">300</h2></div>
     </div>
   </div>
-  <button class="yd_next mt-sm">Next</button>
+  <div class="yd_controles mt-sm"><button class="yd_next">Next</button></div>
 </div>
 
-<!-- ==========================================
-     SECTION 18: MULTIPLE INSTANCES
-=========================================== -->
+
 <h2 class="section-title">SECTION 18: Multiple Instances</h2>
 
 <h3 class="test-title">TEST-094 to 096: Grid Rendering Stability</h3>
 <div class="of-x-scroll">
   <div id="multiple-instances-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"></div>
 </div>
-<script>
-  const multiContainer = document.getElementById('multiple-instances-container');
-  let multiHtml = '';
-  for (let i = 0; i < 2; i++) {
-    const isLoop = i % 3 === 0 ? 'loop' : '';
-    const isAuto = i % 2 === 0 ? 'autoplay' : '';
-    multiHtml += `
-      <div class="yd_carousel ${isLoop} ${isAuto} slide-snap">
-        <div class="yd_viewport"><div class="yd_container slides-2 gap-sm" data-inject-slides="3"></div></div>
-      </div>`;
-  }
-  multiContainer.innerHTML = multiHtml;
-</script>
 
-<!-- ==========================================
-     SECTION 19: VIRTUAL RENDERER
-=========================================== -->
+
 <h2 class="section-title">SECTION 19: Virtual Renderer</h2>
 
-<h3 class="test-title">TEST-097: Virtual Renderer (100 Slides)</h3>
-<div class="yd_carousel" data-renderer="virtual" data-virtual-total="100" data-virtual-render="qaVirtualRender" id="test-097">
+<h3 class="test-title" id="test-097">TEST-097: Virtual Renderer (100,000 Slides)</h3>
+<div class="yd_carousel loop drag-free" data-renderer="virtual" data-virtual-total="100000" data-virtual-render="qaVirtualRender">
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm"></div>
   </div>
-  <div class="yd_scrollbar mt-sm">
-    <div class="yd_scrollbar-thumb"></div>
+  <div class="yd_controles mt-sm flex-x">
+    <button class="yd_prev">Prev</button> <button class="yd_next">Next</button>
+    <div class="yd_scrollbar ml-xs" style="width: 100px; height: 8px; background: #eee; border-radius: 4px; position:relative; cursor:pointer;">
+      <div class="yd_scrollbar-thumb" style="height: 100%; background: #666; border-radius: 4px; position:absolute; top:0; left:0; cursor:grab;"></div>
+    </div>
   </div>
 </div>
 
 <h3 class="test-title">TEST-098: Virtual Renderer (1000 Slides)</h3>
-<div class="yd_carousel" data-renderer="virtual" data-virtual-total="1000" data-virtual-render="qaVirtualRender" id="test-098">
+<div class="yd_carousel" data-renderer="virtual" data-virtual-total="1000" data-virtual-render="qaVirtualRender">
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm"></div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
 <h3 class="test-title">TEST-099: Virtual Renderer + Loop (1000 Slides)</h3>
-<div class="yd_carousel loop" data-renderer="virtual" data-virtual-total="1000" data-virtual-render="qaVirtualRender" id="test-099">
+<div class="yd_carousel loop" data-renderer="virtual" data-virtual-total="1000" data-virtual-render="qaVirtualRender">
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm"></div>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 20: STRESS TESTS
-=========================================== -->
-<h2 class="section-title">SECTION 20: Stress Tests</h2>
 
-<h3 class="test-title">TEST-103 to 105: Native DOM Overload</h3>
-<div class="yd_carousel drag-free" id="test-stress-dom">
+<h2 class="section-title">SECTION 20: DOM Stress Tests</h2>
+
+<h3 class="test-title" id="test-stress-dom">TEST-103 to 105: Native DOM Overload</h3>
+<div class="yd_carousel drag-free">
   <div class="yd_viewport">
     <div class="yd_container slides-5 gap-sm" data-inject-slides="500"></div>
   </div>
 </div>
 <p style="font-size:13px; color:#6c757d;">Note: Injected 500 nodes physically into the DOM to test mutation and event stability.</p>
 
-<!-- ==========================================
-     SECTION 21: REGISTRY TESTS
-=========================================== -->
+
 <h2 class="section-title">SECTION 21: Registry Tests</h2>
 
-<div class="p-md bg-main" style="border-radius: 8px;">
-  <div class="flex-x f-wrap">
-    <button onclick="alert('Instances: ' + CarouselRegistry._instances.size)">Check Active Instances</button>
-    <button onclick="alert('Keyboard Target: ' + (CarouselRegistry.activeCarousel && CarouselRegistry.activeCarousel.root.id ? CarouselRegistry.activeCarousel.root.id : 'None'))">Check Keyboard Target</button>
-  </div>
+<div class="yd_controles mt-sm flex-x f-wrap">
+  <button onclick="alert('Instances: ' + CarouselRegistry._instances.size)">Check Active Instances</button>
+  <button onclick="alert('Keyboard Target: ' + (CarouselRegistry.activeCarousel && CarouselRegistry.activeCarousel.root.id ? CarouselRegistry.activeCarousel.root.id : 'None'))">Check Keyboard Target</button>
 </div>
 
-<!-- ==========================================
-     SECTION 22: OBSERVER TESTS
-=========================================== -->
+
 <h2 class="section-title">SECTION 22: Observer Tests</h2>
 
 <h3 class="test-title">TEST-113 to 117: Resize, Hide/Show & Freezing</h3>
@@ -972,30 +812,26 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="8"></div>
   </div>
-  <div class="mt-sm flex-x">
-    <button onclick="document.getElementById('test-obs').style.width = '50%' ">Shrink Width (Test ResizeOb)</button>
+  <div class="yd_controles mt-sm flex-x">
+    <button onclick="document.getElementById('test-obs').style.width = '50%' ">Shrink Width</button>
     <button onclick="document.getElementById('test-obs').style.width = '100%' ">Reset Width</button>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 23: EVENT SYSTEM
-=========================================== -->
+
 <h2 class="section-title">SECTION 23: Event System</h2>
 
 <h3 class="test-title">TEST-118 to 123: Wildcard & Stats</h3>
-<div class="yd_carousel loop" id="test-events">
+<div class="yd_carousel loop">
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="4"></div>
   </div>
-  <div class="mt-sm flex-x">
+  <div class="yd_controles mt-sm flex-x">
     <button class="yd_prev">Prev</button> <button class="yd_next">Next</button>
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 24: AUTOPLAY CONFIGURATIONS
-=========================================== -->
+
 <h2 class="section-title">SECTION 24: Autoplay Configurations</h2>
 
 <h3 class="test-title">TEST-124: Autoplay Delay (Fast vs Slow)</h3>
@@ -1017,8 +853,8 @@
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm" data-inject-slides="6"></div>
   </div>
-  <p style="font-size: 13px; color: #6c757d;" id="test-125-status">Direction: forward</p>
 </div>
+<p style="font-size: 13px; color: #6c757d;" id="test-125-status">Direction: forward</p>
 <script>
   setTimeout(() => {
     const api = document.getElementById('test-125').__ydCarousel;
@@ -1034,9 +870,6 @@
 </script>
 
 
-<!-- ==========================================
-     SECTION 25: PHYSICS & ANIMATION SPEED
-=========================================== -->
 <h2 class="section-title">SECTION 25: Physics & Animation Speed</h2>
 
 <h3 class="test-title">TEST-126: Animation Speed (Duration)</h3>
@@ -1045,7 +878,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm" data-inject-slides="5"></div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
 <h4>Slow Cinematic (data-duration="0.03")</h4>
@@ -1053,7 +886,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-sm" data-inject-slides="5"></div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
 <h3 class="test-title">TEST-127: Drag Inertia</h3>
@@ -1087,9 +920,7 @@
   </div>
 </div>
 
-<!-- ==========================================
-     SECTION 26: INPUT THRESHOLDS
-=========================================== -->
+
 <h2 class="section-title">SECTION 26: Input Thresholds</h2>
 
 <h3 class="test-title">TEST-129: Velocity Threshold</h3>
@@ -1117,9 +948,6 @@
 </div>
 
 
-<!-- ==========================================
-     SECTION 27: EXTREME QA PROFILES & STRESS
-=========================================== -->
 <h2 class="section-title">SECTION 27: Extreme QA Profiles</h2>
 
 <h3 class="test-title">TEST-132: Arcade Mode</h3>
@@ -1127,8 +955,10 @@
   <div class="yd_viewport">
     <div class="yd_container slides-4 gap-sm" data-inject-slides="12"></div>
   </div>
-  <div class="yd_progress mt-sm">
-    <div class="yd_progress-fill"></div>
+  <div class="yd_controles mt-sm">
+    <div class="yd_progress" style="width: 100%; height: 4px; background: #eee;">
+      <div class="yd_progress-fill" style="height: 100%; background: #333; width: var(--progress);"></div>
+    </div>
   </div>
 </div>
 
@@ -1144,7 +974,7 @@
   <div class="yd_viewport">
     <div class="yd_container slides-2 gap-sm" data-inject-slides="6"></div>
   </div>
-  <div class="mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
+  <div class="yd_controles mt-sm"><button class="yd_prev">Prev</button> <button class="yd_next">Next</button></div>
 </div>
 
 <h3 class="test-title">TEST-135: Loop Breaker Test</h3>
@@ -1160,11 +990,63 @@
   <div class="yd_viewport">
     <div class="yd_container slides-3 gap-md" data-inject-slides="10"></div>
   </div>
-  <div class="mt-sm flex-x"><button class="yd_prev">Prev</button><button class="yd_next">Next</button>
-    <div class="yd_dots"></div>
+  <div class="yd_controles mt-sm flex-x">
+    <button class="yd_prev">Prev</button><button class="yd_next">Next</button>
+    <div class="yd_dots flex-x ml-sm"></div>
   </div>
-  <div class="yd_scrollbar mt-sm">
-    <div class="yd_scrollbar-thumb"></div>
+  <div class="yd_controles mt-sm">
+    <div class="yd_scrollbar" style="width: 100%; height: 8px; background: #eee; border-radius: 4px; position:relative; cursor:pointer;">
+      <div class="yd_scrollbar-thumb" style="height: 100%; background: #666; border-radius: 4px; position:absolute; top:0; left:0; cursor:grab;"></div>
+    </div>
   </div>
 </div>
 <p style="font-size: 14px; font-weight: 500; color: #dc3545;">Contains: Loop, Drag-Free, Autoplay, Keyboard, Wheel, Custom Physics, Custom Delays, and full Plugin Stack.</p>
+
+
+<!-- ==========================================
+     DOM INJECTION SCRIPTS
+========================================== -->
+<script>
+  // 1. Virtual Renderer Callback
+  window.qaVirtualRender = function(idx) {
+    const hue = (idx * 25) % 360;
+    return `<h2 class="slide" style="background-color: hsl(${hue}, 70%, 85%); color: #333; border-color: hsl(${hue}, 70%, 60%)">${idx + 1}</h2>`;
+  };
+
+  // 2. Stress Test DOM Populator
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-inject-slides]').forEach(el => {
+      const count = parseInt(el.getAttribute('data-inject-slides'), 10);
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        html += `<div class="yd_slide ac:blur-md"><h2 class="slide">${i+1}</h2></div>`;
+      }
+      el.innerHTML = html;
+    });
+
+    // 3. Render Multiple Instances Grid (Section 18)
+    const multiContainer = document.getElementById('multiple-instances-container');
+    if (multiContainer) {
+      let multiHtml = '';
+      for (let i = 0; i < 4; i++) {
+        const isLoop = i % 2 === 0 ? 'loop' : '';
+        const isAuto = i % 3 === 0 ? 'autoplay' : '';
+        multiHtml += `
+          <div class="yd_carousel ${isLoop} ${isAuto} slide-snap">
+            <div class="yd_viewport"><div class="yd_container slides-2 gap-sm">
+              <div class="yd_slide ac:blur-md"><h2 class="slide">1</h2></div>
+              <div class="yd_slide ac:blur-md"><h2 class="slide">2</h2></div>
+              <div class="yd_slide ac:blur-md"><h2 class="slide">3</h2></div>
+            </div></div>
+          </div>`;
+      }
+      multiContainer.innerHTML = multiHtml;
+    }
+    
+    // Auto-init the carousels after injecting DOM
+    if (typeof ydCarousel !== 'undefined') {
+      ydCarousel.startAutoInit();
+    }
+  });
+</script>
+
