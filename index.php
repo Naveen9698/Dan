@@ -18,6 +18,7 @@
 
     <?php include 'classes/slider.php'; ?>
     <?php include 'classes/base.php'; ?>
+    <?php include 'classes/animation.php'; ?>
     <?php include 'classes/aspect-ratio-system.php'; ?>
     <?php include 'classes/border-system.php'; ?>
     <?php include 'classes/color-system.php'; ?>
