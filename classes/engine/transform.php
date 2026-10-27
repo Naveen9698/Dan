@@ -23,7 +23,18 @@
 [class^="chs-scale-"],  [class*=" chs-scale-"], 
 [class^="chs-skewx-"],  [class*=" chs-skewx-"],
 [class^="chs-skewy-"],  [class*=" chs-skewy-"],
-[class^="chs-rotate-"], [class*=" chs-rotate-"]{
+[class^="chs-rotate-"], [class*=" chs-rotate-"] {
+  transform:
+    rotate(calc(var(--rotate-value, 0deg) + var(--yd-transform-rotate, 0deg)))
+    scale(calc(var(--scale-value, 1) * var(--yd-transform-scale, 1)))
+    skewX(calc(var(--skewx-value, 0deg) + var(--yd-transform-skewx, 0deg)))
+    skewY(calc(var(--skewy-value, 0deg) + var(--yd-transform-skewy, 0deg)))
+    translateX(calc(var(--translate-right, 0px) - var(--translate-left, 0px) + var(--yd-transform-tx, 0px)))
+    translateY(calc(var(--translate-bottom, 0px) - var(--translate-top, 0px) + var(--yd-transform-ty, 0px)));
+}
+
+
+<!-- {
   transform:
     rotate(var(--rotate-value, 0deg))
     scale(var(--scale-value, 1))
@@ -31,4 +42,4 @@
     skewY(var(--skewy-value, 0deg))
     translateX(calc(var(--translate-right, 0px) - var(--translate-left, 0px)))
     translateY(calc(var(--translate-bottom, 0px) - var(--translate-top, 0px)));
-}
+} -->

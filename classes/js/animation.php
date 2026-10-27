@@ -1,202 +1,226 @@
 /**
- * ydAnimation 1.0 - DECLARATIVE MICROKERNEL ANIMATION ENGINE
- * Architecture: Isolated IIFE, Independent Transforms, Channel Collision Detection, Safe Parsers
+ * ydAnimation 1.1.4 LTS - TRIGGER ENGINE
+ * Architecture: Frozen. Safe Mutation Diffs, Validation Severities, Pre-Render Sync.
  */
-
 const ydAnimation = (() => {
-
-  // ==========================================
-  // core/constants.js
-  // ==========================================
-  const DEFAULT_MODIFIERS = Object.freeze({
-    duration: 500, delay: 0, ease: 'ease', repeat: 1, direction: 'normal', fill: 'both',
-    amount: null, angle: null, distance: 50, origin: 'center'
-  });
 
   class AnimEnvironment {
     static hasDOM() { return typeof window !== 'undefined' && typeof document !== 'undefined'; }
   }
 
   // ==========================================
-  // core/registry.js
+  // REGISTRY 
   // ==========================================
-  class AnimRegistry {
-    static effects = new Map();
-    static triggers = new Map();
-    
-    // THE FIX: Effects now declare their metadata/channels upon registration
-    static registerEffect(name, config) { this.effects.set(name, config); }
-    static registerTrigger(prefix, handlerClass) { this.triggers.set(prefix, handlerClass); }
-  }
+  const EFFECT_CHANNELS = {
+    'fade': ['opacity', 'translate'], 'slide': ['translate'],
+    'scale': ['scale'], 'zoom': ['opacity', 'scale'], 
+    'rotate': ['rotate'], 'flip': ['rotate3d'], 'blur': ['blur'],
+    'bounce': ['translate'], 'pulse': ['scale'], 'shake': ['translate'], 
+    'wobble': ['translate', 'rotate'], 'swing': ['rotate'], 
+    'heartbeat': ['scale'], 'float': ['translate'], 'flash': ['opacity']
+  };
 
-  // ==========================================
-  // core/parser.js
-  // ==========================================
+  const EFFECT_MODIFIERS = {
+    'fade': ['distance', 'duration', 'delay', 'ease'],
+    'slide': ['distance', 'duration', 'delay', 'ease'],
+    'scale': ['amount', 'origin', 'duration', 'delay', 'ease'],
+    'zoom': ['amount', 'origin', 'duration', 'delay', 'ease'],
+    'rotate': ['angle', 'origin', 'duration', 'delay', 'ease'],
+    'flip': ['origin', 'duration', 'delay', 'ease'],
+    'blur': ['amount', 'duration', 'delay', 'ease'],
+    'bounce': ['duration', 'delay', 'ease'],
+    'pulse': ['duration', 'delay', 'ease'],
+    'shake': ['duration', 'delay', 'ease'],
+    'wobble': ['duration', 'delay', 'ease'],
+    'swing': ['duration', 'delay', 'ease'],
+    'heartbeat': ['duration', 'delay', 'ease'],
+    'float': ['duration', 'delay', 'ease'],
+    'flash': ['duration', 'delay', 'ease']
+  };
+
+  const TRIGGER_MODIFIERS = {
+    'vi': ['once', 'replay'],
+    'sc': ['start', 'end']
+  };
+
+  // FIX P7: Warning Severities & Debouncing
+  const _warned = new Set();
+  const warnOnce = (type, msg) => {
+    const fullMsg = `ydAnimation ${type}: ${msg}`;
+    if (!_warned.has(fullMsg)) { console.warn(fullMsg); _warned.add(fullMsg); }
+  };
+
   class AnimParser {
-    static getTriggerRegex() {
-      const triggerKeys = Array.from(AnimRegistry.triggers.keys()).join('|');
-      return new RegExp(`^(${triggerKeys}):([a-z-]+)$`);
+    static getTriggerRegex(triggerKeys) {
+      return new RegExp(`^(${triggerKeys.join('|')}):([a-z-]+)(\\|.*)?$`);
     }
 
-    static parse(element) {
+    static parse(element, triggerKeys) {
       const classes = Array.from(element.classList);
-      const config = { effects: {}, triggers: {} };
-      const triggerRegex = this.getTriggerRegex();
-      
-      // 1. Identify Triggers & Base Effects
-      classes.forEach(cls => {
-        const match = cls.match(triggerRegex);
-        if (match) {
-          const trigger = match[1];
-          const effectName = match[2];
-          const baseEffect = effectName.split('-')[0];
-          
-          // Last declaration wins (overwrites previous of same baseEffect)
-          config.effects[baseEffect] = { trigger, effectName, modifiers: { ...DEFAULT_MODIFIERS } };
-          if (!config.triggers[trigger]) config.triggers[trigger] = { config: {} };
-        }
-      });
+      const config = { triggers: {} }; 
+      const triggerRegex = AnimParser.getTriggerRegex(triggerKeys);
+      const claimedChannels = {}; 
 
-      // 2. Identify Modifiers
-      classes.forEach(cls => {
-        // THE FIX: Safe colon parsing (indexOf) allows complex values like URL or cubic-bezier(...)
-        const idx = cls.indexOf(':');
-        if (idx === -1) return;
+      element.classList.add('yd-anim');
+
+      for (let i = classes.length - 1; i >= 0; i--) {
+        const match = classes[i].match(triggerRegex);
+        if (!match) continue;
+
+        const trigger = match[1];
+        const effectStr = match[2]; 
         
-        const namespace = cls.substring(0, idx);
-        const keyval = cls.substring(idx + 1);
+        // FIX P4: Simplified base extraction
+        const baseEffect = effectStr.split('-')[0];
+
+        if (!EFFECT_CHANNELS[baseEffect]) {
+            warnOnce(`[Effect]`, `Unknown effect '${baseEffect}' on element.`);
+            continue; 
+        }
+
+        const modStr = match[3] ? match[3].substring(1) : ''; 
         
-        if (config.effects[namespace]) {
-          const dashIdx = keyval.indexOf('-');
-          if (dashIdx > -1) {
-            const key = keyval.substring(0, dashIdx);
-            const val = keyval.substring(dashIdx + 1);
-            config.effects[namespace].modifiers[key] = this._castValue(key, val);
+        if (!config.triggers[trigger]) {
+          config.triggers[trigger] = { config: {}, modifiers: {}, cssVars: {}, effects: [] };
+        }
+        if (!claimedChannels[trigger]) claimedChannels[trigger] = new Set();
+
+        const requiredChannels = EFFECT_CHANNELS[baseEffect] || [];
+        let conflict = false;
+
+        for (const ch of requiredChannels) {
+          if (claimedChannels[trigger].has(ch)) { 
+              conflict = true; 
+              warnOnce(`[Conflict]`, `'${effectStr}' dropped. Channel '${ch}' already claimed on trigger '${trigger}'.`);
+              break; 
           }
         }
+
+        if (!conflict) {
+          requiredChannels.forEach(ch => claimedChannels[trigger].add(ch));
+          config.triggers[trigger].effects.unshift({ effect: effectStr, base: baseEffect });
+
+          element.classList.add(`yd-effect-${effectStr}`, `yd-base-${baseEffect}`, `yd-trigger-${trigger}`);
+
+          if (modStr) {
+            modStr.split('|').forEach(mod => {
+              const dashIdx = mod.indexOf('-');
+              const modName = dashIdx > -1 ? mod.substring(0, dashIdx) : mod;
+              const modValue = dashIdx > -1 ? mod.substring(dashIdx + 1) : true;
+              
+              const isValidEffectMod = EFFECT_MODIFIERS[baseEffect]?.includes(modName);
+              const isValidTriggerMod = TRIGGER_MODIFIERS[trigger]?.includes(modName);
+
+              if (!isValidEffectMod && !isValidTriggerMod) {
+                  warnOnce(`[Modifier]`, `'${modName}' is not supported on '${trigger}:${baseEffect}'. Ignored.`);
+              } else {
+                  config.triggers[trigger].modifiers[modName] = modValue;
+              }
+            });
+          }
+        }
+      }
+
+      Object.keys(config.triggers).forEach(t => {
+        const mods = config.triggers[t].modifiers;
         
-        if (config.triggers[namespace]) {
-          const dashIdx = keyval.indexOf('-');
-          if (dashIdx > -1) {
-            const key = keyval.substring(0, dashIdx);
-            const val = keyval.substring(dashIdx + 1);
-            config.triggers[namespace].config[key] = val;
+        // FIX P6: Mutually Exclusive Modifier Check
+        if (mods.once && mods.replay) {
+            warnOnce(`[Modifier]`, `Trigger '${t}' has both 'once' and 'replay'. Defaulting to 'once'.`);
+            delete mods.replay;
+        }
+
+        const baseEffects = config.triggers[t].effects.map(e => e.base);
+        const cssVars = config.triggers[t].cssVars;
+        
+        if (mods.duration) cssVars['--yd-anim-duration'] = `${mods.duration}ms`;
+        if (mods.delay) cssVars['--yd-anim-delay'] = `${mods.delay}ms`;
+        if (mods.ease) cssVars['--yd-anim-ease'] = `var(--ease-${mods.ease}, ${mods.ease})`;
+        if (mods.origin) cssVars['transform-origin'] = mods.origin.replace('-', ' ');
+        if (mods.distance) cssVars['--yd-anim-distance'] = `${mods.distance}px`;
+        if (mods.angle) cssVars['--yd-anim-angle'] = `${mods.angle}deg`;
+        if (mods.amount) {
+          if (baseEffects.includes('blur')) {
+            const blurMap = { 'xs': '2px', 'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px' };
+            cssVars['--yd-anim-blur-val'] = blurMap[mods.amount] || '8px';
           } else {
-            config.triggers[namespace].config[keyval] = true; 
+            cssVars['--yd-anim-amount'] = mods.amount / 100;
           }
         }
+        Object.assign(config.triggers[t].config, mods);
       });
-
       return config;
     }
-
-    static _castValue(key, val) {
-      if (val === 'inf') return Infinity;
-      if (['duration', 'delay', 'repeat', 'amount', 'angle', 'distance'].includes(key)) return parseFloat(val);
-      return val;
-    }
-
-    static mapEase(easeToken) {
-      const map = {
-        'linear': 'linear', 'in': 'ease-in', 'out': 'ease-out', 'in-out': 'ease-in-out',
-        'back': 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        'bounce': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
-      };
-      return map[easeToken] || easeToken; // Fallback assumes developer passed a raw cubic-bezier(...)
-    }
   }
 
   // ==========================================
-  // engine/observer-manager.js
+  // OBSERVERS (IO & Scroll)
   // ==========================================
   class AnimObserverManager {
     constructor() {
-      this.intersectionObserver = null;
-      this.trackedElements = new Map(); 
-      this.scrollElements = new Set();
-      this.scrollRaf = null;
+      this.io = null; this.scrollElements = new Set(); this.scrollRaf = null;
       this._onScroll = this._onScroll.bind(this);
     }
-
     init() {
       if (!AnimEnvironment.hasDOM()) return;
-      
-      this.intersectionObserver = new IntersectionObserver((entries) => {
+      this.io = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-          const data = this.trackedElements.get(entry.target);
-          if (data && data.vi) {
+          const trigger = entry.target.__ydAnimTriggers?.vi;
+          if (trigger) {
             if (entry.isIntersecting) {
-              data.vi.play();
-              if (data.vi.config.once) this.untrack(entry.target, 'vi');
+              trigger.play();
+              if (trigger.config.once) this.untrack(trigger);
             } else {
-              if (data.vi.config.replay) data.vi.reverse();
+              if (trigger.config.replay) trigger.reverse();
             }
           }
         });
-      }, { threshold: [0, 0.5, 1] });
-
-      window.addEventListener('scroll', this._onScroll, { passive: true });
-      window.addEventListener('resize', this._onScroll, { passive: true });
+      }, { threshold: [0, 0.1] });
     }
-
     _onScroll() {
-      if (this.scrollRaf) return;
-      this.scrollRaf = requestAnimationFrame(() => {
-        this.scrollRaf = null;
-        this._processScrollTick();
-      });
+      if (!this.scrollRaf) {
+        this.scrollRaf = requestAnimationFrame(() => {
+          this.scrollRaf = null;
+          this._processScrollTick();
+        });
+      }
     }
-
     _processScrollTick() {
       const wh = window.innerHeight;
-      this.scrollElements.forEach(({ el, trigger }) => {
-        const rect = el.getBoundingClientRect();
+      this.scrollElements.forEach((trigger) => {
+        const rect = trigger.element.getBoundingClientRect();
         const startTrigger = trigger.config.start || 'bottom'; 
         const endTrigger = trigger.config.end || 'top';
-        
         let startY = startTrigger === 'top' ? 0 : (startTrigger === 'center' ? wh/2 : wh);
         let endY = endTrigger === 'top' ? 0 : (endTrigger === 'center' ? wh/2 : wh);
-        
-        const totalRange = startY - endY;
-        
-        // THE FIX: Gracefully handle identical start/end ranges to prevent Divide By Zero failures
-        if (totalRange === 0) {
-          console.warn(`[ydAnimation] Scroll trigger on element has 0 range (start: ${startTrigger}, end: ${endTrigger}). Adjusted end constraint to prevent failure.`, el);
-          endY -= 1; // Slightest possible adjustment to unbreak the math
-        }
-
+        if (startY - endY === 0) endY -= 1; 
         const elementY = rect.top + (rect.height / 2); 
-        const currentProgress = startY - elementY;
-        
-        let progress = currentProgress / (startY - endY);
-        progress = Math.max(0, Math.min(1, progress));
-        
-        trigger.scrub(progress);
+        let progress = (startY - elementY) / (startY - endY);
+        trigger.scrub(Math.max(0, Math.min(1, progress)));
       });
     }
-
-    track(element, type, triggerInstance) {
-      if (!this.trackedElements.has(element)) this.trackedElements.set(element, {});
-      const data = this.trackedElements.get(element);
-      data[type] = triggerInstance;
-
-      if (type === 'vi' && this.intersectionObserver) this.intersectionObserver.observe(element);
-      if (type === 'sc') { this.scrollElements.add({ el: element, trigger: triggerInstance }); this._processScrollTick(); }
-    }
-
-    untrack(element, type) {
-      const data = this.trackedElements.get(element);
-      if (!data) return;
-      
-      if (type === 'vi' && this.intersectionObserver) this.intersectionObserver.unobserve(element);
-      if (type === 'sc') {
-        for (const item of this.scrollElements) {
-          if (item.el === element) { this.scrollElements.delete(item); break; }
+    track(trigger) {
+      if (trigger.type === 'vi') this.io.observe(trigger.element);
+      if (trigger.type === 'sc') { 
+        this.scrollElements.add(trigger); 
+        if (this.scrollElements.size === 1) {
+          window.addEventListener('scroll', this._onScroll, { passive: true });
+          window.addEventListener('resize', this._onScroll, { passive: true });
         }
+        this._processScrollTick(); 
       }
-      
-      delete data[type];
-      if (Object.keys(data).length === 0) this.trackedElements.delete(element);
+    }
+    untrack(trigger) {
+      if (trigger.type === 'vi') this.io.unobserve(trigger.element);
+      if (trigger.type === 'sc') {
+        this.scrollElements.delete(trigger);
+        if (this.scrollElements.size === 0) {
+          window.removeEventListener('scroll', this._onScroll);
+          window.removeEventListener('resize', this._onScroll);
+        }
+        trigger.element.classList.remove('yd-scrubbing');
+        trigger.element.style.removeProperty('--yd-anim-scrub');
+      }
     }
   }
 
@@ -204,294 +228,200 @@ const ydAnimation = (() => {
   if (AnimEnvironment.hasDOM()) GlobalAnimObserver.init();
 
   // ==========================================
-  // engine/animation-manager.js
-  // ==========================================
-  class AnimManager {
-    constructor(element, baseEffect, config) {
-      this.element = element;
-      this.config = config;
-      this.baseEffect = baseEffect;
-      this.animation = null;
-      this._build();
-    }
-
-    _build() {
-      if (!this.element.animate) return; 
-
-      const effectDef = AnimRegistry.effects.get(this.baseEffect);
-      if (!effectDef) return;
-
-      const { keyframes, waapiOptions } = effectDef.generator(this.config.effectName, this.config.modifiers);
-      
-      const options = {
-        duration: this.config.modifiers.duration,
-        delay: this.config.modifiers.delay,
-        easing: AnimParser.mapEase(this.config.modifiers.ease),
-        iterations: this.config.modifiers.repeat,
-        direction: this.config.modifiers.direction,
-        fill: this.config.modifiers.fill,
-        ...waapiOptions
-      };
-
-      this.animation = this.element.animate(keyframes, options);
-      this.animation.pause(); 
-    }
-
-    play() { if (this.animation) this.animation.play(); }
-    pause() { if (this.animation) this.animation.pause(); }
-    reverse() { if (this.animation) { this.animation.reverse(); this.animation.play(); } }
-    cancel() { if (this.animation) this.animation.cancel(); }
-    scrub(progress) { if (this.animation) this.animation.currentTime = this.config.modifiers.duration * progress; }
-  }
-
-  // ==========================================
-  // registries/effects.js (Independent Transforms)
-  // ==========================================
-  
-  // THE FIX: First-class Origin Support (top-left -> top left)
-  const resolveOrigin = (modOrigin) => typeof modOrigin === 'string' ? modOrigin.replace('-', ' ') : 'center';
-
-  AnimRegistry.registerEffect('fade', {
-    channels: ['opacity', 'translate'],
-    generator: (effectName, mods) => {
-      const d = mods.distance;
-      const t = {
-        'fade': ['0 0', '0 0'],
-        'fade-up': [`0 ${d}px`, `0 0`],
-        'fade-down': [`0 -${d}px`, `0 0`],
-        'fade-left': [`${d}px 0`, `0 0`],
-        'fade-right': [`-${d}px 0`, `0 0`]
-      };
-      return { 
-        keyframes: [ 
-          { opacity: 0, translate: t[effectName][0], transformOrigin: resolveOrigin(mods.origin) }, 
-          { opacity: 1, translate: t[effectName][1], transformOrigin: resolveOrigin(mods.origin) } 
-        ] 
-      };
-    }
-  });
-
-  AnimRegistry.registerEffect('slide', {
-    channels: ['translate'],
-    generator: (effectName, mods) => {
-      const d = mods.distance;
-      const t = {
-        'slide-up': [`0 ${d}px`, `0 0`],
-        'slide-down': [`0 -${d}px`, `0 0`],
-        'slide-left': [`${d}px 0`, `0 0`],
-        'slide-right': [`-${d}px 0`, `0 0`]
-      };
-      return { 
-        keyframes: [ 
-          { translate: t[effectName][0], transformOrigin: resolveOrigin(mods.origin) }, 
-          { translate: t[effectName][1], transformOrigin: resolveOrigin(mods.origin) } 
-        ] 
-      };
-    }
-  });
-
-  AnimRegistry.registerEffect('scale', {
-    channels: ['scale'],
-    generator: (effectName, mods) => {
-      const amount = mods.amount ? (mods.amount / 100) : (effectName === 'scale-up' ? 0.5 : 1.5);
-      return { 
-        keyframes: [ 
-          { scale: amount, transformOrigin: resolveOrigin(mods.origin) }, 
-          { scale: 1, transformOrigin: resolveOrigin(mods.origin) } 
-        ] 
-      };
-    }
-  });
-
-  AnimRegistry.registerEffect('zoom', {
-    channels: ['opacity', 'scale'],
-    generator: (effectName, mods) => {
-      const amount = mods.amount ? (mods.amount / 100) : (effectName === 'zoom-in' ? 0.5 : 1.5);
-      return { 
-        keyframes: [ 
-          { scale: amount, opacity: 0, transformOrigin: resolveOrigin(mods.origin) }, 
-          { scale: 1, opacity: 1, transformOrigin: resolveOrigin(mods.origin) } 
-        ] 
-      };
-    }
-  });
-
-  AnimRegistry.registerEffect('rotate', {
-    channels: ['rotate'],
-    generator: (effectName, mods) => {
-      const a = mods.angle || 90;
-      const t = { 'rotate-left': `-${a}deg`, 'rotate-right': `${a}deg` };
-      return { 
-        keyframes: [ 
-          { rotate: t[effectName], transformOrigin: resolveOrigin(mods.origin) }, 
-          { rotate: `0deg`, transformOrigin: resolveOrigin(mods.origin) } 
-        ] 
-      };
-    }
-  });
-
-  AnimRegistry.registerEffect('flip', {
-    channels: ['rotate'],
-    generator: (effectName, mods) => {
-      const t = { 'flip-x': `x 180deg`, 'flip-y': `y 180deg` };
-      return { 
-        keyframes: [ 
-          { rotate: t[effectName], transformOrigin: resolveOrigin(mods.origin) }, 
-          { rotate: `x 0deg` } 
-        ] 
-      };
-    }
-  });
-
-  AnimRegistry.registerEffect('blur', {
-    channels: ['filter', 'opacity'],
-    generator: (effectName, mods) => {
-      const map = { 'xs': '2px', 'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px' };
-      const val = map[mods.amount] || '8px';
-      return { 
-        keyframes: effectName === 'blur-in' 
-          ? [ { filter: `blur(${val})`, opacity: 0 }, { filter: `blur(0px)`, opacity: 1 } ] 
-          : [ { filter: `blur(0px)`, opacity: 1 }, { filter: `blur(${val})`, opacity: 0 } ] 
-      };
-    }
-  });
-
-  // ==========================================
-  // registries/triggers.js
+  // TRIGGERS
   // ==========================================
   class AnimTrigger {
-    constructor(element, type, config, animManagers) {
-      this.element = element; this.type = type; this.config = config; this.animManagers = animManagers;
+    constructor(element, type, parsedTriggerData) { 
+      this.element = element; this.type = type; 
+      this.config = parsedTriggerData.config; this.cssVars = parsedTriggerData.cssVars; this.effects = parsedTriggerData.effects;
     }
-    play() { this.animManagers.forEach(m => m.play()); }
-    reverse() { this.animManagers.forEach(m => m.reverse()); }
-    scrub(progress) { this.animManagers.forEach(m => m.scrub(progress)); }
-    destroy() { GlobalAnimObserver.untrack(this.element, this.type); }
+    play() { 
+      Object.keys(this.cssVars).forEach(k => this.element.style.setProperty(k, this.cssVars[k]));
+      this.element.classList.add(`yd-play-${this.type}`); 
+    }
+    reverse() { this.element.classList.remove(`yd-play-${this.type}`); }
+    scrub(progress) { 
+      if (!this.element.classList.contains('yd-scrubbing')) {
+        Object.keys(this.cssVars).forEach(k => this.element.style.setProperty(k, this.cssVars[k]));
+        this.element.classList.add('yd-scrubbing');
+      }
+      this.element.style.setProperty('--yd-anim-scrub', progress.toFixed(4)); 
+    }
+    destroy() { 
+      Object.keys(this.cssVars).forEach(k => this.element.style.removeProperty(k));
+      this.element.classList.remove(`yd-play-${this.type}`, 'yd-scrubbing'); 
+      this.element.style.removeProperty('--yd-anim-scrub');
+    } 
   }
 
-  AnimRegistry.registerTrigger('lo', class LoadTrigger extends AnimTrigger {
-    init() { requestAnimationFrame(() => this.play()); }
-  });
-
-  AnimRegistry.registerTrigger('vi', class ViewportTrigger extends AnimTrigger {
-    init() { GlobalAnimObserver.track(this.element, 'vi', this); }
-  });
-
-  AnimRegistry.registerTrigger('sc', class ScrollTrigger extends AnimTrigger {
-    init() { GlobalAnimObserver.track(this.element, 'sc', this); }
-  });
-
-  AnimRegistry.registerTrigger('ho', class HoverTrigger extends AnimTrigger {
+  class LoadTrigger extends AnimTrigger { 
+    init() { this._r = requestAnimationFrame(() => { this._r2 = requestAnimationFrame(() => this.play()); }); } 
+    destroy() { cancelAnimationFrame(this._r); cancelAnimationFrame(this._r2); super.destroy(); }
+  }
+  class ViewportTrigger extends AnimTrigger { 
+    init() { GlobalAnimObserver.track(this); } 
+    destroy() { GlobalAnimObserver.untrack(this); super.destroy(); }
+  }
+  class ScrollTrigger extends AnimTrigger { 
+    init() { GlobalAnimObserver.track(this); } 
+    destroy() { GlobalAnimObserver.untrack(this); super.destroy(); }
+  }
+  class HoverTrigger extends AnimTrigger {
     init() {
-      this._enterFn = () => this.play();
-      this._leaveFn = () => this.reverse();
-      this.element.addEventListener('mouseenter', this._enterFn);
-      this.element.addEventListener('mouseleave', this._leaveFn);
+      this._e = () => this.play(); this._l = () => this.reverse();
+      this.element.addEventListener('mouseenter', this._e); this.element.addEventListener('mouseleave', this._l);
     }
     destroy() {
-      this.element.removeEventListener('mouseenter', this._enterFn);
-      this.element.removeEventListener('mouseleave', this._leaveFn);
+      this.element.removeEventListener('mouseenter', this._e); this.element.removeEventListener('mouseleave', this._l);
       super.destroy();
     }
-  });
+  }
+  class PressTrigger extends AnimTrigger {
+    init() {
+      this._d = () => this.play(); this._u = () => this.reverse();
+      this.element.addEventListener('mousedown', this._d); this.element.addEventListener('touchstart', this._d, {passive:true});
+      window.addEventListener('mouseup', this._u); window.addEventListener('touchend', this._u); window.addEventListener('touchcancel', this._u);
+    }
+    destroy() {
+      this.element.removeEventListener('mousedown', this._d); this.element.removeEventListener('touchstart', this._d);
+      window.removeEventListener('mouseup', this._u); window.removeEventListener('touchend', this._u); window.removeEventListener('touchcancel', this._u);
+      super.destroy();
+    }
+  }
+  class ToggleTrigger extends AnimTrigger {
+    init() {
+      // FIX P1: Pre-Render Sync. Evaluates only its OWN trigger state.
+      this.toggled = this.element.classList.contains(`yd-play-${this.type}`); 
+      this._c = () => { this.toggled = !this.toggled; this.toggled ? this.play() : this.reverse(); };
+      this.element.addEventListener('click', this._c);
+    }
+    destroy() { this.element.removeEventListener('click', this._c); super.destroy(); }
+  }
+  class ClassToggleTrigger extends AnimTrigger {
+    constructor(el, type, config, targetClass) { super(el, type, config); this.targetClass = targetClass; }
+    init() {
+      this.wasActive = this.element.classList.contains(this.targetClass);
+      if (this.wasActive) this.play();
+      this.mo = new MutationObserver(() => {
+        const isActive = this.element.classList.contains(this.targetClass);
+        if (isActive !== this.wasActive) { this.wasActive = isActive; isActive ? this.play() : this.reverse(); }
+      });
+      this.mo.observe(this.element, { attributes: true, attributeFilter: ['class'] });
+    }
+    destroy() { if (this.mo) this.mo.disconnect(); super.destroy(); }
+  }
 
-  // ==========================================
-  // facade/ydAnimation.js
-  // ==========================================
+  const TRIGGER_MAP = {
+    'lo': LoadTrigger, 'vi': ViewportTrigger, 'sc': ScrollTrigger, 
+    'ho': HoverTrigger, 'pr': PressTrigger, 'tg': ToggleTrigger,
+    'ac': (el, t, c) => new ClassToggleTrigger(el, t, c, 'active'),
+    'se': (el, t, c) => new ClassToggleTrigger(el, t, c, 'select')
+  };
+
   class ydAnimationFacade {
     static _autoInitObserver = null;
 
     static initAll(rootNode = document) {
       if (!AnimEnvironment.hasDOM()) return;
-      const triggerRegex = AnimParser.getTriggerRegex();
-
-      rootNode.querySelectorAll('*').forEach(el => {
-        if (!el.__ydAnimation && Array.from(el.classList).some(cls => triggerRegex.test(cls))) {
+      const triggerKeys = Object.keys(TRIGGER_MAP);
+      const regex = AnimParser.getTriggerRegex(triggerKeys);
+      
+      const selector = triggerKeys.map(t => `[class*="${t}:"]`).join(', ');
+      const elements = rootNode === document ? document.querySelectorAll(selector) : [rootNode, ...rootNode.querySelectorAll(selector)];
+      
+      elements.forEach(el => {
+        if (el.nodeType === 1 && !el.__ydAnimationConfigured && Array.from(el.classList).some(cls => regex.test(cls))) {
           new ydAnimationFacade(el);
         }
       });
     }
 
+    static _extractAnimClasses(element) {
+        const regex = AnimParser.getTriggerRegex(Object.keys(TRIGGER_MAP));
+        return Array.from(element.classList).filter(cls => regex.test(cls)).join(' ');
+    }
+
     static startAutoInit() {
       if (!AnimEnvironment.hasDOM()) return;
       ydAnimationFacade.initAll(); 
-      
       if (typeof MutationObserver !== 'undefined' && !this._autoInitObserver) {
-        const triggerRegex = AnimParser.getTriggerRegex();
         this._autoInitObserver = new MutationObserver(mutations => {
           mutations.forEach(m => {
-            m.addedNodes.forEach(node => {
-              if (node.nodeType === 1) { 
-                if (!node.__ydAnimation && Array.from(node.classList).some(cls => triggerRegex.test(cls))) {
-                  new ydAnimationFacade(node);
+            if (m.type === 'childList') {
+                m.addedNodes.forEach(node => { if (node.nodeType === 1) ydAnimationFacade.initAll(node); });
+            } 
+            else if (m.type === 'attributes' && m.attributeName === 'class') {
+                const el = m.target;
+                if (el.nodeType === 1 && !el.__ydAnimationDestroying) {
+                    
+                    const currentAnimClasses = ydAnimationFacade._extractAnimClasses(el);
+                    
+                    if (el.__ydAnimationConfigured) {
+                        // FIX P2 & P3: Only teardown/rebuild if the actual animation syntax string mutated.
+                        if (el.__ydAnimClassSignature !== currentAnimClasses) {
+                            el.__ydFacadeInstance?.destroy();
+                            if (currentAnimClasses.length > 0) new ydAnimationFacade(el);
+                        }
+                    } else if (currentAnimClasses.length > 0) {
+                        new ydAnimationFacade(el);
+                    }
                 }
-                ydAnimationFacade.initAll(node); 
-              }
-            });
+            }
           });
         });
-        this._autoInitObserver.observe(document.body, { childList: true, subtree: true });
+        this._autoInitObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
       }
+    }
+
+    static stopAutoInit() {
+      if (this._autoInitObserver) { this._autoInitObserver.disconnect(); this._autoInitObserver = null; }
     }
 
     constructor(element) {
       this.root = element;
-      this.root.__ydAnimation = this;
-      this.parsedConfig = AnimParser.parse(this.root);
+      this.root.__ydAnimationConfigured = true;
+      this.root.__ydFacadeInstance = this; 
       
-      this.animations = new Map(); 
-      this.triggers = [];
+      // Store exact signature to prevent expensive rebuilds on non-anim class toggles (.active)
+      this.root.__ydAnimClassSignature = ydAnimationFacade._extractAnimClasses(this.root);
       
-      // THE FIX: Collision Detection Registry for DOM Nodes
-      this.claimedChannels = new Set();
+      this.parsedConfig = AnimParser.parse(this.root, Object.keys(TRIGGER_MAP));
+      this.root.__ydAnimTriggers = {};
 
-      // 1. Build Animations
-      Object.keys(this.parsedConfig.effects).forEach(baseEffect => {
-        const effectConf = this.parsedConfig.effects[baseEffect];
-        const effectDef = AnimRegistry.effects.get(baseEffect);
-        
-        if (effectDef) {
-          // Verify capability metadata for channel conflicts
-          effectDef.channels.forEach(ch => {
-            if (this.claimedChannels.has(ch)) {
-              console.warn(`[ydAnimation] Channel conflict: Multiple animation effects are attempting to control the '${ch}' property on the same element.`, this.root);
-            }
-            this.claimedChannels.add(ch);
-          });
-          
-          const manager = new AnimManager(this.root, baseEffect, effectConf);
-          if (!this.animations.has(effectConf.trigger)) this.animations.set(effectConf.trigger, []);
-          this.animations.get(effectConf.trigger).push(manager);
-        }
-      });
-
-      // 2. Attach Triggers
-      Object.keys(this.parsedConfig.triggers).forEach(triggerPrefix => {
-        const TriggerClass = AnimRegistry.triggers.get(triggerPrefix);
-        if (TriggerClass) {
-          const managers = this.animations.get(triggerPrefix) || [];
-          const tInstance = new TriggerClass(this.root, triggerPrefix, this.parsedConfig.triggers[triggerPrefix].config, managers);
-          tInstance.init();
-          this.triggers.push(tInstance);
+      Object.keys(this.parsedConfig.triggers).forEach(t => {
+        const ConfigClass = TRIGGER_MAP[t];
+        if (ConfigClass) {
+          const instance = typeof ConfigClass === 'function' && !ConfigClass.prototype?.init 
+            ? ConfigClass(this.root, t, this.parsedConfig.triggers[t]) 
+            : new ConfigClass(this.root, t, this.parsedConfig.triggers[t]);
+          this.root.__ydAnimTriggers[t] = instance;
+          instance.init();
         }
       });
     }
 
     destroy() {
-      this.triggers.forEach(t => t.destroy());
-      this.animations.forEach(managers => managers.forEach(m => m.cancel()));
-      delete this.root.__ydAnimation;
-      this.animations.clear();
-      this.claimedChannels.clear();
-      this.triggers = [];
+      // FIX P2: Bypass mutation observer during deliberate teardown
+      this.root.__ydAnimationDestroying = true;
+      
+      if (this.root.__ydAnimTriggers) {
+        Object.values(this.root.__ydAnimTriggers).forEach(trigger => {
+          if (typeof trigger.destroy === 'function') trigger.destroy();
+        });
+      }
+      Array.from(this.root.classList).forEach(c => {
+        if (c.startsWith('yd-')) this.root.classList.remove(c);
+      });
+      delete this.root.__ydAnimTriggers;
+      delete this.root.__ydAnimationConfigured;
+      delete this.root.__ydFacadeInstance;
+      delete this.root.__ydAnimClassSignature;
+      
+      // Allow observer to track future changes
+      requestAnimationFrame(() => delete this.root.__ydAnimationDestroying);
     }
   }
 
-  // Auto-initialize robustly
-  if (AnimEnvironment.hasDOM()) {
-    document.addEventListener('DOMContentLoaded', () => ydAnimationFacade.startAutoInit());
-  }
-
+  if (AnimEnvironment.hasDOM()) document.addEventListener('DOMContentLoaded', () => ydAnimationFacade.startAutoInit());
   return ydAnimationFacade;
-
 })();
